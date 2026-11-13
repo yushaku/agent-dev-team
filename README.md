@@ -2,6 +2,8 @@
 
 A process for a team of coding agents working a software project inside the Orca app. A human Product Owner approves at fixed gates (business spec, new screens, delivery); an Orchestrator, which can be any coding agent, sizes the work, dispatches role workers (Designer, Tech Lead, Builder, QA, reviewers, Delivery) and ends at a draft PR or a committed branch. Per-project specifics live in a project config, `.team/config.yaml`.
 
+Vietnamese docs for the Product Owner: https://yushaku.github.io/agent-dev-team/
+
 ## How it works
 
 Who hands work to whom: the PO talks to the Orchestrator and to discussion sessions; the Orchestrator dispatches every worker.
@@ -98,6 +100,7 @@ No `missing:` lines means every skill is in place.
 - `scripts/`: helpers such as the quota probe
 - `templates/`: file templates for projects
 - `diagrams/`: architecture diagrams
+- `docs/`: Vietnamese docs site (GitHub Pages)
 - `dashboard/`: local dashboard
 
 ## Metrics (from Orca history, monthly)
@@ -110,5 +113,7 @@ No `missing:` lines means every skill is in place.
 - Tokens per delivered Task, and the Orchestrator's share versus workers (team dashboard, 127.0.0.1:4747).
 
 ## Dashboard
+
+The local dashboard shows token metrics only. For the process itself, see the [Vietnamese docs site](https://yushaku.github.io/agent-dev-team/).
 
 `python3 dashboard/server.py`, then open http://127.0.0.1:4747. See `dashboard/README.md`.

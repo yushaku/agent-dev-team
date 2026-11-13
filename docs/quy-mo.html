@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quy mô việc | Đội agent</title>
+<meta name="description" content="Bốn size S0 đến S3: dùng cho việc gì, ai làm, cổng nào, cách chọn và đổi size.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23303446'/%3E%3Cg transform='translate(6 6)' fill='none' stroke='%23babbf1' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10' cy='4' r='2.5'/%3E%3Ccircle cx='4' cy='16' r='2.5'/%3E%3Ccircle cx='16' cy='16' r='2.5'/%3E%3Cpath d='M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar"><div class="topbar-inner">
+<a class="brand" href="index.html" aria-label="Agent team, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>Agent team</span></a>
+<nav class="nav" aria-label="Các trang"><a href="index.html">Tổng quan</a><a href="quy-trinh.html">Quy trình</a><a href="quy-mo.html" aria-current="page">Quy mô việc</a><a href="vai-tro.html">Vai trò</a><a href="skill.html">Skill</a><a href="bao-tri.html">Bảo trì</a><a href="tai-lieu.html">Tài liệu</a><a href="cau-hinh.html">Cấu hình</a></nav>
+<button type="button" id="theme-toggle" aria-label="Đổi giao diện sáng hoặc tối">Chế độ sáng (Light)</button>
+</div></header>
+<main id="main">
+<h1>Quy mô việc</h1>
+<p class="lead">Orchestrator chọn size trước khi tạo gì trong Orca, và nói size cùng lý do trong một dòng. Dùng size nhỏ nhất vẫn giữ hai điều bất di bất dịch: Builder khác Reviewer với code, và các cổng của PO.</p>
+<figure><div class="diagram"><img src="../diagrams/sizes.svg" alt="Sơ đồ: S0 Direct, S1 Solo, S2 Standard, S3 Full, mỗi size chạy những bước nào." loading="lazy"></div><figcaption>Mỗi size chạy những bước nào. Sơ đồ tiếng Anh. <a href="../diagrams/sizes.html">Mở bản tương tác</a>.</figcaption></figure><div class="table-wrap"><table><thead><tr><th scope="col">Size</th><th scope="col">Dùng cho</th><th scope="col">Ai làm</th><th scope="col">Cổng</th></tr></thead><tbody><tr><td><code>S0</code> Direct</td><td>Trả lời từ code, giải thích hành vi, tra cứu nhỏ chỉ đọc</td><td>Một phiên agent chỉ đọc (<a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/investigator.md">Investigator</a>), không phải Orchestrator. Không tạo gì trong Orca</td><td><code>G-Reply</code> nếu có gì gửi ra ngoài</td></tr><tr><td><code>S1</code> Solo</td><td>Đổi code một khu vực, kết quả mong đợi rõ</td><td>Builder, Anti-AI Editor, Code Reviewer</td><td><code>Gate 2</code></td></tr><tr><td><code>S2</code> Standard</td><td>Vài khu vực, cần test mới, hoặc một quy tắc nghiệp vụ đổi</td><td>Tech Lead (khi đổi quy tắc), Builder, Anti-AI, Security (khi cần), Reviewer, QA, Perf/A11y (khi cần), Designer (màn hình hoặc luồng mới)</td><td><code>Gate 1</code> nếu đổi quy tắc, <code>G-UI</code> nếu có màn hình mới, <code>Gate 2</code></td></tr><tr><td><code>S3</code> Full</td><td>Capability mới, yêu cầu chưa rõ, thiết kế xuyên suốt</td><td>Tech Lead, Designer (khi có UI), Builder, Anti-AI, Security (khi cần), Reviewer, QA, Perf/A11y (khi cần), Delivery Engineer</td><td><code>Gate 1</code>, <code>G-UI</code> khi có UI, <code>Gate 2</code></td></tr></tbody></table></div>
+<h2>Chọn size thế nào</h2>
+<p>Bắt đầu từ S0, chỉ nâng khi có tín hiệu.</p>
+<ul><li><strong>S1:</strong> mọi thay đổi code.</li><li><strong>S2:</strong> nhiều hơn một khu vực hoặc tầng, đổi quy tắc nghiệp vụ, vùng nhạy cảm (đăng nhập, thanh toán, dữ liệu cá nhân hoặc tài chính, upload, API ngoài), màn hình hoặc luồng mới, hoặc thiết kế lại thuần hình ảnh. Sửa màn hình đã có vẫn là S1 và theo <code>ui_rules</code>.</li><li><strong>S3:</strong> yêu cầu vẫn chưa rõ sau một vòng hỏi, capability mới chưa có business spec, hoặc quyết định thiết kế đắt khi đảo ngược.</li><li><strong>Tác động kiến trúc:</strong> thêm hệ thống hoặc vendor ngoài, kho dữ liệu mới, đổi topology deploy, nâng mức tải, hoặc đưa dữ liệu cá nhân qua ranh giới mới, mà chưa có ADR của Solution Architect bao phủ, thì là S3. Sau Gate 1 Orchestrator dừng trước <code>plan</code> và nhờ PO mở phiên Solution Architect.</li><li>Nhiều mục backlog trong một vòng làm việc là một capability S3: một spec, một Build Task.</li><li>Câu hỏi kỹ thuật: phiên Solution Architect. Câu hỏi sản phẩm: phiên Researcher. Chạy thử nghiệm: PoC (xem <a href="quy-trinh.html">Quy trình</a>).</li><li>PO ghi đè được bất cứ lúc nào bằng cách nêu size. Config đặt mặc định và trần bằng <code>flow.default_size</code> và <code>flow.max_size</code>.</li></ul>
+<h2>Đổi size giữa chừng</h2>
+<ul><li><strong>Nâng size:</strong> báo PO, thêm Task hoặc cổng còn thiếu, giữ phần đã làm.</li><li><strong>Hạ size:</strong> dừng các Task đang rảnh, kết thúc ở size nhỏ hơn.</li><li>Không nâng size lặng lẽ qua một cổng: quy tắc nghiệp vụ mới luôn qua Gate 1.</li></ul><p class="sources">Nguồn: <a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/orchestrator/references/sizing.md"><code>skills/orchestrator/references/sizing.md</code></a>, <a href="https://github.com/yushaku/agent-dev-team/blob/main/workflow.md"><code>workflow.md</code></a>.</p>
+</main>
+<footer class="site-footer">
+<p>Trang này tóm tắt cho người đọc (Product Owner). Quy tắc đầy đủ nằm trong các file <code>.md</code> tiếng Anh của <a href="https://github.com/yushaku/agent-dev-team">repo</a>; nếu khác nhau thì <code>.md</code> đúng.</p>
+</footer>
+</body>
+</html>

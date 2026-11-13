@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tài liệu | Đội agent</title>
+<meta name="description" content="Tài liệu nào được commit, ai sở hữu, business spec, ADR, scratch .team/ và site xuất bản.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23303446'/%3E%3Cg transform='translate(6 6)' fill='none' stroke='%23babbf1' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10' cy='4' r='2.5'/%3E%3Ccircle cx='4' cy='16' r='2.5'/%3E%3Ccircle cx='16' cy='16' r='2.5'/%3E%3Cpath d='M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar"><div class="topbar-inner">
+<a class="brand" href="index.html" aria-label="Agent team, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>Agent team</span></a>
+<nav class="nav" aria-label="Các trang"><a href="index.html">Tổng quan</a><a href="quy-trinh.html">Quy trình</a><a href="quy-mo.html">Quy mô việc</a><a href="vai-tro.html">Vai trò</a><a href="skill.html">Skill</a><a href="bao-tri.html">Bảo trì</a><a href="tai-lieu.html" aria-current="page">Tài liệu</a><a href="cau-hinh.html">Cấu hình</a></nav>
+<button type="button" id="theme-toggle" aria-label="Đổi giao diện sáng hoặc tối">Chế độ sáng (Light)</button>
+</div></header>
+<main id="main">
+<h1>Tài liệu</h1>
+<p class="lead">Chính sách này trả lời: tài liệu nào được commit, ai sở hữu, và cái gì chỉ là scratch. Markdown và JSON là nguồn cho agent. HTML là bản cho người đọc, sinh ra từ nguồn và không thêm sự kiện nào nguồn không có.</p>
+<figure><div class="frame"><iframe src="../diagrams/docs-layout.html" title="Tài liệu nằm ở đâu: nguồn agent đọc, HTML cho người, scratch cục bộ" loading="lazy" height="760"></iframe></div><figcaption>Agent chỉ đọc nguồn, không đọc HTML hay site đã xuất bản. Sơ đồ tiếng Anh. <a href="../diagrams/docs-layout.html">Mở toàn màn hình</a>.</figcaption></figure>
+<h2>Tài liệu được commit (danh sách đầy đủ)</h2>
+<div class="table-wrap"><table><thead><tr><th scope="col">Tài liệu</th><th scope="col">Chủ sở hữu</th><th scope="col">Nội dung</th></tr></thead><tbody><tr><td><code>docs/product/&lt;capability&gt;.md</code></td><td>Tech Lead</td><td>Business spec, một file cho mỗi capability</td></tr><tr><td><code>docs/adr/NNN-title.md</code></td><td>Tech Lead (quyết định feature), Solution Architect (quyết định hệ thống)</td><td>Một quyết định kỹ thuật. Chỉ sửa dòng Status; muốn đổi thì viết ADR mới</td></tr><tr><td><code>AGENTS.md</code></td><td>PO</td><td>Quy tắc agent của repo. Đội chỉ đọc, không bao giờ sửa</td></tr><tr><td><code>.team/config.yaml</code></td><td>PO (Orchestrator đề xuất)</td><td>Config đội, cục bộ cho tới khi đội chọn commit. Xem <a href="cau-hinh.html">Cấu hình</a></td></tr><tr><td><code>DESIGN.md</code></td><td>Designer</td><td>Nhận diện hình ảnh: token, kiểu chữ, khoảng cách, quy tắc component</td></tr><tr><td><code>README.md</code></td><td>PO</td><td>Là gì, chạy thế nào</td></tr><tr><td><code>todo.md</code></td><td>PO</td><td>Roadmap; mỗi mục có Goal, Outcome, checkbox. Delivery Engineer gỡ mục đã xong</td></tr><tr><td><code>docs/diagrams/&lt;name&gt;.json</code></td><td>Tech Lead; Solution Architect cho sơ đồ hệ thống</td><td>Spec archify của sơ đồ giữ lại</td></tr><tr><td><code>docs/diagrams/&lt;name&gt;.html</code></td><td>Người đổi spec</td><td>Bản render archify, cập nhật trong cùng commit với spec</td></tr><tr><td><code>.github/workflows/pages.yml</code></td><td>Delivery Engineer; PO review PR</td><td>Xuất bản site tài liệu khi <code>docs.site: pages</code></td></tr></tbody></table></div>
+<p>Tài liệu ngoài danh sách là tham chiếu chỉ đọc cho tới khi PO chuyển hoặc xóa (<code>docs.legacy</code>). API reference và schema doc: sinh từ code khi cần, không lưu.</p>
+
+<h2>Hai nhóm người đọc</h2>
+<ul><li>Agent đọc nguồn (markdown, JSON). Người đọc HTML. Không sửa tay HTML: sửa nguồn rồi render lại.</li><li>Sơ đồ giữ lại trong <code>docs/diagrams/</code>: tổng quan hệ thống (C4 container view) luôn có; sơ đồ deploy khi hạ tầng có hơn một runtime. Sơ đồ khác vẽ theo yêu cầu trong PR hoặc thảo luận và không lưu, trừ khi PO muốn giữ.</li></ul>
+<h2>Business spec</h2>
+<ul><li>Một file cho mỗi capability. Viết bằng tiếng Anh, chỉ dùng ngôn ngữ nghiệp vụ: không nêu giải pháp, công nghệ, tên màn hình, API, database, code hay đường dẫn.</li><li>Gồm: Purpose, Actors, user story đánh số (US1...), quy tắc đánh số (R1...), flow chính và ngoại lệ, acceptance criteria Given/When/Then (AC1...), Glossary, Out of scope, Open questions (rỗng trước Gate 1) và dòng cuối <code>Retired: ...</code>.</li><li>Cỡ: khoảng 80 dòng, quá 150 dòng thì tách capability.</li><li>ID không bao giờ dùng lại hay đánh số lại. Test tham chiếu spec bằng tên file capability, ví dụ <code>garden AC3: ...</code>; spec không tham chiếu test hay code.</li><li>Câu trả lời Gate 1 và quyết định của PO ghi trong <code>.team/&lt;feature&gt;/decisions.md</code>, Tech Lead gộp thành quy tắc và AC. Lịch sử nằm ở <code>git log</code> của spec.</li></ul>
+<h2>Scratch: .team/ (không commit)</h2>
+<ul><li><code>.team/&lt;feature&gt;/</code>: <code>plan.md</code>, <code>decisions.md</code>, <code>walkthrough.html</code> (Gate 1 cho PO), <code>handoff.md</code>, <code>design/</code>, <code>specs/</code> và báo cáo role dạng <code>&lt;role&gt;-r&lt;N&gt;.md</code>.</li><li><code>.team/research/&lt;topic&gt;.md</code>: kết quả phiên Researcher, dưới 60 dòng.</li><li><code>.team/carry-over.md</code>: các mục Should fix còn lại sau merge, mỗi mục một dòng.</li><li>Chỉ <code>.team/config.yaml</code> được phép commit. Đóng Run thì xóa <code>.team/&lt;feature&gt;/</code>, giữ <code>carry-over.md</code> và <code>research/</code>.</li></ul>
+<h2>Quy tắc khác</h2>
+<ul><li><strong>Site xuất bản:</strong> tùy chọn theo repo (<code>docs.site: pages</code>, mặc định off). Repo công khai thì mọi tài liệu commit đều lộ: không để bí mật, dữ liệu cá nhân, tên client hay điều khoản chưa phát hành trong <code>docs/</code>. Bật Pages là bước của PO.</li><li><strong>Xung đột:</strong> ADR hoặc README mâu thuẫn với code thì code thắng. Business spec mâu thuẫn với code thì Tech Lead quyết bên nào sai; đổi quy tắc nghiệp vụ là quyết định của PO (Gate 1).</li><li><strong>Viết:</strong> mỗi câu phải mang một sự kiện, quy tắc hay quyết định mà người đọc không lấy được từ code, config hay tài liệu khác. Xóa câu mà bỏ đi không ai làm khác đi.</li><li><strong>Audit tài liệu:</strong> là việc S0, ra bảng từng tài liệu (giữ, chuyển, legacy, xóa), rồi đề xuất một Run dọn S1. Không đổi gì trước khi PO đồng ý.</li></ul><p class="sources">Nguồn: <a href="https://github.com/yushaku/agent-dev-team/blob/main/docs-policy.md"><code>docs-policy.md</code></a>.</p>
+</main>
+<footer class="site-footer">
+<p>Trang này tóm tắt cho người đọc (Product Owner). Quy tắc đầy đủ nằm trong các file <code>.md</code> tiếng Anh của <a href="https://github.com/yushaku/agent-dev-team">repo</a>; nếu khác nhau thì <code>.md</code> đúng.</p>
+</footer>
+</body>
+</html>

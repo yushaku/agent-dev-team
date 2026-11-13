@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bảo trì | Đội agent</title>
+<meta name="description" content="Chế độ ticket: loại ticket, size mặc định, cổng G-Reply, G-Scope, G-PR, quy tắc giao tiếp và Definition of Done.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23303446'/%3E%3Cg transform='translate(6 6)' fill='none' stroke='%23babbf1' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10' cy='4' r='2.5'/%3E%3Ccircle cx='4' cy='16' r='2.5'/%3E%3Ccircle cx='16' cy='16' r='2.5'/%3E%3Cpath d='M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar"><div class="topbar-inner">
+<a class="brand" href="index.html" aria-label="Agent team, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>Agent team</span></a>
+<nav class="nav" aria-label="Các trang"><a href="index.html">Tổng quan</a><a href="quy-trinh.html">Quy trình</a><a href="quy-mo.html">Quy mô việc</a><a href="vai-tro.html">Vai trò</a><a href="skill.html">Skill</a><a href="bao-tri.html" aria-current="page">Bảo trì</a><a href="tai-lieu.html">Tài liệu</a><a href="cau-hinh.html">Cấu hình</a></nav>
+<button type="button" id="theme-toggle" aria-label="Đổi giao diện sáng hoặc tối">Chế độ sáng (Light)</button>
+</div></header>
+<main id="main">
+<h1>Bảo trì</h1>
+<p class="lead">Chế độ ticket cho phần mềm đang chạy thật: việc đến dưới dạng ticket (lỗi, yêu cầu thay đổi, câu hỏi, sự cố). Kết thúc bằng một bản bàn giao theo <code>delivery.mode</code> hoặc một bản trả lời PO duyệt ở G-Reply. Chỉ nêu chỗ khác với phát triển feature, còn lại theo <a href="quy-trinh.html">Quy trình</a>.</p>
+<figure><div class="frame"><iframe src="../diagrams/ticket-types.html" title="Đường đi của ticket theo loại: Question, Bug, Change request, Incident" loading="lazy" height="760"></iframe></div><figcaption>Mỗi loại ticket đi qua các bước và cổng PO riêng. Sơ đồ tiếng Anh. <a href="../diagrams/ticket-types.html">Mở toàn màn hình</a>.</figcaption></figure>
+<h2>Khác gì so với phát triển feature</h2>
+<div class="table-wrap"><table><thead><tr><th scope="col"></th><th scope="col">Chế độ ticket</th></tr></thead><tbody><tr><td>Bắt đầu từ</td><td>Một ticket trong tracker</td></tr><tr><td>Nguồn sự thật</td><td>Thread của ticket; comment mới nhất thắng phần mô tả</td></tr><tr><td>Vòng chính</td><td>Làm rõ với client, điều tra, sửa</td></tr><tr><td>Business spec</td><td>Chỉ cập nhật khi ticket đổi quy tắc nghiệp vụ, sau G-Scope</td></tr></tbody></table></div>
+<p>Role đổi: Ticket Analyst thay phần spec của Tech Lead; Investigator là role mới; Builder viết test lỗi trước (tên test mang mã ticket) rồi sửa nhỏ nhất; QA tập trung vào hồi quy. Xem <a href="vai-tro.html">Vai trò</a>.</p>
+
+<h2>Loại ticket và size mặc định</h2>
+<div class="table-wrap"><table><thead><tr><th scope="col">Loại</th><th scope="col">Size mặc định</th><th scope="col">Nâng size khi</th></tr></thead><tbody><tr><td>Question</td><td><code>S0</code>: một phiên agent trả lời từ code và soạn bản trả lời</td><td>Cần điều tra rộng (S1: một Investigator)</td></tr><tr><td>Bug</td><td><code>S1</code>: Investigator và Builder có thể là một session (test tái hiện, sửa), rồi Reviewer riêng</td><td>Nhiều khu vực, hành vi mong đợi chưa rõ, hoặc vùng nhạy cảm (S2)</td></tr><tr><td>Change request</td><td><code>S1</code> nếu phạm vi rõ và nhỏ, không thì <code>S2</code></td><td>Capability mới hoặc phạm vi chưa rõ (S3 qua luồng feature)</td></tr><tr><td>Incident</td><td><code>S1</code> fast-track</td><td>Root cause trải nhiều khu vực (S2 cho Bug theo sau)</td></tr></tbody></table></div>
+<h2>Các cổng trong chế độ ticket</h2>
+<div class="table-wrap"><table><thead><tr><th scope="col">Cổng</th><th scope="col">PO làm gì</th></tr></thead><tbody><tr><td><code>G-Reply</code></td><td>Đọc, sửa, dịch bản nháp rồi tự đăng. Agent không bao giờ đăng, kể cả khi tracker cho phép ghi</td></tr><tr><td><code>G-Scope</code></td><td>Duyệt phạm vi và ước lượng, có thể gửi cho client (change request)</td></tr><tr><td><code>G-PR</code></td><td>Duyệt PR sửa lỗi hoặc thay đổi</td></tr></tbody></table></div>
+<p>Incident được fast-track: PO có thể duyệt G-PR và G-Reply trong một bước. Hotfix deploy là việc của người. Nghi lộ dữ liệu cá nhân: chạy luồng Incident, giữ bằng chứng; đội chuẩn bị dữ kiện và bản sửa, không bao giờ gửi thông báo.</p>
+
+<h2>Ví dụ: một Bug đi hết đường</h2>
+<figure><div class="frame"><iframe src="../diagrams/bug-ticket.html" title="Bug ticket từ đầu đến cuối: triage, Analyst, Builder, verify, G-PR, G-Reply" loading="lazy" height="760"></iframe></div><figcaption>Hành vi mong đợi chưa rõ thì Analyst hỏi client trước (G-Reply) và ticket chờ. Sơ đồ tiếng Anh. <a href="../diagrams/bug-ticket.html">Mở toàn màn hình</a>.</figcaption></figure>
+<h2>Quy tắc giao tiếp</h2>
+<ol><li>PO đọc và sửa mọi bản nháp và bản dịch rồi tự đăng.</li><li>Mọi bản nháp qua Anti-AI pass (<code>anti-ai</code>, <code>humanizer</code>) trước khi PO thấy; giữ văn phong và lời chào của client.</li><li>Bản nội bộ dẫn <code>path:line</code>; bản cho client có thể bỏ đường dẫn.</li><li>Đánh dấu việc đang chờ ai: client, PO hay đội.</li><li>Báo cáo sửa lỗi nêu đã đổi gì, cách kiểm tra và môi trường.</li><li>Không hứa ngày hay công sức trong bản nháp nếu chưa qua G-Scope.</li></ol>
+<h2>Nhận ticket</h2>
+<ul><li>Ticket là bản ghi: không có file theo ticket trong repo. Phát hiện của đội nằm trong Orca (<code>worker_done</code>).</li><li>Poll tracker đã cấu hình theo lịch (Orca automation). Với <code>access: manual</code>, PO dán ticket vào chat.</li><li>Ticket hoặc comment mới: tóm tắt cho PO, phân loại, đề xuất bước tiếp. Ticket cùng hành vi thì liên kết, không điều tra hai lần.</li><li>Thứ tự ưu tiên: sự cố, quá hạn, client đang chờ đội, rồi ưu tiên của tracker, rồi ngày đến hạn.</li><li>Chờ client là một trạng thái, không phải Task bị chặn.</li></ul>
+<h2>Definition of Done theo loại</h2>
+<div class="table-wrap"><table><thead><tr><th scope="col">Loại</th><th scope="col">Xong khi</th></tr></thead><tbody><tr><td>Question</td><td>PO đã đăng câu trả lời, phía đội không còn câu hỏi mở</td></tr><tr><td>Bug</td><td>Test tái hiện pass, bộ hồi quy xanh, PR được duyệt ở G-PR, đã soạn báo cáo sửa lỗi</td></tr><tr><td>Change request</td><td>Phạm vi được duyệt, PR được duyệt ở G-PR, business spec cập nhật nếu đổi quy tắc, đã soạn báo cáo</td></tr><tr><td>Incident</td><td>PR sửa được duyệt ở G-PR, đã tạo ticket Bug theo sau</td></tr></tbody></table></div>
+<p>Ngoài danh sách ở <a href="quy-trinh.html">Quy trình</a>, báo PO thêm khi: ticket quá hạn hoặc đến hạn trong một ngày làm việc mà chưa có bản nháp; root cause nằm ở hệ thống của bên khác (đề xuất giảm thiểu phía ta); bản sửa đổi hành vi mà ticket hoặc client khác đang dựa vào.</p>
+<p class="sources">Nguồn: <a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/orchestrator/references/tickets.md"><code>skills/orchestrator/references/tickets.md</code></a>, <a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/ticket-analyst.md"><code>roles/ticket-analyst.md</code></a>, <a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/investigator.md"><code>roles/investigator.md</code></a>, <a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/orchestrator/references/gates.md"><code>skills/orchestrator/references/gates.md</code></a>.</p>
+</main>
+<footer class="site-footer">
+<p>Trang này tóm tắt cho người đọc (Product Owner). Quy tắc đầy đủ nằm trong các file <code>.md</code> tiếng Anh của <a href="https://github.com/yushaku/agent-dev-team">repo</a>; nếu khác nhau thì <code>.md</code> đúng.</p>
+</footer>
+</body>
+</html>
