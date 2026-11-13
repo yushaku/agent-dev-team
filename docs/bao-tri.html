@@ -18,7 +18,7 @@
 <main id="main">
 <h1>Bảo trì</h1>
 <p class="lead">Chế độ ticket cho phần mềm đang chạy thật: việc đến dưới dạng ticket (lỗi, yêu cầu thay đổi, câu hỏi, sự cố). Kết thúc bằng một bản bàn giao theo <code>delivery.mode</code> hoặc một bản trả lời PO duyệt ở G-Reply. Chỉ nêu chỗ khác với phát triển feature, còn lại theo <a href="quy-trinh.html">Quy trình</a>.</p>
-<figure><div class="frame"><iframe src="../diagrams/ticket-types.html" title="Đường đi của ticket theo loại: Question, Bug, Change request, Incident" loading="lazy" height="760"></iframe></div><figcaption>Mỗi loại ticket đi qua các bước và cổng PO riêng. Sơ đồ tiếng Anh. <a href="../diagrams/ticket-types.html">Mở toàn màn hình</a>.</figcaption></figure>
+<figure><div class="frame"><iframe src="../diagrams/ticket-types.html?embed=1" title="Đường đi của ticket theo loại: Question, Bug, Change request, Incident" loading="lazy" height="760"></iframe></div><figcaption>Mỗi loại ticket đi qua các bước và cổng PO riêng. Sơ đồ tiếng Anh. <a href="../diagrams/ticket-types.html?present=1">Mở toàn màn hình</a>.</figcaption></figure>
 <h2>Khác gì so với phát triển feature</h2>
 <div class="table-wrap"><table><thead><tr><th scope="col"></th><th scope="col">Chế độ ticket</th></tr></thead><tbody><tr><td>Bắt đầu từ</td><td>Một ticket trong tracker</td></tr><tr><td>Nguồn sự thật</td><td>Thread của ticket; comment mới nhất thắng phần mô tả</td></tr><tr><td>Vòng chính</td><td>Làm rõ với client, điều tra, sửa</td></tr><tr><td>Business spec</td><td>Chỉ cập nhật khi ticket đổi quy tắc nghiệp vụ, sau G-Scope</td></tr></tbody></table></div>
 <p>Role đổi: Ticket Analyst thay phần spec của Tech Lead; Investigator là role mới; Builder viết test lỗi trước (tên test mang mã ticket) rồi sửa nhỏ nhất; QA tập trung vào hồi quy. Xem <a href="vai-tro.html">Vai trò</a>.</p>
@@ -30,7 +30,7 @@
 <p>Incident được fast-track: PO có thể duyệt G-PR và G-Reply trong một bước. Hotfix deploy là việc của người. Nghi lộ dữ liệu cá nhân: chạy luồng Incident, giữ bằng chứng; đội chuẩn bị dữ kiện và bản sửa, không bao giờ gửi thông báo.</p>
 
 <h2>Ví dụ: một Bug đi hết đường</h2>
-<figure><div class="frame"><iframe src="../diagrams/bug-ticket.html" title="Bug ticket từ đầu đến cuối: triage, Analyst, Builder, verify, G-PR, G-Reply" loading="lazy" height="760"></iframe></div><figcaption>Hành vi mong đợi chưa rõ thì Analyst hỏi client trước (G-Reply) và ticket chờ. Sơ đồ tiếng Anh. <a href="../diagrams/bug-ticket.html">Mở toàn màn hình</a>.</figcaption></figure>
+<figure><div class="frame"><iframe src="../diagrams/bug-ticket.html?embed=1" title="Bug ticket từ đầu đến cuối: triage, Analyst, Builder, verify, G-PR, G-Reply" loading="lazy" height="760"></iframe></div><figcaption>Hành vi mong đợi chưa rõ thì Analyst hỏi client trước (G-Reply) và ticket chờ. Sơ đồ tiếng Anh. <a href="../diagrams/bug-ticket.html?present=1">Mở toàn màn hình</a>.</figcaption></figure>
 <h2>Quy tắc giao tiếp</h2>
 <ol><li>PO đọc và sửa mọi bản nháp và bản dịch rồi tự đăng.</li><li>Mọi bản nháp qua Anti-AI pass (<code>anti-ai</code>, <code>humanizer</code>) trước khi PO thấy; giữ văn phong và lời chào của client.</li><li>Bản nội bộ dẫn <code>path:line</code>; bản cho client có thể bỏ đường dẫn.</li><li>Đánh dấu việc đang chờ ai: client, PO hay đội.</li><li>Báo cáo sửa lỗi nêu đã đổi gì, cách kiểm tra và môi trường.</li><li>Không hứa ngày hay công sức trong bản nháp nếu chưa qua G-Scope.</li></ol>
 <h2>Nhận ticket</h2>
@@ -43,5 +43,6 @@
 <footer class="site-footer">
 <p>Trang này tóm tắt cho người đọc (Product Owner). Quy tắc đầy đủ nằm trong các file <code>.md</code> tiếng Anh của <a href="https://github.com/yushaku/agent-dev-team">repo</a>; nếu khác nhau thì <code>.md</code> đúng.</p>
 </footer>
+<script src="assets/embed.js"></script>
 </body>
 </html>
