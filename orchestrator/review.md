@@ -12,7 +12,7 @@
 - Route document findings by the owner column in `docs-policy.md`.
 - Keep Business spec edits in a separate PM Task.
 - Review-finding fixes go into the commit they fix before Gate 2 (amend or fixup); UI asks follow "UI rounds" below.
-- Send a fix to the settled Builder of that area (`orca.md` "Commands"); start fresh only if `worker-list` cannot prove it reusable or the fix needs another tier or agent. Reviewers and re-reviews always start fresh.
+- Send a fix to the settled Builder of that area (`worker-start --task <fix> --run <run> --worktree <its workspace> --terminal <its agent terminal>`, no `--agent/--model/--effort`); start fresh only if `worker-list` cannot prove it reusable or the fix needs another tier or agent. Reviewers and re-reviews always start fresh.
 - An approved mechanic's inherent limit is not a finding; record it in ADR Consequences and tell the PO it is accepted.
 - Run one scoped re-review per finding axis each round; include Anti-AI and Security findings. Security audits each Run once.
 - Re-review specs contain only prior numbered findings and fix commits (`git show <fix sha>`), never the full spec or branch diff.

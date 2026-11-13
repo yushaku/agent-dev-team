@@ -107,8 +107,8 @@ Triage (page PO immediately) ─▶ Investigator + Builder in parallel ─▶ Re
 ## 6. Tracking
 
 - The ticket is the record: no per-ticket files in the repo. Context lives in the thread; team findings in Orca (`worker_done`).
-- Orca commands: `orca.md`.
-- Board columns: `triage → clarifying → waiting-client → investigating → fixing → verifying → pr-open → done`; these labels show as In progress per `orca.md` "Board status"; `done` when the PR is merged and the final reply is posted.
+- Orca commands: skills `orca-cli`, `orchestration`.
+- Board columns: `triage → clarifying → waiting-client → investigating → fixing → verifying → pr-open → done`; these labels show as In progress per `orchestrator/start.md` "Board mapping"; `done` when the PR is merged and the final reply is posted.
 - Waiting on the client is a column, not a blocked task: re-check the thread on each poll, resume when the client answers.
 
 ## 7. Intake

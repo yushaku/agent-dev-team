@@ -1,6 +1,6 @@
 # Finish
 
-- The Delivery Task delivers per `delivery.mode`; for `branch`, push only if `delivery.push`. Run `orca worktree set --pr <n>` when applicable and move the card (`orca.md`).
+- The Delivery Task delivers per `delivery.mode`; for `branch`, push only if `delivery.push`. Run `orca worktree set --pr <n>` when applicable and move the card (`orchestrator/start.md` "Board mapping").
 - Tell the PO: link or branch, summary, risks, `human_only` steps left, (maintenance) the fix report draft for G-Reply.
 - After Gate 2, close the session (`roles/orchestrator.md` "Every turn").
 - After merge, delete `.team/<feature>/` when closing the Run; keep `.team/carry-over.md` and `.team/research/`.

@@ -93,7 +93,6 @@ No `missing:` lines means every skill is in place.
 - `config.md`: project config schema and model settings
 - `coding-agents.md`: agent registry, model tiers, routing, quota
 - `docs-policy.md`: which documents exist and who owns them
-- `orca.md`: Orca state conventions
 - `maintenance.md`: process for projects in production
 - `skills/`: skills the team wrote
 - `skills-lock.json`: pinned downloaded skills

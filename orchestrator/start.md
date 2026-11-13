@@ -15,11 +15,16 @@
 
 ## Orca setup (none at S0)
 
+- **Mapping:**
+  - Feature or ticket = one worktree, from S1 up (none at S0); stage = workspace status; ticket or PR link = `worktree set --issue/--pr`, `reference add`.
+  - One feature = one Run; role work = Task with deps, titled `<role>: <what>`.
+  - Gate 1, G-UI, Gate 2 = decision gates; recurring checks = automations.
+- **Board mapping:** Run started = `in-progress`, delivered and Gate 2 open = `in-review`, merged = `completed`; any other status id shows as In progress.
 - **S1 and up**, in order:
   1. `orca status --json` ready.
   2. **Resume first:** `orchestration run-list --json`, objective contains the key.
-  3. Create an Orchestrator terminal before `run-create`. Use title `orchestrator <key>` and mailbox rules in `orca.md` "Orchestrator identity".
-  4. `run-create --objective "<key> [<mode>]"`; create the worktree from pushed `origin/<branches.base>` with `orca worktree create --repo path:<repo> --name <KEY> --base-branch origin/<base> --branch <naming> --setup skip --comment "<KEY> <ticket url>" --json`. Link `.team` and `worktree_links` (`config.md`), add references and set Board status (`orca.md`). `--reference` accepts GitHub, GitLab, Jira and similar URLs; put a Backlog URL in `--comment`.
+  3. Create an Orchestrator terminal before `run-create`. Use title `orchestrator <key>` and keep it open for the Run's life. Pass `--from <its handle>` (`orca terminal show --json`) on every orchestration command and `--terminal <handle>` on `check`; the Run records it as `coordinator_handle`, so worker `ask`, heartbeats and `worker_done` land in its inbox.
+  4. `run-create --objective "<key> [<mode>]"`; create the worktree from pushed `origin/<branches.base>` with `orca worktree create --repo path:<repo> --name <KEY> --base-branch origin/<base> --branch <naming> --setup skip --comment "<KEY> <ticket url>" --json`. Link `.team` and `worktree_links` (`config.md`), add references and set Board status ("Board mapping"). `--reference` accepts GitHub, GitLab, Jira and similar URLs; put a Backlog URL in `--comment`.
   5. Install dependencies in the worktree (`pnpm install --frozen-lockfile` or `npm ci --no-audit --no-fund`), then run each verify command once and keep its summary line as the Builder baseline. If a script is broken, use `npx tsc --noEmit -p .` and tell the PO it is pre-existing.
 - Exception: if the local base is ahead only by docs this Run needs and pushing it is the PO's release act, cut from that base, tell the PO, and never amend the commit.
 - No-code flows: no worktree; workers read `git show origin/<client_visible>:<path>`, never the working tree.
