@@ -1,7 +1,7 @@
 # Software Dev Agent Team
 
 - Scope: any software project (web, mobile, desktop, backend, CLI).
-- Per-project specifics (stack, platform skills, commands, tracker, branches, delivery) load at run time from the project config and a platform profile (`config.md`).
+- Per-project specifics (stack, platform skills, commands, tracker, branches, delivery) load at run time from the project config (`config.md`).
 - Output ends at a delivered change: a draft PR or a committed branch. Humans merge, release and deploy outside this process.
 
 ## Locations
@@ -19,14 +19,13 @@ Read this file first; open the others only for the step at hand.
 | `sizing.md` | Sizing a request (S0 to S3), picking a work mode |
 | `workflow.md` | Building the Run: flow, gates, Task DAG, Definition of Done, escalation |
 | `roles/orchestrator.md` | You are the Orchestrator (any agent): core, routes to `orchestrator/*.md` |
-| `roles/<role>.md` | Writing a worker's Task spec: paste the role card with `{slots}` resolved from config and profile |
-| `config.md` | Reading `.team/config.yaml`: schema, defaults, model settings, platform profiles |
+| `roles/<role>.md` | Writing a worker's Task spec: paste the role card with `{slots}` resolved from config |
+| `config.md` | Reading `.team/config.yaml`: schema, defaults, model settings, skill slots |
 | `coding-agents.md` | Dispatching a worker: agent registry, model tiers, routing, quota, free-tier agents |
 | `docs-policy.md` | Any step that writes a document (spec, ADR, README, scratch) |
 | `orca.md` | Creating or updating Orca state |
 | `maintenance.md` | Project in production, work arrives as tickets (differences from dev only) |
-| `profiles/<name>.yaml` | Resolving skill slots for the project's platform |
-| `skills-lock.json` | Installing or adding a downloaded skill a role card or profile names (`orchestrator/revising.md`) |
+| `skills-lock.json` | Installing or adding a downloaded skill a role card or config.md names (`orchestrator/revising.md`) |
 | `skills/<name>/` | Skills the team wrote (linked into `~/.agents/skills`); downloaded skills live only in `~/.agents/skills` |
 
 ## Goals

@@ -1,7 +1,7 @@
 # Orchestrator
 
 - **Runs on:** any coding agent (Claude, Codex, ...) in its own Orca terminal, on the model of the session running it (no tier).
-- **Mission:** load the project config and profile, size the work, create Orca state, dispatch workers, enforce gates and loop limits, report to the PO.
+- **Mission:** load the project config, size the work, create Orca state, dispatch workers, enforce gates and loop limits, report to the PO.
 - **Skills:** `orca-cli`, `orchestration` (`orca skills get orchestration`), `interview-me`.
 - **Writes:** Orca state and files under `.team/` (Task specs, decisions, handoff); nothing committed.
 - **Never:** resolve a gate without the PO's answer, post to a tracker or a client, release, deploy, force-push or merge (except a delivered branch the PO explicitly asks you to merge: `orchestrator/delivery.md`).
@@ -14,7 +14,7 @@ Open a file only for the step at hand.
 | Step | Read |
 |---|---|
 | Preflight, resume, Orca setup | `orchestrator/start.md` |
-| Load the project | `<main checkout>/.team/config.yaml`, `config.md`, `profiles/<profile>.yaml` |
+| Load the project | `<main checkout>/.team/config.yaml`, `config.md` |
 | Repo without config | `orchestrator/bootstrap-config.md` |
 | Size and mode | `sizing.md`, or `maintenance.md` for tickets in production |
 | Build the Run, gates, DoD | `workflow.md`, `orca.md` |

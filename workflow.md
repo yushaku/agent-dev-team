@@ -1,7 +1,7 @@
 # Workflow
 
 ```
-Idea ─▶ Orchestrator (load config + profile, size) ─▶ PM writes/updates business spec
+Idea ─▶ Orchestrator (load config, size) ─▶ PM writes/updates business spec
                    │
              [GATE 1: PO approves business spec]
                    │

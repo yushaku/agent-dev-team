@@ -4,7 +4,7 @@ Everything is parsed live from the team root and the skills dir on each request;
 nothing is generated or written. Expensive parts (diagram embeds, Orca skill bodies,
 skill search text) are cached in memory by mtime.
 
-GET /api/team/index            roles, profiles, skills, diagrams, config keys, scenarios
+GET /api/team/index            roles, skills, diagrams, config keys, scenarios
 GET /api/team/file?path=<rel>  raw .md/.yaml/.yml/.json under the team root (not dashboard/)
 GET /api/team/skill?name=<n>   SKILL.md body + references/ file names (skills dir, symlinks
                                followed), else `orca skills get <n>`, else "not in shared hub"
@@ -220,7 +220,7 @@ def search(q, names):
     return [n for n in names if all(w in skill_text(n) for w in words)]
 
 
-# ---------------------------------------------------------------- roles, profiles
+# ---------------------------------------------------------------- roles
 FIELD_RE = re.compile(r"^- \*\*(.+?)\*\*\s*(.*)$")
 TICK_RE = re.compile(r"`([^`]+)`")
 SKILL_TOKEN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -301,27 +301,6 @@ def yaml_list(v):
         if part and part != ",":
             out.append(part.strip("\"'"))
     return out
-
-
-def parse_profile(path):
-    data, cur = {}, None
-    for line in read(path).splitlines():
-        if not line.strip() or line.lstrip().startswith("#"):
-            continue
-        body, comment = split_comment(line)
-        m = re.match(r"^([\w.]+):\s*(.*)$", body)
-        if m:
-            k, v = m.group(1), m.group(2).strip()
-            lst = yaml_list(v)
-            data[k] = {"value": lst if lst is not None else (v.strip("\"'") if v else []), "comment": comment}
-            cur = k
-            continue
-        m = re.match(r"^\s+-\s*(.*)$", body)
-        if m and cur:
-            if not isinstance(data[cur]["value"], list):
-                data[cur]["value"] = []
-            data[cur]["value"].append(m.group(1).strip().strip("\"'"))
-    return data
 
 
 def config_keys(text):
@@ -502,24 +481,16 @@ def index():
                           "maintenance": True})
     except OSError:
         pass
-    profiles = {}
-    for p in sorted(glob.glob(os.path.join(TEAMS, "profiles", "*.yaml"))):
-        profiles[os.path.basename(p)[:-5]] = parse_profile(p)
     cfg = read(os.path.join(TEAMS, "config.md"))
     sm = re.search(r"^- Slots: (.+)$", cfg, re.M)
     slot_names = TICK_RE.findall(sm.group(1).split(". ")[0]) if sm else []
     keys, yaml_src = config_keys(cfg)
-    # skills: uses = role:profile pairs
+    # skills: role core skills only
     lock = skill_lock()
     uses = {}
     for r in roles:
         for n in r["skills"]:
-            uses.setdefault(n, {}).setdefault(r["id"], set()).update(profiles.keys() or ["*"])
-        for slot in r["slots"]:
-            for pn, pd in profiles.items():
-                v = (pd.get(slot) or {}).get("value")
-                for n in (v if isinstance(v, list) else []):
-                    uses.setdefault(n, {}).setdefault(r["id"], set()).add(pn)
+            uses.setdefault(n, set()).add(r["id"])
     skills = []
     for n in sorted(uses):
         origin, source = skill_origin(n, lock, orca_names, hermes)
@@ -531,8 +502,7 @@ def index():
             if os.path.isdir(rd):
                 refs = sorted(f for f in os.listdir(rd) if not f.startswith("."))
         skills.append({"name": n, "description": desc, "origin": origin, "source": source, "refs": refs,
-                       "roles": sorted(uses[n]),
-                       "uses": sorted("%s:%s" % (r, pn) for r, ps in uses[n].items() for pn in ps)})
+                       "roles": sorted(uses[n])})
     diagrams = {}
     for sp in sorted(glob.glob(os.path.join(DIAGRAMS, "*.json"))):
         if sp.endswith(".visual-check.json"):
@@ -543,7 +513,7 @@ def index():
         except (OSError, ValueError, KeyError, TypeError):
             continue
     kept = re.search(r"^- Kept diagrams[^\n]*$", read(os.path.join(TEAMS, "docs-policy.md")), re.M)
-    return {"generated_at": time.time(), "files": files, "roles": roles, "profiles": profiles,
+    return {"generated_at": time.time(), "files": files, "roles": roles,
             "slots": slot_names, "skills": skills, "hub": hub, "diagrams": diagrams,
             "config_keys": keys, "config_yaml": yaml_src, "scenarios": scenarios(),
             "kept_line": kept.group(0) if kept else "", "team_home": tilde(TEAMS), "skills_dir": tilde(SKILLS_DIR)}

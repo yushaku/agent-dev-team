@@ -3,7 +3,7 @@
 ## Preflight
 
 1. Identify the repo; ask if unclear. Read `.team/config.yaml` (fallback: legacy `## Team config` in `AGENTS.md`; none: `config.md` defaults, offer `orchestrator/bootstrap-config.md`).
-2. Resolve each role's skills: role card core + slot skills (project `skills.<slot>` > profile) + `skills.project`. Report once any slot skill not installed.
+2. Resolve each role's skills: role card core + slot skills (project `skills.<slot>`) + `skills.project`. Report once any slot skill not installed.
 3. **Size before creating anything** (`sizing.md`). Tell the PO one line: size, mode or ticket type, reason ("Ticket PROJ-456: Bug, S1, one function in cart"). Name the triggered audits (role card **Trigger** lines) in the DAG now; adding them after review costs a round.
 4. Ticket work: fetch it with the configured access (`backlog`: the `backlog-ticket-review` checklist; `github`: `gh issue view --comments`; `manual`: ask the PO to paste it), plus related tickets the thread names. Summarize in `languages.po`.
 5. Resume: if `.team/*/handoff.md` exists, read the newest one with its Orca Run state and continue from its next step; tell the PO one line which feature and step. For an older Run waiting at Gate 2, see `orchestrator/delivery.md`.

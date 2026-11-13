@@ -35,7 +35,8 @@
 ## Browser
 
 - One isolated profile per test account, label `<project>-<account>`, reused across Runs: `tab profile list`, else `tab profile create --label <l> --scope isolated`; open with `tab create --url <u> --worktree <sel> --profile <id>`.
-- Shots (visual loop or G-UI, profile `ui_screenshots: true`): per viewport `set device --name "<device>"`, per scheme `set media --color-scheme light|dark`, then `screenshot --page <id>` into `.team/<run>/`.
+- Shots (visual loop or G-UI, config `ui_screenshots: true`): per viewport `set device --name "<device>"`, per scheme `set media --color-scheme light|dark`, then `screenshot --page <id>` into `.team/<run>/`.
+- With the Orca headless tab (`visibilityState: hidden`), screenshots can time out and closed Radix dialogs stay in the DOM with `data-state=closed`; read `innerText` and `data-state`, and switch Radix tabs with `pointerdown` or `mousedown`, not `click()`.
 
 ## Orchestrator identity
 

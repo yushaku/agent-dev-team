@@ -41,9 +41,9 @@ const TABS = {
   "co-viec": [{ md: "sizing.md", diagrams: { "Sizes": ["sizes"] } }],
   "bao-tri": [{ md: "maintenance.md", diagrams: { "3. Ticket types and flows": ["ticket-types", "bug-ticket"] } }],
   "docs": [{ md: "docs-policy.md" }, { scenarios: true }],
-  "config": [{ md: "config.md", configTable: true }, { profiles: true }, { md: "orchestrator/bootstrap-config.md" }],
+  "config": [{ md: "config.md", configTable: true }, { md: "orchestrator/bootstrap-config.md" }],
 };
-const TAB_TITLE = { "tong-quan": "Đội agent phát triển phần mềm", flow: "Quy trình", "co-viec": "Quy mô việc", "bao-tri": "Bảo trì", docs: "Tài liệu và sơ đồ archify", config: "Cấu hình dự án và profile" };
+const TAB_TITLE = { "tong-quan": "Đội agent phát triển phần mềm", flow: "Quy trình", "co-viec": "Quy mô việc", "bao-tri": "Bảo trì", docs: "Tài liệu và sơ đồ archify", config: "Cấu hình dự án" };
 
 /* ---------------------------------------------------------------- data */
 async function getJSON(url) {
@@ -327,21 +327,6 @@ function renderScenarios(panel) {
   panel.append(s);
 }
 
-function renderProfiles(panel) {
-  const names = Object.keys(IDX.profiles);
-  const s = section("cf-profiles", "Bảng slot theo profile");
-  const slotRoles = slot => IDX.roles.filter(r => r.slots.includes(slot)).map(r => r.title).join(", ") || '<span class="muted">không vai trò nào</span>';
-  const cell = v => Array.isArray(v) ? (v.length ? `<div class="chips">${v.map(skillChip).join("")}</div>` : '<span class="muted">trống</span>') : `<code>${esc(v)}</code>`;
-  const rows = IDX.slots.map(slot => `<tr><td><code>{${esc(slot)}}</code></td><td>${slotRoles(slot)}</td>${names.map(n => `<td>${cell((IDX.profiles[n][slot] || { value: [] }).value)}</td>`).join("")}</tr>`).join("");
-  const facts = [...new Set(names.flatMap(n => Object.keys(IDX.profiles[n])))].filter(k => k !== "name" && !IDX.slots.includes(k));
-  const frows = facts.map(k => `<tr><td><code>${esc(k)}</code></td>${names.map(n => { const v = (IDX.profiles[n][k] || {}).value; return `<td>${v == null ? '<span class="muted">không có</span>' : Array.isArray(v) ? (v.length ? v.map(x => esc(x)).join("; ") : '<span class="muted">trống</span>') : esc(v)}</td>`; }).join("")}</tr>`).join("");
-  s.insertAdjacentHTML("beforeend", `<p>Skill slot theo profile, đọc từ ${names.map(n => srcLink("profiles/" + n + ".yaml")).join(", ")}. Bấm chip để đọc SKILL.md.</p>
-    <div class="table-wrap"><table><thead><tr><th scope="col">Slot</th><th scope="col">Vai trò</th>${names.map(n => `<th scope="col">${esc(n)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>
-    <h4 id="cf-facts">Dữ kiện nền tảng</h4>
-    <div class="table-wrap"><table><thead><tr><th scope="col">Khóa</th>${names.map(n => `<th scope="col">${esc(n)}</th>`).join("")}</tr></thead><tbody>${frows}</tbody></table></div>`);
-  panel.append(s);
-}
-
 /* ---------------------------------------------------------------- Vai trò */
 async function renderRoles(panel) {
   const head = document.createElement("div");
@@ -369,10 +354,7 @@ async function renderRoles(panel) {
   }
 }
 function roleCard(r) {
-  const slots = r.slots.map(slot => {
-    const per = Object.keys(IDX.profiles).map(p => { const v = (IDX.profiles[p][slot] || {}).value; return `${esc(p)}: ${Array.isArray(v) && v.length ? v.map(esc).join(", ") : "trống"}`; }).join("; ");
-    return `<p class="slot-prof"><code>{${esc(slot)}}</code> ${per}</p>`;
-  }).join("");
+  const slots = r.slots.length ? `<p class="slot-prof">${r.slots.map(slot => `<code>{${esc(slot)}}</code>`).join(" ")}</p>` : "";
   return `<article class="card" id="role-${esc(r.id)}"><h4>${esc(tr(r.title))}</h4>${r.summary ? `<p>${inline(r.summary)}</p>` : ""}
     ${r.runs_on ? `<p class="card-meta"><strong>Chạy trên:</strong> ${inline(r.runs_on)}</p>` : ""}
     <p class="card-meta"><strong>Tier model:</strong> ${r.tier ? esc(TIER_LABEL[r.tier]) : "thẻ vai trò không ghi tier"}</p>
@@ -463,13 +445,12 @@ async function openSkill(name) {
   await index();
   openSheet(name, async () => {
     const s = await getJSON("/api/team/skill?name=" + encodeURIComponent(name));
-    const meta = IDX.skillByName[name] || { roles: [], uses: [] };
+    const meta = IDX.skillByName[name] || { roles: [] };
     const [cls, lab] = ORIGIN[s.origin] || ORIGIN.missing;
     const out = [kv([
       ["Nguồn gốc", `<span class="chip ${cls}">${esc(lab)}</span> <span class="muted">${esc(s.source)}</span>`],
       ["Mô tả", esc(s.description || meta.description || "")],
       ["Vai trò", meta.roles.map(r => esc(roleTitle(r))).join(", ")],
-      ["Vai trò theo profile", meta.uses.map(u => `<code>${esc(u)}</code>`).join(" ")],
       ["Đường dẫn", s.path ? `<code>${esc(s.path)}</code>` : ""],
       ["references/", s.refs.length ? s.refs.map(f => `<code>${esc(f)}</code>`).join(" ") : ""],
     ])];
@@ -508,7 +489,6 @@ export function renderTab(panel) {
         if (block.md) await renderMd(frag, block, id, first);
         else if (block.diagram) await renderDiagramBlock(frag, block);
         else if (block.scenarios) renderScenarios(frag);
-        else if (block.profiles) renderProfiles(frag);
         first = false;
       }
     }
