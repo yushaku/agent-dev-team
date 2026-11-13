@@ -2,6 +2,20 @@
 
 A process for a team of coding agents working a software project inside the Orca app. A human Product Owner approves at fixed gates (business spec, new screens, delivery); an Orchestrator, which can be any coding agent, sizes the work, dispatches role workers (PM, Designer, Tech Lead, Builder, QA, reviewers, Delivery) and ends at a draft PR or a committed branch. Per-project specifics live in a project config, `.team/config.yaml`.
 
+## How it works
+
+Who hands work to whom: the PO talks to the Orchestrator and to discussion sessions; the Orchestrator dispatches every worker.
+
+![Who hands work to whom](diagrams/team-overview.svg)
+
+The main flow for a new capability (S3), with the PO's gates:
+
+![Main dev flow](diagrams/dev-flow.svg)
+
+What each request size runs:
+
+![What each size runs](diagrams/sizes.svg)
+
 ## Requirements
 
 - Orca app

@@ -51,6 +51,7 @@ description: "Use when writing a system doc or diagram. Fills the Frappe tabbed 
 - Omit `meta.visual_preset` (only `classic` gets the Frappe pass); set `meta.locale` to the document's language (`en` by default); keep `<subject>.<type>.json` beside the doc.
 - Pipeline (`A=~/.agents/skills/archify`, `F=~/.agents/skills/frappe-docs`): `node $A/bin/archify.mjs deliver <type> <spec> <subject>.html --quality showcase` (archify 3.x: `finalize`), then `python3 $F/scripts/archify-frappe.py <subject>.html`, then `node $A/bin/archify.mjs check <subject>.html` must exit 0, then `python3 $F/scripts/archify-embed.py <subject>.html > <subject>.embed.html` in scratch. Re-run all steps after every deliver; re-rendering drops the Frappe pass.
 - Before placing nodes or running deliver, read `references/archify-layout.md` for grid, width budget, CLI and `sources` rules.
+- Markdown image (README, GitHub): `python3 $F/scripts/archify-svg.py <subject>.html > <subject>.svg` after the check; rerun it with every render.
 - Default to embedding. Paste the `archify-embed.py` snippet into the frame in place of `div.diagram-scroll`, unedited; it holds only SVG and scoped Frappe dark CSS, no viewer, toolbar, scripts or motion, with ids prefixed per diagram and width 100%, scrolling inside the wrapper when wider than the frame.
 - For several diagrams on one page, use a distinct `--id <name>` for each; default is the file name. Never paste the same snippet twice.
 - Never hand-edit the snippet; change the spec, rerun the pipeline and re-embed.
