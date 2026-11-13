@@ -14,7 +14,7 @@ export const GROUPS = [
   ["build", "Xây dựng", ["builder"]],
   ["verify", "Kiểm tra", ["anti-ai", "qa", "reviewer", "security", "perf-a11y"]],
   ["delivery", "Bàn giao", ["delivery"]],
-  ["maint", "Bảo trì", ["investigator"]],
+  ["maint", "Bảo trì", ["ticket-analyst", "investigator"]],
 ];
 const ORIGIN = {
   own: ["info", "Tự tạo"],
@@ -35,10 +35,10 @@ const TABS = {
   ],
   "flow": [
     { md: "workflow.md", skip: ["Locations", "Goals", "Principles", "Product Owner"], diagrams: { "Flow": ["dev-flow"] } },
-    { diagram: "orch-wait", title: "Orchestrator chờ worker", detail: [["roles/orchestrator.md", "Every turn"], ["orchestrator/supervise.md", "Execute and supervise"], ["orchestrator/pitfalls.md", "Supervising workers"]] },
+    { diagram: "orch-wait", title: "Orchestrator chờ worker", detail: [["skills/orchestrator/SKILL.md", "Every turn"], ["skills/orchestrator/references/supervise.md", "Execute and supervise"], ["skills/orchestrator/references/orca-quirks.md", "Waiting"], ["skills/orchestrator/references/gates.md", "Escalation"], ["skills/orchestrator/references/delivery.md", "Definition of Done"]] },
   ],
-  "co-viec": [{ md: "sizing.md", diagrams: { "Sizes": ["sizes"] } }],
-  "bao-tri": [{ md: "maintenance.md", diagrams: { "3. Ticket types and flows": ["ticket-types", "bug-ticket"] } }],
+  "co-viec": [{ md: "skills/orchestrator/references/sizing.md", diagrams: { "Sizes": ["sizes"] } }],
+  "bao-tri": [{ md: "skills/orchestrator/references/tickets.md", diagrams: { "Ticket types and flows": ["ticket-types", "bug-ticket"] } }],
   "docs": [{ md: "docs-policy.md" }, { scenarios: true }],
   "config": [{ md: "config.md", configTable: true }, { md: "skills/init-team/SKILL.md" }],
 };
@@ -231,7 +231,7 @@ async function renderMd(panel, block, tabId, first) {
     head.innerHTML = `<h2>${esc(TAB_TITLE[tabId] || doc.title)}</h2>`;
     const introHasDiagram = anchors[""];
     if (!introHasDiagram && doc.intro.length) { const l = mdBlock(doc.intro, baseOf(path)); l.classList.add("lead"); head.append(l); }
-    if (path !== "sizing.md") head.insertAdjacentHTML("beforeend", `<p class="muted">Nguồn: ${srcLink(path)}${doc.title ? ` (${inline(tr(doc.title))})` : ""}, đọc trực tiếp từ file nguồn.</p>`);
+    if (!path.endsWith("/sizing.md")) head.insertAdjacentHTML("beforeend", `<p class="muted">Nguồn: ${srcLink(path)}${doc.title ? ` (${inline(tr(doc.title))})` : ""}, đọc trực tiếp từ file nguồn.</p>`);
     panel.append(head);
   } else {
     const s = section(pfx, doc.title || path);
@@ -349,7 +349,7 @@ async function renderRoles(panel) {
     if (!roles.length) continue;
     roles.forEach(r => placed.add(r.id));
     const s = section("role-group-" + gid, label);
-    if (gid === "maint") s.insertAdjacentHTML("beforeend", `<p>Vai trò chỉ có trong bảo trì, định nghĩa trong ${srcLink("maintenance.md")}.</p>`);
+    if (gid === "maint") s.insertAdjacentHTML("beforeend", `<p>Vai trò chỉ có trong bảo trì, định nghĩa trong ${srcLink("skills/orchestrator/references/tickets.md")} và thẻ vai trò trong <code>roles/</code>.</p>`);
     s.insertAdjacentHTML("beforeend", `<div class="grid">${roles.map(roleCard).join("")}</div>`);
     panel.append(s);
   }
@@ -431,15 +431,17 @@ async function openRole(id) {
   const r = IDX.roleById[id];
   if (!r) return;
   openSheet(tr(r.title), async () => {
-    const text = await fileText(r.file);
+    const text = (await fileText(r.file)).replace(/^---\n[\s\S]*?\n---\n/, "");  // SKILL.md front matter
     let tokens = lex(text);
-    if (r.maintenance) { const sec = sectionByPrefix(tokens, r.title); tokens = sec ? shift(sec.tokens, d => d - 1) : tokens; }
     tokens = tokens.filter(t => !(t.type === "heading" && t.depth === 1));
     shift(tokens, d => d + 1);
     const chips = document.createElement("div");
     chips.className = "chips";
     chips.innerHTML = r.skills.map(skillChip).join("");
-    return [kv([["Nguồn", srcLink(r.file)], ["Nhóm", esc((GROUPS.find(g => g[0] === groupOf(id)) || [, "Khác"])[1])], ["Tier model", r.tier ? esc(r.tier) : ""], ["Slot", r.slots.map(s => `<code>{${esc(s)}}</code>`).join(" ")]]), chips, mdBlock(tokens, "roles")];
+    const out = [kv([["Nguồn", srcLink(r.file)], ["Nhóm", esc((GROUPS.find(g => g[0] === groupOf(id)) || [, "Khác"])[1])], ["Tier model", r.tier ? esc(r.tier) : ""], ["Slot", r.slots.map(s => `<code>{${esc(s)}}</code>`).join(" ")]]), chips, mdBlock(tokens, baseOf(r.file))];
+    const refs = r.file.endsWith("/SKILL.md") ? IDX.files.filter(f => f.startsWith(baseOf(r.file) + "/references/")) : [];
+    if (refs.length) out.push(Object.assign(document.createElement("p"), { innerHTML: `<strong>Tài liệu tham chiếu:</strong> ${refs.map(f => srcLink(f, f.slice(f.lastIndexOf("/") + 1))).join(" ")}` }));
+    return out;
   });
 }
 async function openSkill(name) {

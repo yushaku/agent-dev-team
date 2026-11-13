@@ -30,7 +30,10 @@ DIRECT_ROLE = "chat trực tiếp"  # no team role: a direct chat with the user
 WORKER_ROLE = "worker"  # Orca worker whose task title names no role
 
 def known_roles():
-    return sorted(os.path.basename(f)[:-3] for f in glob.glob(os.path.join(TEAMS, "roles", "*.md")))
+    names = {os.path.basename(f)[:-3] for f in glob.glob(os.path.join(TEAMS, "roles", "*.md"))}
+    if os.path.isfile(os.path.join(TEAMS, "skills", "orchestrator", "SKILL.md")):
+        names.add("orchestrator")
+    return sorted(names)
 
 def norm_role(word, roles):
     w = (word or "").strip().lower()

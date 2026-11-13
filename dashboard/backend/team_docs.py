@@ -260,9 +260,9 @@ def skills_in_card(text, known):
     return names, slots
 
 
-def parse_role(path, known):
+def parse_role(path, known, rid=None, rel=None):
     text = read(path)
-    rid = os.path.basename(path)[:-3]
+    rid = rid or os.path.basename(path)[:-3]
     h1 = re.search(r"^# (.+)$", text, re.M)
     fields = parse_fields(text)
     runs = next((v for k, v in fields if k.lower() == "runs on"), "")
@@ -270,7 +270,7 @@ def parse_role(path, known):
     summary = next((pick[k] for k in ("mission", "does", "trigger", "writes") if pick.get(k)), "")
     tier = re.search(r"tier (top|work|fast)", runs)
     names, slots = skills_in_card(text, known)
-    return {"id": rid, "title": h1.group(1).strip() if h1 else rid, "file": "roles/%s.md" % rid,
+    return {"id": rid, "title": h1.group(1).strip() if h1 else rid, "file": rel or "roles/%s.md" % rid,
             "runs_on": runs, "summary": summary, "tier": tier.group(1) if tier else None,
             "fields": [k for k, _ in fields], "skills": names, "slots": slots}
 
@@ -467,20 +467,10 @@ def index():
     hub = sorted(d for d in os.listdir(SKILLS_DIR) if os.path.isfile(os.path.join(SKILLS_DIR, d, "SKILL.md")))
     known = set(hub) | set(hermes) | orca_names
     roles = [parse_role(p, known) for p in sorted(glob.glob(os.path.join(TEAMS, "roles", "*.md")))]
-    # maintenance-only role with its own Skills line
-    try:
-        mt = read(os.path.join(TEAMS, "maintenance.md"))
-        m = re.search(r"^### (Investigator[^\n]*)\n(.*?)(?=^#)", mt, re.S | re.M)
-        if m:
-            names, slots = skills_in_card(m.group(2), set())
-            fields = parse_fields(m.group(2))
-            roles.append({"id": "investigator", "title": m.group(1).strip(), "file": "maintenance.md",
-                          "runs_on": next((v for k, v in fields if k.lower() == "runs on"), ""),
-                          "summary": next((v for k, v in fields if k.lower() == "mission"), ""),
-                          "tier": None, "fields": [k for k, _ in fields], "skills": names, "slots": slots,
-                          "maintenance": True})
-    except OSError:
-        pass
+    # the Orchestrator is a skill, not a worker card
+    orch = os.path.join(TEAMS, "skills", "orchestrator", "SKILL.md")
+    if os.path.isfile(orch):
+        roles.insert(0, parse_role(orch, known, "orchestrator", "skills/orchestrator/SKILL.md"))
     cfg = read(os.path.join(TEAMS, "config.md"))
     sm = re.search(r"^- Slots: (.+)$", cfg, re.M)
     slot_names = TICK_RE.findall(sm.group(1).split(". ")[0]) if sm else []
