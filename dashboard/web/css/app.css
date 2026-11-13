@@ -110,13 +110,13 @@ code { font-family: var(--font-mono); font-size: 0.875em; background: var(--surf
    ========================================================== */
 .wrap { max-width: var(--content); margin: 0 auto; padding: 0 var(--gutter); }
 
-.topbar { position: sticky; top: 0; z-index: 10; background: var(--mantle); border-bottom: var(--hairline); padding-top: var(--s-2); }
+.topbar { position: sticky; top: 0; z-index: 10; background: var(--mantle); border-bottom: var(--hairline); padding: var(--s-2) 0; }
 
 .topbar .wrap { display: flex; align-items: center; gap: var(--s-5); }
-.brand { display: inline-flex; align-items: center; gap: var(--s-2); flex: none; margin-top: var(--s-2); color: var(--text); font: 600 var(--fs-3) / 1 var(--font-sans); text-decoration: none; white-space: nowrap; }
+.brand { display: inline-flex; align-items: center; gap: var(--s-2); flex: none; color: var(--text); font: 600 var(--fs-3) / 1 var(--font-sans); text-decoration: none; white-space: nowrap; }
 .brand svg { width: 20px; height: 20px; color: var(--lavender); }
 .brand:hover { color: var(--text); text-decoration: none; }
-.doc-link { margin-left: auto; margin-top: var(--s-2); font-size: var(--fs-2); white-space: nowrap; }
+.doc-link { font-size: var(--fs-2); white-space: nowrap; }
 #token { display: grid; gap: var(--s-7); padding: var(--s-7) 0 var(--s-8); }
 .panel-head { display: grid; gap: var(--s-3); }
 .lead { font-size: var(--fs-4); color: var(--subtext1); }
@@ -248,8 +248,8 @@ tr[hidden] { display: none; }
 .dash #refresh { display: inline-grid; place-items: center; background: none; color: var(--subtext0); padding: var(--s-1); }
 .dash #refresh:hover { color: var(--text); background: var(--surface0); }
 .tk-search { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--fs-2); color: var(--subtext0); }
-#tk-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); }
-#tk-nav [data-view] { border-radius: var(--r-2); position: relative; background: none; padding: var(--s-2); color: var(--subtext1); text-decoration: none; }
+#tk-nav { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); }
+#tk-nav [data-view] { border: 0; cursor: pointer; font: 400 var(--fs-2) / 1.4 var(--font-sans); border-radius: var(--r-2); position: relative; background: none; padding: var(--s-2); color: var(--subtext1); text-decoration: none; }
 #tk-nav [data-view]:hover { background: var(--surface0); color: var(--text); }
 #tk-nav [data-view][aria-pressed="true"], #tk-nav [data-view][aria-current="page"] { background: none; color: var(--text); font-weight: 600; }
 #tk-nav [data-view][aria-pressed="true"]::after, #tk-nav [data-view][aria-current="page"]::after { content: ""; position: absolute; left: var(--s-2); right: var(--s-2); bottom: 0; height: 3px; background: var(--lavender); border-radius: var(--r-pill); }
