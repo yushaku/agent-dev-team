@@ -19,7 +19,7 @@ tracker:
   query: "assignee:me state:open"   # e.g.
 languages:
   client: en                 # tracker drafts
-  po: vi                     # PO summaries
+  po: en                     # PO summaries, gate walkthroughs
 branches:
   base: main                 # feature branches start here and target it
   client_visible: main       # what the client runs today
@@ -58,7 +58,7 @@ docs:
   legacy: []                 # existing docs kept read-only
   html: on                   # render docs/diagrams/*.html (docs-policy.md); off = markdown only
   site: off                  # pages = GitHub Pages workflow (docs-policy.md "Published site")
-  html_lang: vi              # defaults to languages.po
+  html_lang: null            # null = languages.po
 models:
   agents: {}                 # per-agent on/off, e.g. {copilot: off, cursor: off}; missing = on; off = never routed to
   tiers: {}                  # remap a tier per agent column, e.g. {work: {codex: <model-id>}}
