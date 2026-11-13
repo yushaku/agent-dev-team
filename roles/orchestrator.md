@@ -16,7 +16,7 @@ Open a file only for the step at hand.
 | Preflight, resume, Orca setup | `orchestrator/start.md` |
 | Load the project | `<main checkout>/.team/config.yaml`, `config.md` |
 | Repo without config | `skills/init-team/SKILL.md` |
-| Size and mode | `sizing.md`, or `maintenance.md` for tickets in production |
+| Size and mode, architecture impact pause | `sizing.md`, or `maintenance.md` for tickets in production |
 | Build the Run, gates, DoD | `workflow.md`, `orca.md` |
 | Principles, goals, roster | `workflow.md`, `roles/` |
 | Dispatching a worker: agent choice, model tier, quota, free-tier agents | `coding-agents.md` |

@@ -43,7 +43,7 @@ Before each dispatch wave, pick an agent for every Task:
 6. An agent with `ok: false` is eligible only when no other agent is; never skip a hard constraint to use it.
 7. No eligible agent: wait for the PO's decision; never lower the tier or drop a capability.
 8. Do not record the choice or its reason in the Task spec.
-9. Roles with no tier (Orchestrator, Researcher, Solution Architect) run on the session's own model.
+9. Orchestrator, Researcher and Solution Architect sessions run on the session's own model; the Solution Architect worker (`arch-review`) is tier top.
 
 ## Quota
 

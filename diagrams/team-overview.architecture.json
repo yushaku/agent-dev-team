@@ -158,6 +158,20 @@
       ]
     },
     {
+      "id": "sa_worker",
+      "type": "messagebus",
+      "label": "Solution Architect",
+      "sublabel": "arch review worker",
+      "pos": [
+        788,
+        340
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
       "id": "antiai",
       "type": "external",
       "label": "Anti-AI Editor",
@@ -249,7 +263,8 @@
       "wraps": [
         "pm",
         "designer",
-        "tech-lead"
+        "tech-lead",
+        "sa_worker"
       ]
     },
     {

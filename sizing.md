@@ -19,6 +19,7 @@
 
 - **S1:** any code change.
 - **S2:** more than one area or layer, a business rule changes, a sensitive area (auth, payments, personal or financial data, uploads, external APIs), or a new screen or user flow (Designer joins, G-UI applies). Changes to an existing screen stay S1 and follow `ui_rules`.
+- **Architecture impact:** a job that adds an external system or vendor, a new data store, changes deployment topology, raises a load target, or moves personal data across a boundary, with no accepted Solution Architect ADR covering it, is S3. After Gate 1 the Orchestrator pauses before `plan` and asks the PO to open a Solution Architect session; resume when the ADR is accepted (docs branch merged or the PO says so).
 - **S3:** requirements unclear after one clarifying round, a new capability with no business spec, or a design decision expensive to reverse.
 - The Orchestrator states size and reason in one line.
 - A todo item spanning several roadmap entries (one user loop) is one S3 capability: one spec, one Build Task; say so and offer to narrow.
@@ -37,6 +38,6 @@
 - Small change: S1 (`workflow.md` "Other DAG shapes").
 - Feature: S2 or S3 (`workflow.md` "Task DAG").
 - Business rule change: S2 (`workflow.md` "Other DAG shapes").
-- **Spike** (S0 or S1): a technical question is a Solution Architect session (`roles/solution-architect.md`), which writes the ADR; a product question is a Researcher session; PO decides.
+- **Spike** (S0 or S1): a technical question is a Solution Architect session (`roles/solution-architect.md`), which writes the ADR; a PoC runs as `workflow.md` "Other DAG shapes"; a product question is a Researcher session; PO decides.
 - Redesign, visual only: S2 (`workflow.md` "Other DAG shapes").
 - Production ticket work: `maintenance.md`.

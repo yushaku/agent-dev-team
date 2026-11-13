@@ -130,6 +130,20 @@
       ]
     },
     {
+      "id": "top_5",
+      "type": "messagebus",
+      "label": "Solution Architect",
+      "sublabel": "arch review worker",
+      "pos": [
+        820,
+        170
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
       "id": "t_work",
       "type": "cloud",
       "label": "work tier",
@@ -280,7 +294,8 @@
         "top_1",
         "top_2",
         "top_3",
-        "top_4"
+        "top_4",
+        "top_5"
       ]
     },
     {

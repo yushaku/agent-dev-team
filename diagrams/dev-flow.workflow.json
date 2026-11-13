@@ -158,7 +158,7 @@
       "col": 2,
       "type": "messagebus",
       "label": "Slice plan",
-      "sublabel": "ADR if needed"
+      "sublabel": "ADR, arch review*"
     },
     {
       "id": "build",

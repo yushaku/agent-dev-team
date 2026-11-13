@@ -64,19 +64,23 @@ Idea ─▶ Orchestrator (load config, size) ─▶ PM writes/updates business s
 ## Task DAG (Feature mode, S3)
 
 ```
-pm-spec ─▶ [gate-1] ─┬─▶ ux-flow ─▶ ux-options ─▶ [g-ui] ─┐
-                     └─▶ plan (2-4 vertical slices) ──────┴─▶ build (all slices)
-                                                                   │
+pm-spec ─▶ [gate-1] ─┬─▶ ux-flow ─▶ ux-options ─▶ [g-ui] ────────────┐
+                     └─▶ plan (2-4 vertical slices) ─▶ arch-review* ─┴─▶ build (all slices)
+                                                                     │
                                   verify ║ review-spec ║ qa ║ perf-a11y*
-                                                                   │
+                                                                     │
                                      deliver (anti-ai on text) ─▶ [gate-2]
 ```
+`*` `arch-review` only when the plan touches a Solution Architect ADR (`roles/solution-architect.md` "Worker"); `perf-a11y` only when triggered.
+
+- Architecture impact (`sizing.md`): after Gate 1 the Orchestrator pauses before `plan` until the ADR is accepted.
 
 ## Other DAG shapes
 
 - **Small change (S1):** `build -> verify (anti-ai, review) -> deliver -> [gate-2]`
 - **Business rule change (S2):** `pm-spec -> [gate-1] -> qa-tests -> build -> verify -> deliver -> [gate-2]`
 - **New screen or flow (S2):** `ux-flow -> ux-options -> [g-ui] -> build -> (verify || qa || perf-a11y*) -> deliver -> [gate-2]`
+- **PoC (S1):** from a `## PoC request` the PO names: `poc` Builder Task on branch `poc/<topic>` in its own worktree, never merged; writes the result (pass/fail per criterion, numbers, `path:line`) to `.team/architecture/<topic>-poc.md`; the PO brings it back to the Solution Architect session.
 - Maintenance shapes: `maintenance.md`.
 - One Build Task per feature; parallel Build Tasks only for disjoint slices when `flow.max_concurrent_agents` > 1.
 - `verify` and `review-spec`: `orchestrator/review.md` "Verification and fix rounds".
