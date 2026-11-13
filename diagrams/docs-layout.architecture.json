@@ -138,20 +138,6 @@
       ]
     },
     {
-      "id": "arch",
-      "type": "messagebus",
-      "label": "architecture/<topic>.md",
-      "sublabel": "Solution Architect",
-      "pos": [
-        220,
-        420
-      ],
-      "size": [
-        160,
-        56
-      ]
-    },
-    {
       "id": "research",
       "type": "messagebus",
       "label": "research/<topic>.md",
@@ -218,7 +204,6 @@
       "label": ".team/ scratch: local, never committed",
       "wraps": [
         "plan",
-        "arch",
         "research",
         "handoff"
       ]
@@ -273,18 +258,6 @@
       "labelAt": [
         680,
         530
-      ]
-    },
-    {
-      "id": "sa-writes",
-      "from": "arch",
-      "to": "adr",
-      "label": "Solution Architect writes",
-      "fromSide": "top",
-      "toSide": "bottom",
-      "labelAt": [
-        300,
-        268
       ]
     }
   ]

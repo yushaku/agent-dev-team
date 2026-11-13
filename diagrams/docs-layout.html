@@ -5369,10 +5369,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <path data-edge-from="handoff" data-edge-to="orch" data-edge-label="resume" data-edge-key="2" data-edge-id="resume" data-composition-points="740,448;800,448" data-composition-crossover="halo" data-composition-independent="true" d="M 740 448 L 800 448" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         </g>
         <path data-edge-from="research" data-edge-to="orch" data-edge-label="read when named" data-edge-key="3" data-edge-id="named" data-composition-points="480,476;480,530;880,530;880,476" d="M 480 476 L 480 522 Q 480 530 488 530 L 872 530 Q 880 530 880 522 L 880 476" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <g data-graph-role="automatic-crossover" style="--step:4">
-          <path data-graph-role="automatic-crossover-underlay" d="M 300 420 L 300 116" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="arch" data-edge-to="adr" data-edge-label="Solution Architect writes" data-edge-key="4" data-edge-id="sa-writes" data-composition-points="300,420;300,116" data-composition-crossover="halo" d="M 300 420 L 300 116" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        </g>
 
         <!-- Components -->
         <g id="node-product" data-node-id="product" data-node-label="docs/product/*.md" tabindex="0" role="button" aria-label="Focus docs/product/*.md, PM: business spec, Committed sources: agents read" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="PM: business spec" data-node-context="Committed sources: agents read">
@@ -5392,7 +5388,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <g id="node-adr" data-node-id="adr" data-node-label="docs/adr/*.md" tabindex="0" role="button" aria-label="Focus docs/adr/*.md, Tech Lead, Solution Architect, Committed sources: agents read" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="Tech Lead, Solution Architect" data-node-context="Committed sources: agents read">
           <title>docs/adr/*.md · Tech Lead, Solution Architect · Committed sources: agents read</title>
           <rect x="220" y="60" width="160" height="56" rx="8" class="c-mask"/>
-          <rect x="220" y="60" width="160" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:5" stroke-width="1.5"/>
+          <rect x="220" y="60" width="160" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(226 66) scale(0.6875)">
             <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
             <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
@@ -5483,20 +5479,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="120" y="462" class="t-muted" font-size="9" text-anchor="middle">Tech Lead, Designer</text>
         </g>
 
-        <g id="node-arch" data-node-id="arch" data-node-label="architecture/&lt;topic&gt;.md" tabindex="0" role="button" aria-label="Focus architecture/&lt;topic&gt;.md, Solution Architect, .team/ scratch: local, never committed" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="Solution Architect" data-node-context=".team/ scratch: local, never committed">
-          <title>architecture/&lt;topic&gt;.md · Solution Architect · .team/ scratch: local, never committed</title>
-          <rect x="220" y="420" width="160" height="56" rx="8" class="c-mask"/>
-          <rect x="220" y="420" width="160" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:4" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(226 426) scale(0.6875)">
-            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
-            <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
-            <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
-            <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="300" y="446" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">architecture/&lt;topic&gt;.md</text>
-        <text data-detail="context" x="300" y="462" class="t-muted" font-size="9" text-anchor="middle">Solution Architect</text>
-        </g>
-
         <g id="node-research" data-node-id="research" data-node-label="research/&lt;topic&gt;.md" tabindex="0" role="button" aria-label="Focus research/&lt;topic&gt;.md, Researcher, .team/ scratch: local, never committed" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="Researcher" data-node-context=".team/ scratch: local, never committed">
           <title>research/&lt;topic&gt;.md · Researcher · .team/ scratch: local, never committed</title>
           <rect x="400" y="420" width="160" height="56" rx="8" class="c-mask"/>
@@ -5549,10 +5531,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <g data-detail="context" data-edge-from="research" data-edge-to="orch" data-edge-label="read when named" data-edge-key="3" data-edge-id="named">
           <rect x="639" y="520" width="82" height="14" rx="3" class="c-mask"/>
           <text x="680" y="530" class="t-edge-default" font-size="8" text-anchor="middle">read when named</text>
-        </g>
-        <g data-detail="context" data-edge-from="arch" data-edge-to="adr" data-edge-label="Solution Architect writes" data-edge-key="4" data-edge-id="sa-writes">
-          <rect x="235" y="258" width="130" height="14" rx="3" class="c-mask"/>
-          <text x="300" y="268" class="t-edge-default" font-size="8" text-anchor="middle">Solution Architect writes</text>
         </g>
 
         <!-- Boundary labels (foreground masks keep routes out of titles) -->

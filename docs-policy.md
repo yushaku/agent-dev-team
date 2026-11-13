@@ -5,7 +5,7 @@
 | Document | Owner | Content | Changes when |
 |---|---|---|---|
 | `docs/product/<capability>.md` | PM | Business spec (below) | The business changes |
-| `docs/adr/NNN-title.md` | Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited (no-op deletions excepted, below); superseded by a new ADR |
+| `docs/adr/NNN-title.md` | Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line (no-op deletions excepted, below); superseded by a new ADR |
 | `AGENTS.md` | PO | Repo agent rules; read-only for the team (`## AGENTS.md`) | Never by the team |
 | `.team/config.yaml` | PO (Orchestrator proposes) | Team config (`config.md`); local-only until the team adopts it | Project settings change |
 | `DESIGN.md` | Designer | Visual identity: tokens in use, type, spacing, component rules | The PO picks an option at G-UI that sets a new rule |
@@ -60,8 +60,11 @@
 
 ## ADR
 
-- Max about 15 lines: Context, Decision, Consequences, Status (`accepted` / `superseded by NNN`).
+- Sections: Context, Decision, Rejected options (one line each), Consequences, Status (`accepted` / `superseded by NNN`). Solution Architect system ADRs add NFR targets and monthly cost, and the PR link.
+- Max about 15 lines; system ADRs about 40.
 - Only for decisions expensive to reverse.
+- Immutable: a changed decision gets a new ADR; the only edit to an old ADR is its Status line (`superseded by NNN`), made by the new ADR's author in the same PR.
+- Agents read only `accepted` ADRs.
 
 ## Scratch
 
@@ -70,8 +73,6 @@
 - `.team/` (ignored, never committed):
   - `<feature>/`: `plan.md` (`roles/tech-lead.md`), `decisions.md` (numbered PO decisions for the Run, including Gate 1 answers, scope cuts and Orchestrator defaults), `walkthrough.html` (Gate 1 HTML for the PO), `handoff.md`, `design/`, `specs/`, and role reports named `<role>-r<N>.md` (round number, e.g. `reviewer-r1.md`, `builder-fix-r1.md`); no other entries per feature.
   - `research/<topic>.md`: outcome of a Researcher session (product discovery): problem, who has it, how others solve it, options, smallest scope, risks, decision, open points, sources; under 60 lines; written in the Researcher session, read by the Orchestrator only when a todo item or the PO names it.
-  - `architecture/<topic>.md`: Solution Architect analysis: question, NFR targets, as-is, options compared, load numbers, monthly cost, decision, transition phases, open points, optional `## PoC request`; under 60 lines; source for the Solution Architect's own docs commit.
-  - `architecture/<topic>-poc.md`: PoC result (`workflow.md` "Other DAG shapes"); read by the Solution Architect session.
   - `carry-over.md`: numbered leftovers (file:line, why); lifecycle in `orchestrator/delivery.md`.
 - `.team/config.yaml` is the only file in `.team/` that may be committed.
 - Cleanup: `orchestrator/delivery.md`.

@@ -80,7 +80,7 @@ pm-spec ─▶ [gate-1] ─┬─▶ ux-flow ─▶ ux-options ─▶ [g-ui] ─
 - **Small change (S1):** `build -> verify (anti-ai, review) -> deliver -> [gate-2]`
 - **Business rule change (S2):** `pm-spec -> [gate-1] -> qa-tests -> build -> verify -> deliver -> [gate-2]`
 - **New screen or flow (S2):** `ux-flow -> ux-options -> [g-ui] -> build -> (verify || qa || perf-a11y*) -> deliver -> [gate-2]`
-- **PoC (S1):** from a `## PoC request` the PO names: `poc` Builder Task on branch `poc/<topic>` in its own worktree, never merged; writes the result (pass/fail per criterion, numbers, `path:line`) to `.team/architecture/<topic>-poc.md`; the PO brings it back to the Solution Architect session.
+- **PoC (S1):** from a `## PoC request` the PO names: `poc` Builder Task on branch `poc/<topic>` in its own worktree, never merged; posts the result (pass/fail per criterion, numbers, `path:line`) as a comment on the Solution Architect PR (`gh pr comment`); the PO names that PR to the Orchestrator.
 - Maintenance shapes: `maintenance.md`.
 - One Build Task per feature; parallel Build Tasks only for disjoint slices when `flow.max_concurrent_agents` > 1.
 - `verify` and `review-spec`: `orchestrator/review.md` "Verification and fix rounds".
