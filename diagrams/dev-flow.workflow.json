@@ -3,6 +3,7 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "Main dev flow (S3)",
+    "output": "diagrams/dev-flow.html",
     "locale": "en",
     "quality_profile": "showcase",
     "legend": {
@@ -107,7 +108,7 @@
       "col": 0,
       "type": "frontend",
       "label": "Idea",
-      "sublabel": "PO asks in chat"
+      "sublabel": "PO asks Orchestrator"
     },
     {
       "id": "size",
@@ -115,7 +116,7 @@
       "col": 0,
       "type": "cloud",
       "label": "Load + size",
-      "sublabel": "config, profile"
+      "sublabel": "config.yaml, size"
     },
     {
       "id": "spec",

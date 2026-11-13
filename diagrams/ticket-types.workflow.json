@@ -3,6 +3,7 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "Ticket paths by type",
+    "output": "diagrams/ticket-types.html",
     "locale": "en",
     "quality_profile": "showcase",
     "legend": {
@@ -227,7 +228,7 @@
       "col": 1,
       "type": "backend",
       "label": "Investigate || fix",
-      "sublabel": "Builder",
+      "sublabel": "Investigator, Builder",
       "width": 132
     },
     {

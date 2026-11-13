@@ -12,9 +12,6 @@
         "frontend": {
           "label": "PO gate"
         },
-        "cloud": {
-          "label": "Orchestrator"
-        },
         "messagebus": {
           "label": "Plan"
         },
@@ -81,9 +78,9 @@
       "id": "s0_ans",
       "lane": "s0",
       "col": 0,
-      "type": "cloud",
+      "type": "messagebus",
       "label": "Read-only answer",
-      "sublabel": "1 read-only worker",
+      "sublabel": "Researcher, no Orca",
       "width": 128
     },
     {
@@ -200,7 +197,7 @@
       "col": 1,
       "type": "frontend",
       "label": "Gate 1, G-UI",
-      "sublabel": "PO approves",
+      "sublabel": "G-UI only with UI",
       "width": 128
     },
     {

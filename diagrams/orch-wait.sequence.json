@@ -3,12 +3,13 @@
   "diagram_type": "sequence",
   "meta": {
     "title": "Orchestrator wait loop",
+    "output": "diagrams/orch-wait.html",
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
     "viewBox": [
       960,
-      680
+      720
     ],
     "legend": {
       "mode": "auto",

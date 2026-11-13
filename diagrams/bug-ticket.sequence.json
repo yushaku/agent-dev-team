@@ -3,6 +3,7 @@
   "diagram_type": "sequence",
   "meta": {
     "title": "Bug ticket, end to end",
+    "output": "diagrams/bug-ticket.html",
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",

@@ -42,7 +42,7 @@
     {
       "id": "adr",
       "type": "messagebus",
-      "label": "ADR, AGENTS.md",
+      "label": "docs/adr/*.md",
       "sublabel": "Tech Lead, Solution Architect",
       "pos": [
         220,
@@ -84,8 +84,8 @@
     {
       "id": "todo",
       "type": "frontend",
-      "label": "todo.md",
-      "sublabel": "PO: roadmap",
+      "label": "todo.md, AGENTS.md",
+      "sublabel": "PO: roadmap, repo rules",
       "pos": [
         760,
         60
@@ -183,7 +183,7 @@
       "id": "orch",
       "type": "cloud",
       "label": "Orchestrator",
-      "sublabel": "reads sources only",
+      "sublabel": "reads docs, not code",
       "pos": [
         800,
         420

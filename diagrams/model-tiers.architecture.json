@@ -35,7 +35,7 @@
       "id": "po",
       "type": "frontend",
       "label": "Product Owner",
-      "sublabel": "decides at top",
+      "sublabel": "approves each tier up",
       "pos": [
         1000,
         40
@@ -147,7 +147,7 @@
       "id": "work_0",
       "type": "messagebus",
       "label": "PM",
-      "sublabel": "S1, updates",
+      "sublabel": "S1, updates, tidy",
       "pos": [
         40,
         330
@@ -326,7 +326,7 @@
       "id": "fast-up",
       "from": "t_fast",
       "to": "t_work",
-      "label": "2 failed rounds",
+      "label": "2 failed rounds, PO OKs",
       "fromSide": "top",
       "toSide": "bottom"
     },
@@ -334,7 +334,7 @@
       "id": "work-up",
       "from": "t_work",
       "to": "t_top",
-      "label": "2 failed rounds",
+      "label": "2 failed rounds, PO OKs",
       "fromSide": "top",
       "toSide": "bottom"
     },
@@ -342,7 +342,7 @@
       "id": "top-up",
       "from": "t_top",
       "to": "po",
-      "label": "2 failed at top",
+      "label": "2 failed at top, PO decides",
       "fromSide": "top",
       "toSide": "bottom"
     }

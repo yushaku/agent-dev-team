@@ -3,6 +3,7 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "Sessions and handoff",
+    "output": "diagrams/sessions.html",
     "locale": "en",
     "quality_profile": "showcase",
     "legend": {
@@ -102,7 +103,7 @@
       "col": 2,
       "type": "messagebus",
       "label": "Writes docs",
-      "sublabel": "ADR, Constraints, archify",
+      "sublabel": "ADRs, archify diagrams",
       "width": 170
     },
     {
@@ -128,8 +129,8 @@
       "lane": "po",
       "col": 2,
       "type": "frontend",
-      "label": "/clear",
-      "sublabel": "\"be Orchestrator\"",
+      "label": "/clear or /new",
+      "sublabel": "\"act as Orchestrator\"",
       "width": 170
     },
     {
@@ -146,7 +147,7 @@
       "lane": "orch",
       "col": 3,
       "type": "cloud",
-      "label": "Gate or 100K",
+      "label": "Gate 1 or 100K",
       "sublabel": "write handoff.md",
       "width": 170
     },
@@ -155,8 +156,8 @@
       "lane": "po",
       "col": 4,
       "type": "frontend",
-      "label": "/clear",
-      "sublabel": "\"be Orchestrator\"",
+      "label": "/clear or /new",
+      "sublabel": "\"act as Orchestrator\"",
       "width": 170
     },
     {
