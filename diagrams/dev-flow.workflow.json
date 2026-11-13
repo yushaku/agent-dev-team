@@ -1,0 +1,269 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Main dev flow (S3)",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO"
+        },
+        "cloud": {
+          "label": "Orchestrator"
+        },
+        "messagebus": {
+          "label": "Plan"
+        },
+        "backend": {
+          "label": "Build"
+        },
+        "external": {
+          "label": "Verify"
+        },
+        "database": {
+          "label": "Delivery"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "po",
+      "label": "PO"
+    },
+    {
+      "id": "orch",
+      "label": "Orchestrator"
+    },
+    {
+      "id": "pm",
+      "label": "PM"
+    },
+    {
+      "id": "designer",
+      "label": "Designer"
+    },
+    {
+      "id": "tech-lead",
+      "label": "Tech Lead"
+    },
+    {
+      "id": "builder",
+      "label": "Builder"
+    },
+    {
+      "id": "verify",
+      "label": "Verify"
+    },
+    {
+      "id": "delivery",
+      "label": "Delivery"
+    }
+  ],
+  "phases": [
+    {
+      "id": "spec",
+      "label": "Spec",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "design",
+      "label": "Design + plan",
+      "fromCol": 2,
+      "toCol": 2
+    },
+    {
+      "id": "build",
+      "label": "Build + verify",
+      "fromCol": 3,
+      "toCol": 4
+    },
+    {
+      "id": "deliver",
+      "label": "Deliver",
+      "fromCol": 5,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "idea",
+    "size",
+    "spec",
+    "gate1",
+    "plan",
+    "build",
+    "verify",
+    "deliver",
+    "gate2"
+  ],
+  "nodes": [
+    {
+      "id": "idea",
+      "lane": "po",
+      "col": 0,
+      "type": "frontend",
+      "label": "Idea",
+      "sublabel": "PO asks in chat"
+    },
+    {
+      "id": "size",
+      "lane": "orch",
+      "col": 0,
+      "type": "cloud",
+      "label": "Load + size",
+      "sublabel": "config, profile"
+    },
+    {
+      "id": "spec",
+      "lane": "pm",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Business spec",
+      "sublabel": "pm-spec"
+    },
+    {
+      "id": "gate1",
+      "lane": "po",
+      "col": 1,
+      "type": "frontend",
+      "label": "Gate 1",
+      "sublabel": "PO approves spec",
+      "tag": "PO decision"
+    },
+    {
+      "id": "options",
+      "lane": "designer",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Flow + options",
+      "sublabel": "2 or 3 mockups"
+    },
+    {
+      "id": "gui",
+      "lane": "po",
+      "col": 2,
+      "type": "frontend",
+      "label": "G-UI",
+      "sublabel": "PO picks one",
+      "tag": "PO decision"
+    },
+    {
+      "id": "plan",
+      "lane": "tech-lead",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Slice plan",
+      "sublabel": "ADR if needed"
+    },
+    {
+      "id": "build",
+      "lane": "builder",
+      "col": 3,
+      "type": "backend",
+      "label": "Build slices",
+      "sublabel": "fast check each"
+    },
+    {
+      "id": "verify",
+      "lane": "verify",
+      "col": 4,
+      "type": "external",
+      "label": "Verify wave",
+      "sublabel": "verify Task, QA, Perf*"
+    },
+    {
+      "id": "deliver",
+      "lane": "delivery",
+      "col": 5,
+      "type": "database",
+      "label": "Docs + deliver",
+      "sublabel": "draft PR or branch"
+    },
+    {
+      "id": "gate2",
+      "lane": "po",
+      "col": 5,
+      "type": "frontend",
+      "label": "Gate 2",
+      "sublabel": "PO reviews",
+      "tag": "PO decision"
+    }
+  ],
+  "edges": [
+    {
+      "id": "ask",
+      "from": "idea",
+      "to": "size",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "dispatch-pm",
+      "from": "size",
+      "to": "spec",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "spec-gate",
+      "from": "spec",
+      "to": "gate1"
+    },
+    {
+      "id": "gate1-design",
+      "from": "gate1",
+      "to": "options",
+      "label": "approved"
+    },
+    {
+      "id": "gate1-plan",
+      "from": "gate1",
+      "to": "plan",
+      "label": "approved"
+    },
+    {
+      "id": "options-gui",
+      "from": "options",
+      "to": "gui"
+    },
+    {
+      "id": "gui-build",
+      "from": "gui",
+      "to": "build",
+      "label": "chosen mockup"
+    },
+    {
+      "id": "plan-build",
+      "from": "plan",
+      "to": "build"
+    },
+    {
+      "id": "build-verify",
+      "from": "build",
+      "to": "verify"
+    },
+    {
+      "id": "fix-loop",
+      "from": "verify",
+      "to": "build",
+      "label": "fix, max 2 rounds",
+      "variant": "default",
+      "role": "return"
+    },
+    {
+      "id": "verify-deliver",
+      "from": "verify",
+      "to": "deliver",
+      "label": "green"
+    },
+    {
+      "id": "deliver-gate",
+      "from": "deliver",
+      "to": "gate2"
+    }
+  ]
+}

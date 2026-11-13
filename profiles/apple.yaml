@@ -1,0 +1,16 @@
+# iOS / iPadOS / macOS (Swift, SwiftUI, SwiftData)
+name: apple
+design: []                                   # HTML mockups, no web taste rules
+architecture: []
+build.ui: []                                 # projects usually ship their own SwiftUI skill (skills.project)
+build.core: []
+qa: []                                       # xcodebuild test; simulator checks only if the project allows them
+review: []
+security: [security-and-hardening]           # keychain, data protection, entitlements: covered by security-and-hardening
+perf: []
+perf_metrics: "launch time, main-thread hangs, memory, scroll hitches (Instruments), per the project's perf notes"
+ui_screenshots: false                        # unless the project allows simulator or device capture
+notes:
+  - "xcodebuild runs share DerivedData; set commands.serial: true and keep max_concurrent_agents low."
+  - "Each new worktree starts a cold build; prefer S1 and one Builder at a time."
+ui_viewports: ["iPhone 16", "iPhone 16 dark", "Mac window"]   # mockups only; device checks stay human

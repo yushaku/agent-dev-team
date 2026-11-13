@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Model tiers and escalation",
+    "output": "diagrams/model-tiers.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO"
+        },
+        "cloud": {
+          "label": "Orchestrator sets tier"
+        },
+        "messagebus": {
+          "label": "Plan"
+        },
+        "backend": {
+          "label": "Build"
+        },
+        "external": {
+          "label": "Verify"
+        },
+        "database": {
+          "label": "Delivery"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "po",
+      "type": "frontend",
+      "label": "Product Owner",
+      "sublabel": "decides at top",
+      "pos": [
+        1000,
+        40
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "t_top",
+      "type": "cloud",
+      "label": "top tier",
+      "sublabel": "opus, gpt-6-astra",
+      "pos": [
+        1000,
+        170
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "top_0",
+      "type": "messagebus",
+      "label": "Tech Lead",
+      "sublabel": "ADR, plan",
+      "pos": [
+        40,
+        170
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "top_1",
+      "type": "messagebus",
+      "label": "PM",
+      "sublabel": "first spec S2, S3",
+      "pos": [
+        196,
+        170
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "top_2",
+      "type": "backend",
+      "label": "Builder",
+      "sublabel": "S3",
+      "pos": [
+        352,
+        170
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "top_3",
+      "type": "external",
+      "label": "Code Reviewer",
+      "sublabel": "not below Builder",
+      "pos": [
+        508,
+        170
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "top_4",
+      "type": "external",
+      "label": "Security",
+      "sublabel": "when triggered",
+      "pos": [
+        664,
+        170
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "t_work",
+      "type": "cloud",
+      "label": "work tier",
+      "sublabel": "sonnet, gpt-6.1-sol",
+      "pos": [
+        1000,
+        330
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "work_0",
+      "type": "messagebus",
+      "label": "PM",
+      "sublabel": "S1, updates",
+      "pos": [
+        40,
+        330
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "work_1",
+      "type": "messagebus",
+      "label": "Designer",
+      "sublabel": "flow, options",
+      "pos": [
+        196,
+        330
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "work_2",
+      "type": "messagebus",
+      "label": "Researcher",
+      "sublabel": "worker mode",
+      "pos": [
+        352,
+        330
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "work_3",
+      "type": "backend",
+      "label": "Builder",
+      "sublabel": "S1, S2",
+      "pos": [
+        508,
+        330
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "work_4",
+      "type": "external",
+      "label": "QA",
+      "sublabel": "AC to tests",
+      "pos": [
+        664,
+        330
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "work_5",
+      "type": "external",
+      "label": "Perf / A11y",
+      "sublabel": "when triggered",
+      "pos": [
+        820,
+        330
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "t_fast",
+      "type": "cloud",
+      "label": "fast tier",
+      "sublabel": "haiku, gpt-6-luna",
+      "pos": [
+        1000,
+        490
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "fast_0",
+      "type": "backend",
+      "label": "Builder",
+      "sublabel": "S0",
+      "pos": [
+        40,
+        490
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "fast_1",
+      "type": "external",
+      "label": "Anti-AI Editor",
+      "sublabel": "run alone",
+      "pos": [
+        196,
+        490
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "fast_3",
+      "type": "database",
+      "label": "Delivery Engineer",
+      "sublabel": "draft PR, docs",
+      "pos": [
+        352,
+        490
+      ],
+      "size": [
+        140,
+        56
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "top tier, effort high",
+      "wraps": [
+        "t_top",
+        "top_0",
+        "top_1",
+        "top_2",
+        "top_3",
+        "top_4"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "work tier, effort medium",
+      "wraps": [
+        "t_work",
+        "work_0",
+        "work_1",
+        "work_2",
+        "work_3",
+        "work_4",
+        "work_5"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "fast tier, effort low",
+      "wraps": [
+        "t_fast",
+        "fast_0",
+        "fast_1",
+        "fast_3"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "fast-up",
+      "from": "t_fast",
+      "to": "t_work",
+      "label": "2 failed rounds",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "work-up",
+      "from": "t_work",
+      "to": "t_top",
+      "label": "2 failed rounds",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "top-up",
+      "from": "t_top",
+      "to": "po",
+      "label": "2 failed at top",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ]
+}

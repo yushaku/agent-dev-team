@@ -1,0 +1,375 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Ticket paths by type",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO gate"
+        },
+        "cloud": {
+          "label": "Orchestrator"
+        },
+        "messagebus": {
+          "label": "Plan"
+        },
+        "backend": {
+          "label": "Build"
+        },
+        "external": {
+          "label": "Verify"
+        },
+        "database": {
+          "label": "Delivery"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "q",
+      "label": "Question"
+    },
+    {
+      "id": "b",
+      "label": "Bug"
+    },
+    {
+      "id": "c",
+      "label": "Change request"
+    },
+    {
+      "id": "i",
+      "label": "Incident",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "understand",
+      "label": "Understand",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "fix",
+      "label": "Fix + verify",
+      "fromCol": 2,
+      "toCol": 3
+    },
+    {
+      "id": "gates",
+      "label": "PO gates",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "b_a",
+    "b_i",
+    "b_b",
+    "b_v",
+    "b_g",
+    "b_r"
+  ],
+  "nodes": [
+    {
+      "id": "q_a",
+      "lane": "q",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Read thread",
+      "sublabel": "Ticket Analyst",
+      "width": 132
+    },
+    {
+      "id": "q_i",
+      "lane": "q",
+      "col": 1,
+      "type": "messagebus",
+      "label": "Answer from code",
+      "sublabel": "Investigator",
+      "width": 132
+    },
+    {
+      "id": "q_r",
+      "lane": "q",
+      "col": 5,
+      "type": "frontend",
+      "label": "G-Reply",
+      "sublabel": "PO posts",
+      "width": 132
+    },
+    {
+      "id": "b_a",
+      "lane": "b",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Expected vs actual",
+      "sublabel": "Ticket Analyst",
+      "width": 132
+    },
+    {
+      "id": "b_i",
+      "lane": "b",
+      "col": 1,
+      "type": "messagebus",
+      "label": "Root cause",
+      "sublabel": "Investigator",
+      "width": 132
+    },
+    {
+      "id": "b_b",
+      "lane": "b",
+      "col": 2,
+      "type": "backend",
+      "label": "Failing test, fix",
+      "sublabel": "Builder",
+      "width": 132
+    },
+    {
+      "id": "b_v",
+      "lane": "b",
+      "col": 3,
+      "type": "external",
+      "label": "verify || QA",
+      "sublabel": "Verify",
+      "width": 132
+    },
+    {
+      "id": "b_g",
+      "lane": "b",
+      "col": 4,
+      "type": "frontend",
+      "label": "G-PR",
+      "sublabel": "PO approves",
+      "width": 132
+    },
+    {
+      "id": "b_r",
+      "lane": "b",
+      "col": 5,
+      "type": "frontend",
+      "label": "G-Reply",
+      "sublabel": "when fix is live",
+      "width": 132
+    },
+    {
+      "id": "c_a",
+      "lane": "c",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Clarify scope",
+      "sublabel": "Analyst, G-Reply",
+      "width": 132
+    },
+    {
+      "id": "c_i",
+      "lane": "c",
+      "col": 1,
+      "type": "messagebus",
+      "label": "Impact, estimate",
+      "sublabel": "Investigator",
+      "width": 132
+    },
+    {
+      "id": "c_s",
+      "lane": "c",
+      "col": 2,
+      "type": "frontend",
+      "label": "G-Scope",
+      "sublabel": "PO approves",
+      "width": 132
+    },
+    {
+      "id": "c_v",
+      "lane": "c",
+      "col": 3,
+      "type": "backend",
+      "label": "Build, verify",
+      "sublabel": "small CR only",
+      "width": 132
+    },
+    {
+      "id": "c_g",
+      "lane": "c",
+      "col": 4,
+      "type": "frontend",
+      "label": "G-PR",
+      "sublabel": "PO approves",
+      "width": 132
+    },
+    {
+      "id": "c_r",
+      "lane": "c",
+      "col": 5,
+      "type": "frontend",
+      "label": "G-Reply",
+      "sublabel": "report",
+      "width": 132
+    },
+    {
+      "id": "i_t",
+      "lane": "i",
+      "col": 0,
+      "type": "cloud",
+      "label": "Triage",
+      "sublabel": "tell PO now",
+      "width": 132
+    },
+    {
+      "id": "i_b",
+      "lane": "i",
+      "col": 1,
+      "type": "backend",
+      "label": "Investigate || fix",
+      "sublabel": "Builder",
+      "width": 132
+    },
+    {
+      "id": "i_v",
+      "lane": "i",
+      "col": 3,
+      "type": "external",
+      "label": "Review",
+      "sublabel": "Reviewer",
+      "width": 132
+    },
+    {
+      "id": "i_g",
+      "lane": "i",
+      "col": 4,
+      "type": "frontend",
+      "label": "G-PR",
+      "sublabel": "fast-track",
+      "width": 132
+    },
+    {
+      "id": "i_f",
+      "lane": "i",
+      "col": 5,
+      "type": "cloud",
+      "label": "Bug follow-up",
+      "sublabel": "root cause ticket",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "id": "q_a-q_i",
+      "from": "q_a",
+      "to": "q_i",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "q_i-q_r",
+      "from": "q_i",
+      "to": "q_r",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "b_a-b_i",
+      "from": "b_a",
+      "to": "b_i",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "b_i-b_b",
+      "from": "b_i",
+      "to": "b_b",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "b_b-b_v",
+      "from": "b_b",
+      "to": "b_v",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "b_v-b_g",
+      "from": "b_v",
+      "to": "b_g",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "b_g-b_r",
+      "from": "b_g",
+      "to": "b_r",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c_a-c_i",
+      "from": "c_a",
+      "to": "c_i",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c_i-c_s",
+      "from": "c_i",
+      "to": "c_s",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c_s-c_v",
+      "from": "c_s",
+      "to": "c_v",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c_v-c_g",
+      "from": "c_v",
+      "to": "c_g",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c_g-c_r",
+      "from": "c_g",
+      "to": "c_r",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "i_t-i_b",
+      "from": "i_t",
+      "to": "i_b",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "i_b-i_v",
+      "from": "i_b",
+      "to": "i_v",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "i_v-i_g",
+      "from": "i_v",
+      "to": "i_g",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "i_g-i_f",
+      "from": "i_g",
+      "to": "i_f",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ]
+}

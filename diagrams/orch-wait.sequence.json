@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Orchestrator wait loop",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      960,
+      680
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "Task dispatch, gate"
+        },
+        "default": {
+          "label": "note, update"
+        },
+        "return": {
+          "label": "worker_done, answer"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "po",
+      "type": "frontend",
+      "label": "PO",
+      "sublabel": "human"
+    },
+    {
+      "id": "orch",
+      "type": "cloud",
+      "label": "Orchestrator",
+      "sublabel": "waits, never polls"
+    },
+    {
+      "id": "builder",
+      "type": "backend",
+      "label": "Builder",
+      "sublabel": "Codex worker"
+    },
+    {
+      "id": "verify",
+      "type": "external",
+      "label": "Verify",
+      "sublabel": "verify Task || QA"
+    }
+  ],
+  "segments": [
+    {
+      "from": 156,
+      "to": 332,
+      "label": "Build"
+    },
+    {
+      "from": 336,
+      "to": 508,
+      "label": "Verify + fix"
+    },
+    {
+      "from": 512,
+      "to": 600,
+      "label": "Gate"
+    }
+  ],
+  "messages": [
+    {
+      "from": "orch",
+      "to": "builder",
+      "y": 180,
+      "label": "worker-start: build Task",
+      "variant": "emphasis"
+    },
+    {
+      "from": "orch",
+      "to": "builder",
+      "y": 224,
+      "label": "status note: commands, handoff",
+      "variant": "default"
+    },
+    {
+      "from": "builder",
+      "to": "orch",
+      "y": 268,
+      "label": "worker_done: commits, test output",
+      "variant": "return",
+      "note": "Orchestrator waits with check --wait, no polling"
+    },
+    {
+      "from": "orch",
+      "to": "po",
+      "y": 312,
+      "label": "update: verify summary, counts",
+      "variant": "default"
+    },
+    {
+      "from": "orch",
+      "to": "verify",
+      "y": 356,
+      "label": "verify Task (+ QA, Perf*)",
+      "variant": "emphasis"
+    },
+    {
+      "from": "verify",
+      "to": "orch",
+      "y": 400,
+      "label": "worker_done: findings",
+      "variant": "return"
+    },
+    {
+      "from": "orch",
+      "to": "builder",
+      "y": 444,
+      "label": "fix Task, max 2 rounds",
+      "variant": "emphasis"
+    },
+    {
+      "from": "builder",
+      "to": "orch",
+      "y": 488,
+      "label": "worker_done: fix sha",
+      "variant": "return"
+    },
+    {
+      "from": "orch",
+      "to": "po",
+      "y": 532,
+      "label": "Gate 2: draft PR",
+      "variant": "emphasis"
+    },
+    {
+      "from": "po",
+      "to": "orch",
+      "y": 576,
+      "label": "approved",
+      "variant": "return"
+    }
+  ]
+}

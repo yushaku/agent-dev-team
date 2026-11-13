@@ -1,0 +1,466 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Who hands work to whom",
+    "output": "diagrams/team-overview.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO"
+        },
+        "cloud": {
+          "label": "Orchestrator"
+        },
+        "messagebus": {
+          "label": "Plan"
+        },
+        "backend": {
+          "label": "Build"
+        },
+        "external": {
+          "label": "Verify"
+        },
+        "database": {
+          "label": "Delivery"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "po",
+      "type": "frontend",
+      "label": "Product Owner",
+      "sublabel": "human, all gates",
+      "pos": [
+        120,
+        80
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "researcher_talk",
+      "type": "messagebus",
+      "label": "Researcher",
+      "sublabel": "discussion session",
+      "pos": [
+        420,
+        80
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "sa_talk",
+      "type": "messagebus",
+      "label": "Solution Architect",
+      "sublabel": "discussion session",
+      "pos": [
+        944,
+        80
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "orchestrator",
+      "type": "cloud",
+      "label": "Orchestrator",
+      "sublabel": "sizes, dispatches",
+      "pos": [
+        120,
+        210
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "report",
+      "type": "messagebus",
+      "label": "Research report",
+      "sublabel": "research/<topic>.md",
+      "pos": [
+        420,
+        210
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "pm",
+      "type": "messagebus",
+      "label": "Product Manager",
+      "sublabel": "business spec",
+      "pos": [
+        320,
+        340
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "designer",
+      "type": "messagebus",
+      "label": "UX / UI Designer",
+      "sublabel": "flow, options",
+      "pos": [
+        476,
+        340
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "tech-lead",
+      "type": "messagebus",
+      "label": "Tech Lead",
+      "sublabel": "ADR, slice plan",
+      "pos": [
+        632,
+        340
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "researcher",
+      "type": "messagebus",
+      "label": "Researcher",
+      "sublabel": "worker mode",
+      "pos": [
+        788,
+        340
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "builder",
+      "type": "backend",
+      "label": "Builder",
+      "sublabel": "all slices",
+      "pos": [
+        320,
+        460
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "antiai",
+      "type": "external",
+      "label": "Anti-AI Editor",
+      "sublabel": "fresh context",
+      "pos": [
+        320,
+        580
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "qa",
+      "type": "external",
+      "label": "QA",
+      "sublabel": "AC to tests",
+      "pos": [
+        476,
+        580
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "reviewer",
+      "type": "external",
+      "label": "Code Reviewer",
+      "sublabel": "other agent",
+      "pos": [
+        632,
+        580
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "security",
+      "type": "external",
+      "label": "Security",
+      "sublabel": "when triggered",
+      "pos": [
+        788,
+        580
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "perf",
+      "type": "external",
+      "label": "Perf / A11y",
+      "sublabel": "when triggered",
+      "pos": [
+        944,
+        580
+      ],
+      "size": [
+        140,
+        56
+      ]
+    },
+    {
+      "id": "delivery",
+      "type": "database",
+      "label": "Delivery Engineer",
+      "sublabel": "docs, draft PR or branch",
+      "pos": [
+        320,
+        700
+      ],
+      "size": [
+        140,
+        56
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Plan",
+      "wraps": [
+        "pm",
+        "designer",
+        "tech-lead",
+        "researcher"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Build",
+      "wraps": [
+        "builder"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Verify",
+      "wraps": [
+        "antiai",
+        "qa",
+        "reviewer",
+        "security",
+        "perf"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Delivery",
+      "wraps": [
+        "delivery"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "po-asks",
+      "from": "po",
+      "to": "orchestrator",
+      "label": "request, gate answer",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        130,
+        173
+      ]
+    },
+    {
+      "id": "orch-tells",
+      "from": "orchestrator",
+      "to": "po",
+      "label": "gate question",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [
+        258,
+        173
+      ]
+    },
+    {
+      "id": "po-discuss",
+      "from": "po",
+      "to": "researcher_talk",
+      "label": "discuss",
+      "fromSide": "right",
+      "toSide": "left",
+      "labelAt": [
+        350,
+        87
+      ]
+    },
+    {
+      "id": "res-answers",
+      "from": "researcher_talk",
+      "to": "po",
+      "label": "options",
+      "fromSide": "left",
+      "toSide": "right",
+      "labelAt": [
+        350,
+        129
+      ]
+    },
+    {
+      "id": "po-sa",
+      "from": "po",
+      "to": "sa_talk",
+      "label": "discuss",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          200,
+          40
+        ],
+        [
+          1024,
+          40
+        ]
+      ],
+      "labelAt": [
+        762,
+        28
+      ]
+    },
+    {
+      "id": "sa-answers",
+      "from": "sa_talk",
+      "to": "po",
+      "label": "options + load numbers",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          1024,
+          40
+        ],
+        [
+          200,
+          40
+        ]
+      ],
+      "labelAt": [
+        762,
+        54
+      ]
+    },
+    {
+      "id": "res-writes",
+      "from": "researcher_talk",
+      "to": "report",
+      "label": "writes",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        500,
+        173
+      ]
+    },
+    {
+      "id": "orch-reads",
+      "from": "report",
+      "to": "orchestrator",
+      "label": "read when named",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "to-plan",
+      "from": "orchestrator",
+      "to": "pm",
+      "label": "dispatch",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          200,
+          368
+        ]
+      ]
+    },
+    {
+      "id": "to-build",
+      "from": "orchestrator",
+      "to": "builder",
+      "label": "dispatch",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          200,
+          488
+        ]
+      ]
+    },
+    {
+      "id": "to-verify",
+      "from": "orchestrator",
+      "to": "antiai",
+      "label": "dispatch",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          200,
+          608
+        ]
+      ]
+    },
+    {
+      "id": "to-delivery",
+      "from": "orchestrator",
+      "to": "delivery",
+      "label": "dispatch",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          200,
+          728
+        ]
+      ]
+    }
+  ]
+}

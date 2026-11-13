@@ -1,0 +1,343 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "What each size runs",
+    "output": "diagrams/sizes.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO gate"
+        },
+        "cloud": {
+          "label": "Orchestrator"
+        },
+        "messagebus": {
+          "label": "Plan"
+        },
+        "backend": {
+          "label": "Build"
+        },
+        "external": {
+          "label": "Verify"
+        },
+        "database": {
+          "label": "Delivery"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "s0",
+      "label": "S0 Direct"
+    },
+    {
+      "id": "s1",
+      "label": "S1 Solo"
+    },
+    {
+      "id": "s2",
+      "label": "S2 Standard"
+    },
+    {
+      "id": "s3",
+      "label": "S3 Full"
+    }
+  ],
+  "phases": [
+    {
+      "id": "plan",
+      "label": "Plan",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "build",
+      "label": "Build + verify",
+      "fromCol": 2,
+      "toCol": 3
+    },
+    {
+      "id": "deliver",
+      "label": "Deliver",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "s3_p",
+    "s3_g1",
+    "s3_b",
+    "s3_v",
+    "s3_d",
+    "s3_g"
+  ],
+  "nodes": [
+    {
+      "id": "s0_ans",
+      "lane": "s0",
+      "col": 0,
+      "type": "cloud",
+      "label": "Read-only answer",
+      "sublabel": "1 read-only worker",
+      "width": 128
+    },
+    {
+      "id": "s0_g",
+      "lane": "s0",
+      "col": 5,
+      "type": "frontend",
+      "label": "G-Reply",
+      "sublabel": "if sent out",
+      "width": 128
+    },
+    {
+      "id": "s1_b",
+      "lane": "s1",
+      "col": 2,
+      "type": "backend",
+      "label": "Build",
+      "sublabel": "1 Builder",
+      "width": 128
+    },
+    {
+      "id": "s1_v",
+      "lane": "s1",
+      "col": 3,
+      "type": "external",
+      "label": "verify Task",
+      "sublabel": "Anti-AI, Review",
+      "width": 128
+    },
+    {
+      "id": "s1_d",
+      "lane": "s1",
+      "col": 4,
+      "type": "database",
+      "label": "Deliver",
+      "sublabel": "draft PR",
+      "width": 128
+    },
+    {
+      "id": "s1_g",
+      "lane": "s1",
+      "col": 5,
+      "type": "frontend",
+      "label": "Gate 2",
+      "sublabel": "PO reviews",
+      "width": 128
+    },
+    {
+      "id": "s2_p",
+      "lane": "s2",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Spec or flow",
+      "sublabel": "PM or Designer",
+      "width": 128
+    },
+    {
+      "id": "s2_g1",
+      "lane": "s2",
+      "col": 1,
+      "type": "frontend",
+      "label": "Gate 1 / G-UI",
+      "sublabel": "when rule or screen",
+      "width": 128
+    },
+    {
+      "id": "s2_b",
+      "lane": "s2",
+      "col": 2,
+      "type": "backend",
+      "label": "Build",
+      "sublabel": "1 to 2 slices",
+      "width": 128
+    },
+    {
+      "id": "s2_v",
+      "lane": "s2",
+      "col": 3,
+      "type": "external",
+      "label": "Verify wave",
+      "sublabel": "verify, QA, Perf*",
+      "width": 128
+    },
+    {
+      "id": "s2_d",
+      "lane": "s2",
+      "col": 4,
+      "type": "database",
+      "label": "Deliver",
+      "sublabel": "draft PR",
+      "width": 128
+    },
+    {
+      "id": "s2_g",
+      "lane": "s2",
+      "col": 5,
+      "type": "frontend",
+      "label": "Gate 2",
+      "sublabel": "PO reviews",
+      "width": 128
+    },
+    {
+      "id": "s3_p",
+      "lane": "s3",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Spec, design, plan",
+      "sublabel": "PM, Designer, Tech Lead",
+      "width": 128
+    },
+    {
+      "id": "s3_g1",
+      "lane": "s3",
+      "col": 1,
+      "type": "frontend",
+      "label": "Gate 1, G-UI",
+      "sublabel": "PO approves",
+      "width": 128
+    },
+    {
+      "id": "s3_b",
+      "lane": "s3",
+      "col": 2,
+      "type": "backend",
+      "label": "Build",
+      "sublabel": "2 to 4 slices",
+      "width": 128
+    },
+    {
+      "id": "s3_v",
+      "lane": "s3",
+      "col": 3,
+      "type": "external",
+      "label": "Verify wave",
+      "sublabel": "verify, QA, Perf*",
+      "width": 128
+    },
+    {
+      "id": "s3_d",
+      "lane": "s3",
+      "col": 4,
+      "type": "database",
+      "label": "Delivery",
+      "sublabel": "Delivery Engineer",
+      "width": 128
+    },
+    {
+      "id": "s3_g",
+      "lane": "s3",
+      "col": 5,
+      "type": "frontend",
+      "label": "Gate 2",
+      "sublabel": "PO reviews",
+      "width": 128
+    }
+  ],
+  "edges": [
+    {
+      "id": "s0_ans-s0_g",
+      "from": "s0_ans",
+      "to": "s0_g",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s1_b-s1_v",
+      "from": "s1_b",
+      "to": "s1_v",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s1_v-s1_d",
+      "from": "s1_v",
+      "to": "s1_d",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s1_d-s1_g",
+      "from": "s1_d",
+      "to": "s1_g",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s2_p-s2_g1",
+      "from": "s2_p",
+      "to": "s2_g1",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s2_g1-s2_b",
+      "from": "s2_g1",
+      "to": "s2_b",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s2_b-s2_v",
+      "from": "s2_b",
+      "to": "s2_v",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s2_v-s2_d",
+      "from": "s2_v",
+      "to": "s2_d",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s2_d-s2_g",
+      "from": "s2_d",
+      "to": "s2_g",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s3_p-s3_g1",
+      "from": "s3_p",
+      "to": "s3_g1",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s3_g1-s3_b",
+      "from": "s3_g1",
+      "to": "s3_b",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s3_b-s3_v",
+      "from": "s3_b",
+      "to": "s3_v",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s3_v-s3_d",
+      "from": "s3_v",
+      "to": "s3_d",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s3_d-s3_g",
+      "from": "s3_d",
+      "to": "s3_g",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ]
+}

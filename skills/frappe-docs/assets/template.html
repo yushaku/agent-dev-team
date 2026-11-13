@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Ledger: system design</title>
+<style>
+/* ==========================================================
+   1. Tokens: Catppuccin Frappe. Never add colours or sizes.
+   ========================================================== */
+:root {
+  /* Surfaces */
+  --crust: #232634;     /* code blocks */
+  --mantle: #292c3c;    /* top bar, cards, callouts, diagram frame */
+  --base: #303446;      /* page */
+  --surface0: #414559;  /* chips, inline code, step numbers, hover */
+  --surface1: #51576d;  /* the only hairline colour */
+  --surface2: #626880;  /* scrollbar thumb, disabled */
+  --overlay0: #737994;  /* decoration only, never text */
+  --overlay1: #838ba7;  /* archify trust boundaries (dashed) */
+  --overlay2: #949cbb;  /* archify edges */
+  /* Text */
+  --subtext0: #a5adce;  /* muted: captions, labels, table headers */
+  --subtext1: #b5bfe2;  /* secondary: leads, inactive tabs */
+  --text: #c6d0f5;      /* body, headings */
+  /* Interaction */
+  --lavender: #babbf1;  /* links, focus ring, active tab */
+  /* Status: one meaning each */
+  --blue: #8caaee;      /* info */
+  --green: #a6d189;     /* ok, done, accepted */
+  --yellow: #e5c890;    /* warning, proposed, in progress */
+  --red: #e78284;       /* risk, error, blocked */
+  --mauve: #ca9ee6;     /* decision */
+  /* Diagram tiers: archify nodes and legend swatches only (archify-frappe.py) */
+  --sky: #99d1db;       /* tier: client */
+  --pink: #f4b8e4;      /* tier: data store */
+  --peach: #ef9f76;     /* tier: external */
+  --tier-client: var(--sky);
+  --tier-edge: var(--blue);
+  --tier-service: var(--green);
+  --tier-async: var(--mauve);
+  --tier-data: var(--pink);
+  --tier-external: var(--peach);
+  /* Unused: too close to sky */
+  --sapphire: #85c1dc;
+  --teal: #81c8be;
+  /* Reserved: do not use */
+  --maroon: #ea999c;
+  --flamingo: #eebebe;
+  --rosewater: #f2d5cf;
+
+  /* Spacing: 4px base */
+  --s-1: 4px;   /* inline gaps */
+  --s-2: 8px;   /* inline gaps, chip gaps */
+  --s-3: 12px;  /* heading to block, list items, cell padding */
+  --s-4: 16px;  /* inside cards (compact), mobile gutter */
+  --s-5: 24px;  /* inside cards, between blocks, gutter */
+  --s-6: 32px;
+  --s-7: 48px;  /* between sections, panel top */
+  --s-8: 64px;  /* panel bottom */
+
+  /* Type */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-1: 13px;  /* captions, chips, legend */
+  --fs-2: 14px;  /* tabs, tables, code */
+  --fs-3: 16px;  /* body */
+  --fs-4: 18px;  /* lead, h4, card titles */
+  --fs-5: 22px;  /* h3 */
+  --fs-6: 28px;  /* h2 tab title */
+  --lh-body: 1.65;
+  --lh-head: 1.25;
+  --lh-code: 1.55;
+
+  /* Shape */
+  --hairline: 1px solid var(--surface1);
+  --r-1: 4px;
+  --r-2: 8px;
+  --r-3: 12px;
+  --r-pill: 999px;
+
+  /* Layout */
+  --content: 1040px;
+  --measure: 70ch;
+  --gutter: var(--s-5);
+  --header-offset: 112px;
+}
+
+/* ==========================================================
+   2. Base
+   ========================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--base); scroll-padding-top: var(--header-offset); }
+body {
+  margin: 0;
+  background: var(--base);
+  color: var(--text);
+  font: 400 var(--fs-3) / var(--lh-body) var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+h1, h2, h3, h4, p, ul, ol, dl, dd, figure, pre { margin: 0; }
+h1, h2, h3, h4 { font-weight: 600; line-height: var(--lh-head); text-wrap: balance; }
+h2 { font-size: var(--fs-6); }
+h3 { font-size: var(--fs-5); }
+h4 { font-size: var(--fs-4); }
+p, li, dd { max-width: var(--measure); }
+ul, ol { padding-left: var(--s-5); display: grid; gap: var(--s-2); }
+strong { font-weight: 600; }
+a { color: var(--lavender); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+code { font-family: var(--font-mono); font-size: 0.875em; background: var(--surface0); color: var(--text); padding: 0 var(--s-1); border-radius: var(--r-1); }
+:focus-visible { outline: 2px solid var(--lavender); outline-offset: 2px; border-radius: var(--r-1); }
+* { scrollbar-color: var(--surface2) transparent; scrollbar-width: thin; }
+
+/* ==========================================================
+   3. Layout: sticky top bar, tab bar, panels
+   ========================================================== */
+.wrap { max-width: var(--content); margin: 0 auto; padding: 0 var(--gutter); }
+
+.topbar { position: sticky; top: 0; z-index: 10; background: var(--mantle); border-bottom: var(--hairline); }
+.topbar-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-5); padding-top: var(--s-4); }
+.topbar h1 { font-size: var(--fs-3); }
+.topbar-meta { display: flex; align-items: center; gap: var(--s-3); font-size: var(--fs-1); color: var(--subtext0); }
+
+.tabs { overflow-x: auto; margin: var(--s-2) calc(-1 * var(--s-3)) 0; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+[role="tablist"] { display: flex; gap: var(--s-1); width: max-content; }
+[role="tab"] {
+  position: relative;
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: var(--s-3);
+  font: 400 var(--fs-2) / 1 var(--font-sans);
+  color: var(--subtext1);
+  white-space: nowrap;
+}
+[role="tab"]:hover { color: var(--text); }
+[role="tab"][aria-selected="true"] { color: var(--text); font-weight: 600; }
+[role="tab"][aria-selected="true"]::after {
+  content: ""; position: absolute; left: var(--s-3); right: var(--s-3); bottom: -1px;
+  height: 2px; background: var(--lavender); border-radius: var(--r-pill);
+}
+[role="tab"]:focus-visible { outline-offset: -2px; }
+html:not(.js) .tabs { display: none; }
+
+[role="tabpanel"] { display: grid; gap: var(--s-7); padding: var(--s-7) 0 var(--s-8); }
+[role="tabpanel"][hidden] { display: none; }
+[role="tabpanel"]:focus-visible { outline: none; }
+.panel-head { display: grid; gap: var(--s-3); }
+.lead { font-size: var(--fs-4); color: var(--subtext1); }
+section { display: grid; gap: var(--s-5); }
+section > h3 { margin-bottom: calc(var(--s-3) - var(--s-5)); } /* heading to block = s-3 */
+.muted { color: var(--subtext0); }
+
+/* ==========================================================
+   4. Components
+   ========================================================== */
+
+/* Callout: mantle fill + 3px left rule. The only accent rule allowed. */
+.callout { --c: var(--blue); background: var(--mantle); border-left: 3px solid var(--c); border-radius: 0 var(--r-2) var(--r-2) 0; padding: var(--s-4) var(--s-5); }
+.callout p + p { margin-top: var(--s-2); }
+.callout-label { color: var(--c); font-weight: 600; margin-right: var(--s-1); }
+.callout.info { --c: var(--blue); }
+.callout.warn { --c: var(--yellow); }
+.callout.risk { --c: var(--red); }
+.callout.decision { --c: var(--mauve); }
+
+/* Status chip: surface0 pill, coloured dot, text-coloured label */
+.chip { --c: var(--overlay2); display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-1) var(--s-3); border-radius: var(--r-pill); background: var(--surface0); color: var(--text); font-size: var(--fs-1); line-height: 1.4; white-space: nowrap; }
+.chip::before { content: ""; width: var(--s-2); height: var(--s-2); border-radius: var(--r-pill); background: var(--c); }
+.chip.ok { --c: var(--green); }
+.chip.warn { --c: var(--yellow); }
+.chip.risk { --c: var(--red); }
+.chip.info { --c: var(--blue); }
+.chip.decision { --c: var(--mauve); }
+.chip.neutral { --c: var(--overlay2); }
+
+/* Table: row hairlines only, no box, no verticals */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: var(--fs-2); font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: var(--s-3) var(--s-4); }
+th:first-child, td:first-child { padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
+th { font-size: var(--fs-1); font-weight: 600; color: var(--subtext0); }
+tr { border-bottom: var(--hairline); }
+tbody tr:last-child { border-bottom: 0; }
+
+/* Code block: crust, no border */
+.code { display: grid; gap: var(--s-2); }
+.code figcaption { font: var(--fs-1) / 1.4 var(--font-mono); color: var(--subtext0); }
+.code pre { background: var(--crust); border-radius: var(--r-2); padding: var(--s-4) var(--s-5); overflow-x: auto; font: var(--fs-2) / var(--lh-code) var(--font-mono); color: var(--text); tab-size: 2; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.code .c { color: var(--subtext0); } /* comments: the only code colour */
+
+/* Key-value list */
+.kv { display: grid; grid-template-columns: minmax(8rem, 12rem) 1fr; gap: var(--s-3) var(--s-5); }
+.kv dt { color: var(--subtext0); }
+
+/* Cards: mantle fill, no border, 2 to 4 parallel items */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s-5); }
+.card { background: var(--mantle); border-radius: var(--r-2); padding: var(--s-5); display: grid; gap: var(--s-2); align-content: start; }
+.card h4, .decision h3 { font-size: var(--fs-4); }
+.card p { color: var(--subtext1); }
+
+/* Step list */
+.steps { list-style: none; padding: 0; counter-reset: step; gap: var(--s-4); }
+.steps li { counter-increment: step; display: grid; grid-template-columns: var(--s-5) 1fr; gap: var(--s-3); }
+.steps li::before { content: counter(step); display: grid; place-items: center; width: var(--s-5); height: var(--s-5); margin-top: 2px; border-radius: var(--r-pill); background: var(--surface0); font: 600 var(--fs-1) / 1 var(--font-mono); color: var(--text); }
+
+/* Decision card */
+.decision { background: var(--mantle); border-radius: var(--r-2); padding: var(--s-5); display: grid; gap: var(--s-4); }
+.decision header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+.decision-id { font: var(--fs-1) / 1 var(--font-mono); color: var(--subtext0); }
+.decision .chip { margin-left: auto; }
+.decisions { display: grid; gap: var(--s-5); }
+
+/* Diagram frame: holds an archify SVG (exported, then archify-frappe.py) or a link to the archify file */
+.diagram { background: var(--mantle); border-radius: var(--r-3); padding: var(--s-5); display: grid; gap: var(--s-4); min-width: 0; }
+.diagram-scroll { overflow-x: auto; border-radius: var(--r-2); }
+.diagram-scroll > svg { display: block; max-width: none; height: auto; }
+.diagram figcaption { font-size: var(--fs-1); color: var(--subtext0); }
+.legend { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); font-size: var(--fs-1); color: var(--subtext1); }
+.legend li { display: inline-flex; align-items: center; gap: var(--s-2); }
+.swatch { width: var(--s-3); height: var(--s-3); border-radius: var(--r-1); border: 1.5px solid var(--c); background: var(--base); }
+.line { width: var(--s-6); border-top: 1.5px solid var(--overlay2); }
+.line.async { border-top: 1.5px dashed var(--tier-async); }
+.diagram-text { font-size: var(--fs-2); color: var(--subtext1); }
+.diagram-text summary { cursor: pointer; width: max-content; font-size: var(--fs-1); color: var(--subtext1); }
+.diagram-text summary:hover { color: var(--text); }
+.diagram-text ul { padding-top: var(--s-3); gap: var(--s-1); }
+
+/* ==========================================================
+   5. Responsive, motion, print
+   ========================================================== */
+@media (max-width: 640px) {
+  :root { --gutter: var(--s-4); --header-offset: 140px; }
+  h2 { font-size: var(--fs-5); }
+  h3 { font-size: var(--fs-4); }
+  .lead { font-size: var(--fs-3); }
+  .kv { grid-template-columns: 1fr; gap: var(--s-1); }
+  .kv dd + dt { margin-top: var(--s-3); }
+  .diagram { padding: var(--s-4); }
+  .decision .chip { margin-left: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  [role="tab"] { transition: color 120ms ease; }
+}
+@media print {
+  .topbar { position: static; }
+  .tabs { display: none; }
+  [role="tabpanel"][hidden] { display: grid; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="topbar-row">
+      <h1>Ledger: system design</h1>
+      <div class="topbar-meta">
+        <span class="chip warn">Draft</span>
+        <span>Updated <time datetime="2026-11-06">6 Nov 2026</time></span>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Document sections">
+      <div role="tablist" aria-label="Document sections">
+        <button role="tab" id="tab-overview" aria-controls="overview" aria-selected="true">Overview</button>
+        <button role="tab" id="tab-components" aria-controls="components" aria-selected="false" tabindex="-1">Components</button>
+        <button role="tab" id="tab-flows" aria-controls="flows" aria-selected="false" tabindex="-1">Flows</button>
+        <button role="tab" id="tab-decisions" aria-controls="decisions" aria-selected="false" tabindex="-1">Decisions</button>
+        <button role="tab" id="tab-risks" aria-controls="risks" aria-selected="false" tabindex="-1">Risks</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ===================== Overview ===================== -->
+  <section role="tabpanel" id="overview" aria-labelledby="tab-overview" tabindex="0">
+    <div class="panel-head">
+      <h2>Overview</h2>
+      <p class="lead">Ledger is an offline-first expense tracker. A PWA stores entries locally and syncs them through one Cloudflare Worker to D1; receipt photos go to R2 and are read by an async OCR job.</p>
+    </div>
+
+    <section aria-labelledby="facts">
+      <h3 id="facts">Key facts</h3>
+      <dl class="kv">
+        <dt>Owner</dt><dd>Platform team, on-call rota in PagerDuty</dd>
+        <dt>Status</dt><dd><span class="chip ok">In production</span></dd>
+        <dt>Users</dt><dd>About 4,000 monthly active, peak 30 requests per second</dd>
+        <dt>Runtime</dt><dd>Cloudflare Workers, Pages, D1, R2, Queues</dd>
+        <dt>Availability target</dt><dd>99.9% for <code>/api/*</code>, monthly</dd>
+        <dt>Data residency</dt><dd>D1 and R2 pinned to the EU jurisdiction</dd>
+      </dl>
+    </section>
+
+    <section aria-labelledby="architecture">
+      <h3 id="architecture">Architecture</h3>
+      <figure class="diagram">
+        <!-- Small static diagram: replace the paragraph below with
+             <div class="diagram-scroll" tabindex="0" role="region" aria-label="Ledger architecture, scrollable">EXPORTED SVG</div>
+             (archify viewer, Export SVG, then scripts/archify-frappe.py on the .svg). -->
+        <p><a href="ledger-architecture.html">Open the Ledger architecture diagram</a>: pan, zoom, search and trace each request path.</p>
+        <ul class="legend" aria-label="Legend">
+          <li><span class="swatch" style="--c: var(--tier-client)"></span>Client</li>
+          <li><span class="swatch" style="--c: var(--tier-service)"></span>Service</li>
+          <li><span class="swatch" style="--c: var(--tier-async)"></span>Async and events</li>
+          <li><span class="swatch" style="--c: var(--tier-data)"></span>Data store</li>
+          <li><span class="swatch" style="--c: var(--tier-external)"></span>External</li>
+          <li><span class="line"></span>Sync call</li>
+          <li><span class="line async"></span>Async or event</li>
+        </ul>
+        <figcaption>Request path for the web app. Arrows point from caller to callee; dashed arrows are async.</figcaption>
+        <details class="diagram-text">
+          <summary>Text version</summary>
+          <ul>
+            <li>Ledger PWA calls API Worker over HTTPS.</li>
+            <li>API Worker reads and writes D1 ledger over SQL and puts receipts in R2 receipts.</li>
+            <li>API Worker enqueues a job on ocr-jobs (async); the queue delivers it to OCR consumer (async).</li>
+            <li>OCR consumer reads the receipt from R2, calls the vendor OCR API over HTTPS and writes the total to D1.</li>
+          </ul>
+        </details>
+      </figure>
+    </section>
+
+    <section aria-labelledby="goals">
+      <h3 id="goals">Quality goals</h3>
+      <div class="grid">
+        <article class="card">
+          <h4>Offline first</h4>
+          <p>Every write lands in IndexedDB first. The app stays usable with no network for days.</p>
+        </article>
+        <article class="card">
+          <h4>Cheap to run</h4>
+          <p>Stays inside the Workers paid plan base fee up to 10,000 monthly users.</p>
+        </article>
+        <article class="card">
+          <h4>Private by default</h4>
+          <p>Receipts are never public. R2 objects are read only through the Worker.</p>
+        </article>
+      </div>
+    </section>
+
+    <div class="callout info" role="note">
+      <p><span class="callout-label">Note</span>Authentication is out of scope here. See the <a href="#decisions">Decisions</a> tab for the passkey proposal.</p>
+    </div>
+  </section>
+
+  <!-- ===================== Components ===================== -->
+  <section role="tabpanel" id="components" aria-labelledby="tab-components" tabindex="0" hidden>
+    <div class="panel-head">
+      <h2>Components</h2>
+      <p class="lead">Five deployable parts, one repository. Each part has one owner and one scaling axis.</p>
+    </div>
+
+    <section aria-labelledby="inventory">
+      <h3 id="inventory">Inventory</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Component</th><th scope="col">Runtime</th><th scope="col">Owns</th><th scope="col">Scales by</th><th scope="col">Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Ledger PWA</td><td>Pages, static</td><td>UI, local store, sync queue</td><td>CDN cache</td><td><span class="chip ok">Live</span></td></tr>
+            <tr><td>API Worker</td><td>Workers</td><td>Auth check, validation, writes</td><td>Requests</td><td><span class="chip ok">Live</span></td></tr>
+            <tr><td>D1</td><td>SQLite</td><td>Entries, budgets, OCR results</td><td>Read replicas</td><td><span class="chip ok">Live</span></td></tr>
+            <tr><td>R2 bucket</td><td>Object store</td><td>Receipt images, 30 day thumbnails</td><td>Objects</td><td><span class="chip ok">Live</span></td></tr>
+            <tr><td>OCR consumer</td><td>Workers + Queues</td><td>Text extraction jobs</td><td>Batch size</td><td><span class="chip warn">Beta</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="api-worker">
+      <h3 id="api-worker">API Worker</h3>
+      <dl class="kv">
+        <dt>Entry point</dt><dd><code>apps/api/src/index.ts</code></dd>
+        <dt>Routes</dt><dd><code>GET /api/entries</code>, <code>POST /api/sync</code>, <code>PUT /api/receipts/:id</code></dd>
+        <dt>Limits</dt><dd>50 ms CPU per request, 5 MB receipt upload</dd>
+        <dt>Bindings</dt><dd><code>DB</code>, <code>RECEIPTS</code>, <code>OCR_QUEUE</code></dd>
+      </dl>
+      <figure class="code">
+        <figcaption>apps/api/wrangler.toml</figcaption>
+<pre><code>name = "ledger-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ledger"
+
+[[r2_buckets]]
+binding = "RECEIPTS"
+bucket_name = "ledger-receipts"
+jurisdiction = "eu"
+
+[[queues.producers]]
+binding = "OCR_QUEUE"
+queue = "ocr-jobs"   <span class="c"># consumed by apps/ocr</span></code></pre>
+      </figure>
+      <div class="callout warn" role="note">
+        <p><span class="callout-label">Warning</span>D1 migrations run before the Worker deploys. A migration that drops a column breaks the running version for up to two minutes.</p>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===================== Flows ===================== -->
+  <section role="tabpanel" id="flows" aria-labelledby="tab-flows" tabindex="0" hidden>
+    <div class="panel-head">
+      <h2>Flows</h2>
+      <p class="lead">Two flows carry most of the load: syncing local entries and reading a receipt. Both tolerate retries because every write carries a client-generated id.</p>
+    </div>
+
+    <section aria-labelledby="flow-sync">
+      <h3 id="flow-sync">Sync local entries</h3>
+      <ol class="steps">
+        <li><div><strong>PWA</strong> saves the entry to IndexedDB with a ULID and marks it pending.</div></li>
+        <li><div><strong>Service worker</strong> batches pending entries when the network returns, up to 100 per request.</div></li>
+        <li><div><strong>API Worker</strong> validates the batch and upserts rows in one D1 transaction.</div></li>
+        <li><div><strong>API Worker</strong> returns the server cursor; the PWA clears pending flags up to it.</div></li>
+      </ol>
+      <figure class="code">
+        <figcaption>POST /api/sync</figcaption>
+<pre><code>{
+  "cursor": "01JC8Z4M2Q",
+  "entries": [
+    { "id": "01JC9A7T0K", "amount": 125000, "currency": "VND", "category": "food" }
+  ]
+}</code></pre>
+      </figure>
+    </section>
+
+    <section aria-labelledby="flow-ocr">
+      <h3 id="flow-ocr">Read a receipt</h3>
+      <ol class="steps">
+        <li><div><strong>PWA</strong> uploads the photo with <code>PUT /api/receipts/:id</code>.</div></li>
+        <li><div><strong>API Worker</strong> stores it in R2 and enqueues <code>{ id, key }</code> on <code>ocr-jobs</code>.</div></li>
+        <li><div><strong>OCR consumer</strong> reads the image, calls the vendor API and writes the total to D1.</div></li>
+        <li><div><strong>PWA</strong> picks up the parsed total on its next sync.</div></li>
+      </ol>
+      <div class="callout info" role="note">
+        <p><span class="callout-label">Note</span>Failed jobs retry three times with backoff, then land in <code>ocr-jobs-dlq</code> for manual review.</p>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===================== Decisions ===================== -->
+  <section role="tabpanel" id="decisions" aria-labelledby="tab-decisions" tabindex="0" hidden>
+    <div class="panel-head">
+      <h2>Decisions</h2>
+      <p class="lead">Accepted decisions are binding until superseded. Proposed ones need a review before the next release.</p>
+    </div>
+
+    <div class="decisions">
+      <article class="decision" id="adr-001">
+        <header>
+          <span class="decision-id">ADR-001</span>
+          <h3>Use D1 instead of a hosted Postgres</h3>
+          <span class="chip ok">Accepted</span>
+        </header>
+        <dl class="kv">
+          <dt>Context</dt><dd>Data is small, per user, and read near the user. A Postgres connection from Workers adds latency and a second vendor.</dd>
+          <dt>Decision</dt><dd>Store all relational data in D1 with read replicas enabled.</dd>
+          <dt>Consequences</dt><dd>No cross-user analytics in the primary store; nightly export to R2 covers reporting.</dd>
+        </dl>
+      </article>
+
+      <article class="decision" id="adr-002">
+        <header>
+          <span class="decision-id">ADR-002</span>
+          <h3>Run OCR asynchronously through a queue</h3>
+          <span class="chip ok">Accepted</span>
+        </header>
+        <dl class="kv">
+          <dt>Context</dt><dd>The vendor API takes 2 to 6 seconds, longer than a good upload response.</dd>
+          <dt>Decision</dt><dd>Upload returns at once; a queue consumer does the OCR.</dd>
+          <dt>Consequences</dt><dd>The total appears on the next sync, not instantly.</dd>
+        </dl>
+      </article>
+
+      <article class="decision" id="adr-003">
+        <header>
+          <span class="decision-id">ADR-003</span>
+          <h3>Sign in with passkeys only</h3>
+          <span class="chip warn">Proposed</span>
+        </header>
+        <dl class="kv">
+          <dt>Context</dt><dd>Email codes cost money and land in spam for some providers.</dd>
+          <dt>Decision</dt><dd>Use WebAuthn passkeys, with a recovery code shown once.</dd>
+          <dt>Consequences</dt><dd>Users on old Android builds need a fallback; to be decided.</dd>
+        </dl>
+      </article>
+    </div>
+
+    <div class="callout decision" role="note">
+      <p><span class="callout-label">Decision needed</span>Pick the passkey fallback by 20 Nov 2026: email code or device link. Owner: Platform lead.</p>
+    </div>
+  </section>
+
+  <!-- ===================== Risks ===================== -->
+  <section role="tabpanel" id="risks" aria-labelledby="tab-risks" tabindex="0" hidden>
+    <div class="panel-head">
+      <h2>Risks</h2>
+      <p class="lead">Three open risks, one of them high. Each has an owner and a next step.</p>
+    </div>
+
+    <div class="callout risk" role="note">
+      <p><span class="callout-label">Risk</span>The OCR vendor stores images for 30 days by default. This conflicts with our privacy goal until the zero-retention contract is signed.</p>
+    </div>
+
+    <section aria-labelledby="risk-register">
+      <h3 id="risk-register">Register</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Risk</th><th scope="col">Impact</th><th scope="col">Mitigation</th><th scope="col">Owner</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Vendor keeps receipt images</td><td><span class="chip risk">High</span></td><td>Zero-retention contract; strip EXIF before upload</td><td>Legal, Platform</td></tr>
+            <tr><td>D1 size limit at 10 GB</td><td><span class="chip warn">Medium</span></td><td>Shard by user id when the database passes 6 GB</td><td>Platform</td></tr>
+            <tr><td>Sync conflicts on shared budgets</td><td><span class="chip neutral">Low</span></td><td>Last write wins per field; log conflicts</td><td>App team</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="glossary">
+      <h3 id="glossary">Glossary</h3>
+      <dl class="kv">
+        <dt>Cursor</dt><dd>Opaque server position; everything before it is synced.</dd>
+        <dt>ULID</dt><dd>Sortable unique id generated on the device.</dd>
+        <dt>DLQ</dt><dd>Dead letter queue for jobs that failed every retry.</dd>
+      </dl>
+    </section>
+  </section>
+
+</main>
+
+<script>
+/* Tabs: ARIA, arrow keys, hash deep links, last tab remembered */
+(() => {
+  document.documentElement.classList.add("js");
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  const panels = tabs.map(t => document.getElementById(t.getAttribute("aria-controls")));
+  const key = "frappe-docs:" + location.pathname;
+  const save = id => { try { localStorage.setItem(key, id); } catch (e) {} };
+  const load = () => { try { return localStorage.getItem(key); } catch (e) { return null; } };
+
+  function select(i, { focus = false, hash = true } = {}) {
+    tabs.forEach((t, j) => {
+      const on = j === i;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+      panels[j].hidden = !on;
+    });
+    if (focus) tabs[i].focus();
+    tabs[i].scrollIntoView({ block: "nearest", inline: "nearest" });
+    save(panels[i].id);
+    if (hash && location.hash !== "#" + panels[i].id) history.replaceState(null, "", "#" + panels[i].id);
+  }
+
+  function fromHash() {
+    const id = decodeURIComponent(location.hash.slice(1));
+    const el = id && document.getElementById(id);
+    if (!el) return false;
+    const i = panels.findIndex(p => p === el || p.contains(el));
+    if (i < 0) return false;
+    select(i, { hash: false });
+    if (el === panels[i]) window.scrollTo(0, 0); else el.scrollIntoView();
+    return true;
+  }
+
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => { select(i); window.scrollTo(0, 0); });
+    t.addEventListener("keydown", e => {
+      const last = tabs.length - 1;
+      const next = { ArrowRight: i === last ? 0 : i + 1, ArrowLeft: i === 0 ? last : i - 1, Home: 0, End: last }[e.key];
+      if (next === undefined) return;
+      e.preventDefault();
+      select(next, { focus: true });
+    });
+  });
+
+  window.addEventListener("hashchange", fromHash);
+  if (!fromHash()) {
+    const i = panels.findIndex(p => p.id === load());
+    select(i < 0 ? 0 : i, { hash: false });
+  }
+})();
+</script>
+</body>
+</html>

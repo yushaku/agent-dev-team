@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Bug ticket, end to end",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      960,
+      872
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "Task dispatch"
+        },
+        "default": {
+          "label": "request"
+        },
+        "return": {
+          "label": "reply, worker_done"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "po",
+      "type": "frontend",
+      "label": "PO",
+      "sublabel": "human"
+    },
+    {
+      "id": "orch",
+      "type": "cloud",
+      "label": "Orchestrator",
+      "sublabel": "triage"
+    },
+    {
+      "id": "analyst",
+      "type": "messagebus",
+      "label": "Ticket Analyst",
+      "sublabel": "Plan, replaces PM"
+    },
+    {
+      "id": "builder",
+      "type": "backend",
+      "label": "Builder",
+      "sublabel": "investigate + fix"
+    },
+    {
+      "id": "reviewer",
+      "type": "external",
+      "label": "Verify",
+      "sublabel": "verify Task || QA"
+    }
+  ],
+  "segments": [
+    {
+      "from": 156,
+      "to": 328,
+      "label": "Triage + clarify"
+    },
+    {
+      "from": 332,
+      "to": 504,
+      "label": "Fix + verify"
+    },
+    {
+      "from": 508,
+      "to": 768,
+      "label": "PO gates"
+    }
+  ],
+  "messages": [
+    {
+      "from": "po",
+      "to": "orch",
+      "y": 180,
+      "label": "Bug ticket",
+      "variant": "emphasis"
+    },
+    {
+      "from": "orch",
+      "to": "po",
+      "y": 224,
+      "label": "Bug, S1, one-line reason",
+      "variant": "return"
+    },
+    {
+      "from": "orch",
+      "to": "analyst",
+      "y": 268,
+      "label": "read the whole thread",
+      "variant": "default"
+    },
+    {
+      "from": "analyst",
+      "to": "orch",
+      "y": 312,
+      "label": "expected vs actual",
+      "variant": "return"
+    },
+    {
+      "from": "orch",
+      "to": "builder",
+      "y": 356,
+      "label": "reproduce, root cause, fix",
+      "variant": "emphasis"
+    },
+    {
+      "from": "builder",
+      "to": "orch",
+      "y": 400,
+      "label": "test fails, then passes",
+      "variant": "return"
+    },
+    {
+      "from": "orch",
+      "to": "reviewer",
+      "y": 444,
+      "label": "Anti-AI, Security*, Review || QA",
+      "variant": "emphasis"
+    },
+    {
+      "from": "reviewer",
+      "to": "orch",
+      "y": 488,
+      "label": "zero Must fix, tests green",
+      "variant": "return"
+    },
+    {
+      "from": "orch",
+      "to": "po",
+      "y": 532,
+      "label": "G-PR: draft PR",
+      "variant": "emphasis"
+    },
+    {
+      "from": "po",
+      "to": "orch",
+      "y": 576,
+      "label": "G-PR approved",
+      "variant": "return"
+    },
+    {
+      "from": "orch",
+      "to": "analyst",
+      "y": 620,
+      "label": "draft fix report",
+      "variant": "default"
+    },
+    {
+      "from": "analyst",
+      "to": "orch",
+      "y": 664,
+      "label": "draft + translation",
+      "variant": "return"
+    },
+    {
+      "from": "orch",
+      "to": "po",
+      "y": 708,
+      "label": "G-Reply: draft",
+      "variant": "emphasis"
+    },
+    {
+      "from": "po",
+      "to": "orch",
+      "y": 752,
+      "label": "approved, PO posts when live",
+      "variant": "return"
+    }
+  ]
+}

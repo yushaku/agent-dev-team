@@ -1,0 +1,248 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Sessions and handoff",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO"
+        },
+        "cloud": {
+          "label": "Orchestrator"
+        },
+        "messagebus": {
+          "label": "Plan: Researcher, Solution Architect"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "sa",
+      "label": "Solution Architect"
+    },
+    {
+      "id": "po",
+      "label": "PO"
+    },
+    {
+      "id": "res",
+      "label": "Researcher"
+    },
+    {
+      "id": "orch",
+      "label": "Orchestrator"
+    }
+  ],
+  "phases": [
+    {
+      "id": "discuss",
+      "label": "Discuss",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "work",
+      "label": "Run",
+      "fromCol": 2,
+      "toCol": 3
+    },
+    {
+      "id": "next",
+      "label": "New session",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "open_res",
+    "discuss",
+    "report",
+    "open_orch",
+    "pick",
+    "gate",
+    "clear",
+    "resume"
+  ],
+  "nodes": [
+    {
+      "id": "open_res",
+      "lane": "po",
+      "col": 0,
+      "type": "frontend",
+      "label": "Open session",
+      "sublabel": "Researcher or Solution Architect",
+      "width": 170
+    },
+    {
+      "id": "sa_discuss",
+      "lane": "sa",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Discuss 1 topic",
+      "sublabel": "load numbers, options",
+      "width": 170
+    },
+    {
+      "id": "sa_note",
+      "lane": "sa",
+      "col": 1,
+      "type": "messagebus",
+      "label": "architecture/<topic>.md",
+      "sublabel": "then PO agrees",
+      "width": 170
+    },
+    {
+      "id": "sa_docs",
+      "lane": "sa",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Writes docs",
+      "sublabel": "ADR, Constraints, archify",
+      "width": 170
+    },
+    {
+      "id": "discuss",
+      "lane": "res",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Discuss 1 topic",
+      "sublabel": "options, sources",
+      "width": 170
+    },
+    {
+      "id": "report",
+      "lane": "res",
+      "col": 1,
+      "type": "messagebus",
+      "label": "research/<topic>.md",
+      "sublabel": "+ todo.md proposals",
+      "width": 170
+    },
+    {
+      "id": "open_orch",
+      "lane": "po",
+      "col": 2,
+      "type": "frontend",
+      "label": "/clear",
+      "sublabel": "\"be Orchestrator\"",
+      "width": 170
+    },
+    {
+      "id": "pick",
+      "lane": "orch",
+      "col": 2,
+      "type": "cloud",
+      "label": "Pick work",
+      "sublabel": "todo item, named note",
+      "width": 170
+    },
+    {
+      "id": "gate",
+      "lane": "orch",
+      "col": 3,
+      "type": "cloud",
+      "label": "Gate or 100K",
+      "sublabel": "write handoff.md",
+      "width": 170
+    },
+    {
+      "id": "clear",
+      "lane": "po",
+      "col": 4,
+      "type": "frontend",
+      "label": "/clear",
+      "sublabel": "\"be Orchestrator\"",
+      "width": 170
+    },
+    {
+      "id": "resume",
+      "lane": "orch",
+      "col": 5,
+      "type": "cloud",
+      "label": "Resume",
+      "sublabel": "handoff.md + Orca",
+      "width": 170
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "open_res",
+      "to": "discuss",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "s1",
+      "from": "open_res",
+      "to": "sa_discuss",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "s2",
+      "from": "sa_discuss",
+      "to": "sa_note",
+      "label": "writes",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "s3",
+      "from": "sa_note",
+      "to": "sa_docs",
+      "label": "docs branch",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e2",
+      "from": "discuss",
+      "to": "report",
+      "label": "writes",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e3",
+      "from": "report",
+      "to": "open_orch",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "e4",
+      "from": "open_orch",
+      "to": "pick",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "e5",
+      "from": "pick",
+      "to": "gate",
+      "label": "runs Tasks",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e6",
+      "from": "gate",
+      "to": "clear",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "e7",
+      "from": "clear",
+      "to": "resume",
+      "fromSide": "right",
+      "toSide": "top"
+    }
+  ]
+}

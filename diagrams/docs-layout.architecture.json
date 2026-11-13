@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Where docs live",
+    "output": "diagrams/docs-layout.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO"
+        },
+        "cloud": {
+          "label": "Orchestrator"
+        },
+        "messagebus": {
+          "label": "Plan"
+        },
+        "database": {
+          "label": "Delivery"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "product",
+      "type": "messagebus",
+      "label": "docs/product/*.md",
+      "sublabel": "PM: business spec",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "adr",
+      "type": "messagebus",
+      "label": "ADR, AGENTS.md",
+      "sublabel": "Tech Lead, Solution Architect",
+      "pos": [
+        220,
+        60
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "dspec",
+      "type": "messagebus",
+      "label": "docs/diagrams/*.json",
+      "sublabel": "Tech Lead, Solution Architect",
+      "pos": [
+        400,
+        60
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "readme",
+      "type": "database",
+      "label": "README, CHANGELOG",
+      "sublabel": "PO: README, Builder: CHANGELOG",
+      "pos": [
+        580,
+        60
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "todo",
+      "type": "frontend",
+      "label": "todo.md",
+      "sublabel": "PO: roadmap",
+      "pos": [
+        760,
+        60
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "html",
+      "type": "database",
+      "label": "GitHub Pages (optional)",
+      "sublabel": "Delivery Engineer: pages.yml + diagrams",
+      "pos": [
+        580,
+        240
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "po",
+      "type": "frontend",
+      "label": "Product Owner",
+      "sublabel": "reads HTML only",
+      "pos": [
+        800,
+        240
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "plan",
+      "type": "messagebus",
+      "label": "plan.md, design/",
+      "sublabel": "Tech Lead, Designer",
+      "pos": [
+        40,
+        420
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "arch",
+      "type": "messagebus",
+      "label": "architecture/<topic>.md",
+      "sublabel": "Solution Architect",
+      "pos": [
+        220,
+        420
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "research",
+      "type": "messagebus",
+      "label": "research/<topic>.md",
+      "sublabel": "Researcher",
+      "pos": [
+        400,
+        420
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "handoff",
+      "type": "cloud",
+      "label": "handoff.md",
+      "sublabel": "+ carry-over.md",
+      "pos": [
+        580,
+        420
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "orch",
+      "type": "cloud",
+      "label": "Orchestrator",
+      "sublabel": "reads sources only",
+      "pos": [
+        800,
+        420
+      ],
+      "size": [
+        160,
+        56
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Committed sources: agents read",
+      "wraps": [
+        "product",
+        "adr",
+        "dspec",
+        "readme",
+        "todo"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Generated HTML: humans read",
+      "wraps": [
+        "html"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": ".team/ scratch: local, never committed",
+      "wraps": [
+        "plan",
+        "arch",
+        "research",
+        "handoff"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "regen",
+      "from": "readme",
+      "to": "html",
+      "label": "regenerate at delivery",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        660,
+        178
+      ]
+    },
+    {
+      "id": "po-reads",
+      "from": "html",
+      "to": "po",
+      "label": "reads",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "resume",
+      "from": "handoff",
+      "to": "orch",
+      "label": "resume",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "named",
+      "from": "research",
+      "to": "orch",
+      "label": "read when named",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "via": [
+        [
+          480,
+          530
+        ],
+        [
+          880,
+          530
+        ]
+      ],
+      "labelAt": [
+        680,
+        530
+      ]
+    },
+    {
+      "id": "sa-writes",
+      "from": "arch",
+      "to": "adr",
+      "label": "Solution Architect writes",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [
+        300,
+        268
+      ]
+    }
+  ]
+}

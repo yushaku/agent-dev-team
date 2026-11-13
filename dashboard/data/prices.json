@@ -1,0 +1,11 @@
+{
+  "_note": "USD per 1M tokens. Every price below is an ASSUMPTION copied from older public list prices, not a published price for these model ids. Edit freely; a model missing here is shown as '?' and not costed. Keys match exactly or as a prefix of the model id.",
+  "models": {
+    "claude-opus":   {"input": 5.0,  "cache_read": 0.5,   "cache_write": 6.25, "output": 25.0, "assumed": true, "basis": "Claude Opus 4.5 list price, 5 min cache write"},
+    "claude-sonnet": {"input": 3.0,  "cache_read": 0.3,   "cache_write": 3.75, "output": 15.0, "assumed": true, "basis": "Claude Sonnet 4.5 list price"},
+    "claude-haiku":  {"input": 1.0,  "cache_read": 0.1,   "cache_write": 1.25, "output": 5.0,  "assumed": true, "basis": "Claude Haiku 4.5 list price"},
+    "gpt-6-astra":   {"input": 1.25, "cache_read": 0.125, "cache_write": 0,    "output": 10.0, "assumed": true, "basis": "GPT-5 list price"},
+    "gpt-6.1-sol":   {"input": 1.25, "cache_read": 0.125, "cache_write": 0,    "output": 10.0, "assumed": true, "basis": "GPT-5 list price"},
+    "gpt-6-luna":    {"input": 0.25, "cache_read": 0.025, "cache_write": 0,    "output": 2.0,  "assumed": true, "basis": "GPT-5 mini list price"}
+  }
+}
