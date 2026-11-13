@@ -95,7 +95,7 @@ rect.c-external { stroke: #996f60; }
 <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
 </g>
 <text x="112" y="125.2" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Read-only answer</text>
-<text x="112" y="140.1" class="t-muted" font-size="8" text-anchor="middle">Researcher, no Orca</text>
+<text x="112" y="139.7" class="t-muted" font-size="7.6" text-anchor="middle">read-only session, no Orca</text>
 </g>
 <g id="sizes-node-s0_g">
 <rect x="848" y="93" width="128" height="52" rx="8" class="c-mask"/>

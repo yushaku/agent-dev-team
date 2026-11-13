@@ -18,7 +18,7 @@
 
 ## Principles
 
-1. **Separate sessions:** the PO gives work to the Orchestrator (any coding agent in an Orca terminal), which dispatches everyone else; the PO discusses with the Researcher, whose report (`.team/research/`, `todo.md`) the Orchestrator reads, or with the Solution Architect. No chat between a discussion session and the Orchestrator.
+1. **Separate sessions:** the PO gives work to the Orchestrator (any coding agent in an Orca terminal), which dispatches everyone else; the PO discusses a product idea with the Researcher, whose note (`.team/research/`, `todo.md`) the Orchestrator reads, or technical design with the Solution Architect. No chat between a discussion session and the Orchestrator.
 2. **Orca tracks, code is the truth:** no markdown boards; status, ownership, dependencies, gates live in Orca; how the system works is answered by code and tests; what the business wants, by the business spec.
 3. **Process here, specifics in config:** no project stack, platform, command or branch name; agents and trackers are process.
 4. **Few documents, one owner each:** `docs-policy.md`.

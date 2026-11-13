@@ -7,7 +7,7 @@
 
 | Size | Use for | Who works | Orca | Gates |
 |---|---|---|---|---|
-| **S0 Direct** | Answer from code, explain behavior, tiny read-only lookups | Researcher | Nothing created; read-only lookups (`orca reference find`, `orca search`), code via `git show`/`git grep` on the remote branch, no checkout | G-Reply if anything leaves the team |
+| **S0 Direct** | Answer from code, explain behavior, tiny read-only lookups | one read-only agent session (Investigator card, `maintenance.md`) | Nothing created; read-only lookups (`orca reference find`, `orca search`), code via `git show`/`git grep` on the remote branch, no checkout | G-Reply if anything leaves the team |
 | **S1 Solo** | One-area change, clear expected result | Builder, Anti-AI Editor, Code Reviewer | 1 worktree, no Run (or a Run with 2 Tasks) | Gate 2 |
 | **S2 Standard** | A few areas, new tests needed, or one business rule changes | Product Manager (business rule change), Builder, Anti-AI Editor, Security Auditor (when triggered), Code Reviewer, QA, Perf/A11y (when triggered), Designer (new screen or flow) | 1 worktree + Run with a short DAG | Gate 1 if a business rule changes, G-UI for a new screen or flow, Gate 2 |
 | **S3 Full** | New capability, unclear requirements, cross-cutting design | Product Manager, Designer (when UI), Tech Lead, Builder, Anti-AI Editor, Security Auditor (when triggered), Code Reviewer, QA, Perf/A11y (when triggered), Delivery Engineer | 1 feature worktree (+ child worktrees if parallel Builders are allowed) + Run with the full DAG (`workflow.md`) | Gate 1, G-UI when there is UI, Gate 2 |
@@ -37,6 +37,6 @@
 - Small change: S1 (`workflow.md` "Other DAG shapes").
 - Feature: S2 or S3 (`workflow.md` "Task DAG").
 - Business rule change: S2 (`workflow.md` "Other DAG shapes").
-- **Spike** (S0 or S1): Researcher, then Tech Lead writes an ADR if a decision is made; PO decides.
+- **Spike** (S0 or S1): a technical question is a Solution Architect session (`roles/solution-architect.md`), which writes the ADR; a product question is a Researcher session; PO decides.
 - Redesign, visual only: S2 (`workflow.md` "Other DAG shapes").
 - Production ticket work: `maintenance.md`.

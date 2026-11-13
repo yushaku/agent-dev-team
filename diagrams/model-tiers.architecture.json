@@ -172,26 +172,12 @@
       ]
     },
     {
-      "id": "work_2",
-      "type": "messagebus",
-      "label": "Researcher",
-      "sublabel": "worker mode",
-      "pos": [
-        352,
-        330
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
       "id": "work_3",
       "type": "backend",
       "label": "Builder",
       "sublabel": "S1, S2",
       "pos": [
-        508,
+        352,
         330
       ],
       "size": [
@@ -205,7 +191,7 @@
       "label": "QA",
       "sublabel": "AC to tests",
       "pos": [
-        664,
+        508,
         330
       ],
       "size": [
@@ -219,7 +205,7 @@
       "label": "Perf / A11y",
       "sublabel": "when triggered",
       "pos": [
-        820,
+        664,
         330
       ],
       "size": [
@@ -304,7 +290,6 @@
         "t_work",
         "work_0",
         "work_1",
-        "work_2",
         "work_3",
         "work_4",
         "work_5"

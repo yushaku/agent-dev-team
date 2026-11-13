@@ -80,7 +80,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Read-only answer",
-      "sublabel": "Researcher, no Orca",
+      "sublabel": "read-only session, no Orca",
       "width": 128
     },
     {

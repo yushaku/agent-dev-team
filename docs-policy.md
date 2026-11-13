@@ -69,7 +69,7 @@
 - Delivery Engineer todo updates: `roles/delivery.md`.
 - `.team/` (ignored, never committed):
   - `<feature>/`: `plan.md` (`roles/tech-lead.md`), `decisions.md` (numbered PO decisions for the Run, including Gate 1 answers, scope cuts and Orchestrator defaults), `walkthrough.html` (Gate 1 HTML for the PO), `handoff.md`, `design/`, `specs/`, and role reports named `<role>-r<N>.md` (round number, e.g. `reviewer-r1.md`, `builder-fix-r1.md`); no other entries per feature.
-  - `research/<topic>.md`: outcome of a discussion or research session: question, options, decision, open points, sources; under 60 lines; written in the discussion session, read by the Orchestrator only when a todo item or the PO names it.
+  - `research/<topic>.md`: outcome of a Researcher session (product discovery): problem, who has it, how others solve it, options, smallest scope, risks, decision, open points, sources; under 60 lines; written in the Researcher session, read by the Orchestrator only when a todo item or the PO names it.
   - `architecture/<topic>.md`: Solution Architect analysis: question, options compared, load numbers, decision, open points; under 60 lines; source for the Solution Architect's own docs commit.
   - `carry-over.md`: numbered leftovers (file:line, why); lifecycle in `orchestrator/delivery.md`.
 - `.team/config.yaml` is the only file in `.team/` that may be committed.

@@ -49,7 +49,7 @@
       "id": "researcher_talk",
       "type": "messagebus",
       "label": "Researcher",
-      "sublabel": "discussion session",
+      "sublabel": "product discovery",
       "pos": [
         420,
         80
@@ -136,20 +136,6 @@
       "sublabel": "ADR, slice plan",
       "pos": [
         632,
-        340
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "researcher",
-      "type": "messagebus",
-      "label": "Researcher",
-      "sublabel": "worker mode",
-      "pos": [
-        788,
         340
       ],
       "size": [
@@ -263,8 +249,7 @@
       "wraps": [
         "pm",
         "designer",
-        "tech-lead",
-        "researcher"
+        "tech-lead"
       ]
     },
     {

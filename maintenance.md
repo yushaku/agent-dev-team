@@ -46,8 +46,6 @@
 ### QA
 - Focus on regression: the reproducing test, the affected flows, the surrounding call paths the Investigator found.
 
-**Not used by default:** Researcher on demand.
-
 ## 3. Ticket types and flows
 
 Size every ticket first (`sizing.md`):
