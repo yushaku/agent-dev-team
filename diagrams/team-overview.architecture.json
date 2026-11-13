@@ -37,7 +37,7 @@
       "label": "Product Owner",
       "sublabel": "human, all gates",
       "pos": [
-        120,
+        440,
         80
       ],
       "size": [
@@ -51,7 +51,7 @@
       "label": "Researcher",
       "sublabel": "product discovery",
       "pos": [
-        420,
+        780,
         80
       ],
       "size": [
@@ -65,11 +65,11 @@
       "label": "Solution Architect",
       "sublabel": "discussion session",
       "pos": [
-        944,
+        80,
         80
       ],
       "size": [
-        160,
+        180,
         56
       ]
     },
@@ -79,7 +79,7 @@
       "label": "Orchestrator",
       "sublabel": "sizes, dispatches",
       "pos": [
-        120,
+        440,
         210
       ],
       "size": [
@@ -93,7 +93,7 @@
       "label": "Research report",
       "sublabel": "research/<topic>.md",
       "pos": [
-        420,
+        780,
         210
       ],
       "size": [
@@ -287,7 +287,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "labelAt": [
-        130,
+        450,
         173
       ]
     },
@@ -299,7 +299,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "labelAt": [
-        258,
+        578,
         173
       ]
     },
@@ -309,11 +309,7 @@
       "to": "researcher_talk",
       "label": "discuss",
       "fromSide": "right",
-      "toSide": "left",
-      "labelAt": [
-        350,
-        87
-      ]
+      "toSide": "left"
     },
     {
       "id": "res-answers",
@@ -321,55 +317,23 @@
       "to": "po",
       "label": "options",
       "fromSide": "left",
-      "toSide": "right",
-      "labelAt": [
-        350,
-        129
-      ]
+      "toSide": "right"
     },
     {
       "id": "po-sa",
       "from": "po",
       "to": "sa_talk",
       "label": "discuss",
-      "fromSide": "top",
-      "toSide": "top",
-      "via": [
-        [
-          200,
-          40
-        ],
-        [
-          1024,
-          40
-        ]
-      ],
-      "labelAt": [
-        762,
-        28
-      ]
+      "fromSide": "left",
+      "toSide": "right"
     },
     {
       "id": "sa-answers",
       "from": "sa_talk",
       "to": "po",
       "label": "options + load numbers",
-      "fromSide": "top",
-      "toSide": "top",
-      "via": [
-        [
-          1024,
-          40
-        ],
-        [
-          200,
-          40
-        ]
-      ],
-      "labelAt": [
-        762,
-        54
-      ]
+      "fromSide": "right",
+      "toSide": "left"
     },
     {
       "id": "res-writes",
@@ -379,7 +343,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "labelAt": [
-        500,
+        860,
         173
       ]
     },
@@ -396,13 +360,21 @@
       "from": "orchestrator",
       "to": "tech-lead",
       "label": "dispatch",
-      "fromSide": "bottom",
+      "fromSide": "left",
       "toSide": "left",
       "via": [
         [
           200,
+          238
+        ],
+        [
+          200,
           368
         ]
+      ],
+      "labelAt": [
+        260,
+        354
       ]
     },
     {
@@ -410,13 +382,21 @@
       "from": "orchestrator",
       "to": "builder",
       "label": "dispatch",
-      "fromSide": "bottom",
+      "fromSide": "left",
       "toSide": "left",
       "via": [
         [
           200,
+          238
+        ],
+        [
+          200,
           488
         ]
+      ],
+      "labelAt": [
+        260,
+        474
       ]
     },
     {
@@ -424,13 +404,21 @@
       "from": "orchestrator",
       "to": "antiai",
       "label": "dispatch",
-      "fromSide": "bottom",
+      "fromSide": "left",
       "toSide": "left",
       "via": [
         [
           200,
+          238
+        ],
+        [
+          200,
           608
         ]
+      ],
+      "labelAt": [
+        260,
+        594
       ]
     },
     {
@@ -438,13 +426,21 @@
       "from": "orchestrator",
       "to": "delivery",
       "label": "dispatch",
-      "fromSide": "bottom",
+      "fromSide": "left",
       "toSide": "left",
       "via": [
         [
           200,
+          238
+        ],
+        [
+          200,
           728
         ]
+      ],
+      "labelAt": [
+        260,
+        714
       ]
     }
   ]
