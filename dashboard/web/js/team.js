@@ -29,7 +29,7 @@ const TIER_LABEL = { top: "top", work: "work", fast: "fast" };
 const TABS = {
   "tong-quan": [
     { md: "workflow.md", only: ["Locations", "Goals", "Principles", "Product Owner"], diagrams: { "": ["team-overview"] } },
-    { diagram: "sessions", title: "Phiên làm việc", detail: [["roles/researcher.md", "Discussion"], ["docs-policy.md", "Scratch"]] },
+    { diagram: "sessions", title: "Phiên làm việc", detail: [["roles/researcher.md", "Researcher"], ["docs-policy.md", "Scratch"]] },
     { diagram: "docs-layout", title: "Tài liệu: ai viết, ai đọc", detail: [["docs-policy.md", "Two audiences"]] },
     { diagram: "model-tiers", title: "Chọn model", detail: [["config.md", "Model tiers"]] },
   ],
