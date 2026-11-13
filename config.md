@@ -31,7 +31,7 @@ delivery:
 commands:
   verify: ["<lint>", "<test>", "<build>"]   # or pointers to where the repo documents them
   serial: false              # true = run one at a time (shared cache or device)
-e2e: []                      # optional; heavy E2E commands, run only on request (orchestrator/bootstrap-config.md)
+e2e: []                      # optional; heavy E2E commands, run only on request
 worktree_links: [.env]       # untracked local files linked from the main checkout
 skills:                      # slot values (`Skill slots`); empty = role core skills only
   build.ui: [extra-skill]    # e.g.
@@ -81,7 +81,7 @@ models:
 
 ## Starting values by platform
 
-Used only when bootstrapping a config (`orchestrator/bootstrap-config.md`); written into the project's `.team/config.yaml`, which then owns them. Other platforms: empty slots.
+Used only by the `init-team` skill; written into the project's `.team/config.yaml`, which then owns them. Other platforms: empty slots.
 
 - **web**
   - `design`: [design-taste-frontend]

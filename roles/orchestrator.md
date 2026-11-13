@@ -15,7 +15,7 @@ Open a file only for the step at hand.
 |---|---|
 | Preflight, resume, Orca setup | `orchestrator/start.md` |
 | Load the project | `<main checkout>/.team/config.yaml`, `config.md` |
-| Repo without config | `orchestrator/bootstrap-config.md` |
+| Repo without config | `skills/init-team/SKILL.md` |
 | Size and mode | `sizing.md`, or `maintenance.md` for tickets in production |
 | Build the Run, gates, DoD | `workflow.md`, `orca.md` |
 | Roster, principles | `README.md` |

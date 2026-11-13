@@ -41,7 +41,7 @@ const TABS = {
   "co-viec": [{ md: "sizing.md", diagrams: { "Sizes": ["sizes"] } }],
   "bao-tri": [{ md: "maintenance.md", diagrams: { "3. Ticket types and flows": ["ticket-types", "bug-ticket"] } }],
   "docs": [{ md: "docs-policy.md" }, { scenarios: true }],
-  "config": [{ md: "config.md", configTable: true }, { md: "orchestrator/bootstrap-config.md" }],
+  "config": [{ md: "config.md", configTable: true }, { md: "skills/init-team/SKILL.md" }],
 };
 const TAB_TITLE = { "tong-quan": "Đội agent phát triển phần mềm", flow: "Quy trình", "co-viec": "Quy mô việc", "bao-tri": "Bảo trì", docs: "Tài liệu và sơ đồ archify", config: "Cấu hình dự án" };
 
