@@ -40,12 +40,12 @@
       "label": "Orchestrator"
     },
     {
-      "id": "tech-lead",
-      "label": "Tech Lead"
-    },
-    {
       "id": "designer",
       "label": "Designer"
+    },
+    {
+      "id": "tech-lead",
+      "label": "Tech Lead"
     },
     {
       "id": "builder",
@@ -71,12 +71,12 @@
       "id": "design",
       "label": "Design + plan",
       "fromCol": 2,
-      "toCol": 2
+      "toCol": 3
     },
     {
       "id": "build",
       "label": "Build + verify",
-      "fromCol": 3,
+      "fromCol": 4,
       "toCol": 4
     },
     {
@@ -142,7 +142,7 @@
     {
       "id": "gui",
       "lane": "po",
-      "col": 2,
+      "col": 3,
       "type": "frontend",
       "label": "G-UI",
       "sublabel": "PO picks one",
@@ -159,7 +159,7 @@
     {
       "id": "build",
       "lane": "builder",
-      "col": 3,
+      "col": 4,
       "type": "backend",
       "label": "Build slices",
       "sublabel": "fast check each"
@@ -225,7 +225,9 @@
     {
       "id": "options-gui",
       "from": "options",
-      "to": "gui"
+      "to": "gui",
+      "fromSide": "right",
+      "toSide": "bottom"
     },
     {
       "id": "gui-build",
@@ -236,7 +238,9 @@
     {
       "id": "plan-build",
       "from": "plan",
-      "to": "build"
+      "to": "build",
+      "fromSide": "right",
+      "toSide": "top"
     },
     {
       "id": "build-verify",
