@@ -1,0 +1,58 @@
+# Vietnamese docs site on GitHub Pages. Stages docs/ and diagrams/ (*.html, *.svg only) side by side
+# so the relative links ../diagrams/ resolve. No Jekyll build.
+name: Docs site
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "diagrams/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stage site
+        run: |
+          mkdir -p site/docs site/diagrams
+          cp -r docs/. site/docs/
+          cp diagrams/*.html diagrams/*.svg site/diagrams/
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="vi">
+          <head>
+          <meta charset="utf-8">
+          <title>Đội agent</title>
+          <meta http-equiv="refresh" content="0; url=docs/">
+          <link rel="canonical" href="docs/">
+          </head>
+          <body>
+          <p><a href="docs/">Mở tài liệu</a></p>
+          </body>
+          </html>
+          HTML
+          touch site/.nojekyll
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
