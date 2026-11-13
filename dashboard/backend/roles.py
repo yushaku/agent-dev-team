@@ -24,6 +24,7 @@ ROLE_ALIAS = {
     "product": "pm", "research": "researcher", "deliver": "delivery", "verify": "reviewer", "ux": "designer",
     "spec": "pm", "plan": "tech-lead", "arch": "tech-lead", "architect": "tech-lead", "investigate": "researcher",
     "solution": "solution-architect", "sa": "solution-architect", "solution-architect": "solution-architect",
+    "arch-review": "solution-architect", "poc": "builder",
 }
 DIRECT_ROLE = "chat trực tiếp"  # no team role: a direct chat with the user
 WORKER_ROLE = "worker"  # Orca worker whose task title names no role
