@@ -12,7 +12,7 @@ export const persist = () => { try { localStorage.setItem("team-dashboard", JSON
 export const COL = { claude: "var(--claude)", codex: "var(--codex)", copilot: "var(--copilot)", hermes: "var(--hermes)", fin: "var(--p-fin)", cr: "var(--p-cr)", cw: "var(--p-cw)", out: "var(--p-out)" };
 export const PARTS = [["fin", "Input mới"], ["cr", "Cache đọc"], ["cw", "Cache ghi"], ["out", "Output"]];
 export const GROUPS = { po: ["PO", "var(--sky)"], orch: ["Orchestrator", "var(--blue)"], plan: ["Plan", "var(--mauve)"], build: ["Build", "var(--green)"], verify: ["Verify", "var(--peach)"], delivery: ["Delivery", "var(--pink)"], direct: ["Chat trực tiếp", "var(--overlay0)"], other: ["Khác", "var(--overlay2)"] };
-export const ROLE_GROUP = { po: "po", orchestrator: "orch", pm: "plan", designer: "plan", architect: "plan", "solution-architect": "plan", "tech-lead": "plan", researcher: "plan", builder: "build", "anti-ai": "verify", qa: "verify", reviewer: "verify", security: "verify", "perf-a11y": "verify", "doc-keeper": "delivery", delivery: "delivery", "chat trực tiếp": "direct" };
+export const ROLE_GROUP = { po: "po", orchestrator: "orch", designer: "plan", architect: "plan", "solution-architect": "plan", "tech-lead": "plan", researcher: "plan", builder: "build", "anti-ai": "verify", qa: "verify", reviewer: "verify", security: "verify", "perf-a11y": "verify", "doc-keeper": "delivery", delivery: "delivery", "chat trực tiếp": "direct" };
 export const ROLE_SRC = { orca: "task Orca", "role-line": "dòng Role:", dispatch: "lệnh giao việc Orca", title: "title", skill: "skill" };
 export const groupOf = r => ROLE_GROUP[r] || "other";
 export const roleCol = r => GROUPS[groupOf(r)][1];

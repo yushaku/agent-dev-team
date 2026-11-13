@@ -10,7 +10,7 @@ const textCache = new Map();
 /* Role groups: same colour key as the archify diagrams. */
 export const GROUPS = [
   ["orch", "Orchestrator", ["orchestrator"]],
-  ["plan", "Lên kế hoạch: spec, thiết kế, tra cứu, kiến trúc", ["pm", "designer", "tech-lead", "researcher", "solution-architect"]],
+  ["plan", "Lên kế hoạch: spec, thiết kế, tra cứu, kiến trúc", ["tech-lead", "designer", "researcher", "solution-architect"]],
   ["build", "Xây dựng", ["builder"]],
   ["verify", "Kiểm tra", ["anti-ai", "qa", "reviewer", "security", "perf-a11y"]],
   ["delivery", "Bàn giao", ["delivery"]],

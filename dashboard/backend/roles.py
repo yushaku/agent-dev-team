@@ -21,8 +21,8 @@ ROLE_ALIAS = {
     "build": "builder", "fix": "builder", "review": "reviewer", "re-review": "reviewer",
     "review+security": "reviewer", "docs": "doc-keeper", "doc": "doc-keeper",
     "design": "designer", "perf": "perf-a11y", "a11y": "perf-a11y", "close": "orchestrator",
-    "product": "pm", "research": "researcher", "deliver": "delivery", "verify": "reviewer", "ux": "designer",
-    "spec": "pm", "plan": "tech-lead", "arch": "tech-lead", "architect": "tech-lead", "investigate": "researcher",
+    "product": "tech-lead", "research": "researcher", "deliver": "delivery", "verify": "reviewer", "ux": "designer",
+    "spec": "tech-lead", "pm": "tech-lead", "tidy": "tech-lead", "plan": "tech-lead", "arch": "tech-lead", "architect": "tech-lead", "investigate": "researcher",
     "solution": "solution-architect", "sa": "solution-architect", "solution-architect": "solution-architect",
     "arch-review": "solution-architect", "poc": "builder",
 }
@@ -44,7 +44,7 @@ def norm_role(word, roles):
     return None
 
 def role_from_title(title, roles):
-    """`<role>: <work>` and variants: `review + anti-ai: x`, `build-t3: x`, `pm-spec: x`, `# Task: verify x`."""
+    """`<role>: <work>` and variants: `review + anti-ai: x`, `build-t3: x`, `pm-spec: x` (old PM titles count as tech-lead), `# Task: verify x`."""
     t = re.sub(r"^[#\s]*(?:task:\s*)?", "", (title or "").strip(), flags=re.I)
     head = t.split(":", 1)[0] if ":" in t else (t.split() or [""])[0]
     for w in re.split(r"[\s+/,]+", head.lower()):
@@ -60,7 +60,7 @@ def role_from_text(text, roles):
     v = m.group(1)
     m2 = ROLE_FILE_RE.search(v)
     if m2:
-        return m2.group(1)
+        return norm_role(m2.group(1), roles) or m2.group(1)
     m3 = re.match(r"\s*([A-Za-z][\w+-]*)", v)
     return norm_role(m3.group(1), roles) if m3 else None
 

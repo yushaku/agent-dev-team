@@ -5,7 +5,7 @@ from backend.roles import assign_role, discussion_role, role_from_text, role_fro
 
 
 ROLES = {
-    "builder", "reviewer", "tech-lead", "pm", "researcher",
+    "builder", "reviewer", "tech-lead", "researcher",
     "solution-architect", "designer", "doc-keeper", "delivery",
 }
 
@@ -15,9 +15,13 @@ class RoleTests(unittest.TestCase):
         self.assertEqual(role_from_title("builder: implement the change", ROLES), "builder")
         self.assertEqual(role_from_title("verify: check the result", ROLES), "reviewer")
         self.assertEqual(role_from_title("architect: map the system", ROLES), "tech-lead")
+        self.assertEqual(role_from_title("pm-spec: write the spec", ROLES), "tech-lead")
+        self.assertEqual(role_from_title("pm-tidy: tidy", ROLES), "tech-lead")
+        self.assertEqual(role_from_title("PM: business spec", ROLES), "tech-lead")
 
     def test_role_line(self):
-        self.assertEqual(role_from_text("Role: pm", ROLES), "pm")
+        self.assertEqual(role_from_text("Role: pm", ROLES), "tech-lead")
+        self.assertEqual(role_from_text("Role: roles/pm.md", ROLES), "tech-lead")
         self.assertEqual(role_from_text("role: solution architecture", ROLES), "solution-architect")
 
     def test_discussion_role_phrasing(self):
@@ -26,7 +30,7 @@ class RoleTests(unittest.TestCase):
 
     def test_role_assignment_precedence_and_fallbacks(self):
         self.assertEqual(
-            assign_role({"role": "builder"}, {"role_line": "pm", "dispatcher": True}),
+            assign_role({"role": "builder"}, {"role_line": "tech-lead", "dispatcher": True}),
             ("builder", "orca"),
         )
         self.assertEqual(
