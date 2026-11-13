@@ -29,7 +29,7 @@
       "id": "product",
       "type": "messagebus",
       "label": "docs/product/*.md",
-      "sublabel": "PM: business spec",
+      "sublabel": "Tech Lead: business spec",
       "pos": [
         40,
         60

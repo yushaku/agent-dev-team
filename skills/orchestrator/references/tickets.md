@@ -15,7 +15,7 @@
 ## Roster (changes only)
 
 - **Orchestrator / Triage:** poll assigned tickets, classify them (below), set priority, link related tickets, report a summary to the PO in `languages.po`. One worktree per ticket that needs code, named by ticket key (`start.md`).
-- **Ticket Analyst** (replaces Product Manager): `roles/ticket-analyst.md`.
+- **Ticket Analyst** (no Tech Lead spec part): `roles/ticket-analyst.md`.
 - **Investigator** (new): `roles/investigator.md`.
 - **Builder:** as `roles/builder.md`, plus a failing test that reproduces the bug first, then the smallest fix. The test name carries the ticket key.
 - **QA:** regression focus: the reproducing test, the affected flows, the call paths the Investigator found.

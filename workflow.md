@@ -30,13 +30,13 @@
 ## Flow
 
 ```
-Idea ─▶ Orchestrator (load config, size) ─▶ PM writes/updates business spec
+Idea ─▶ Orchestrator (load config, size) ─▶ Tech Lead writes/updates business spec
                    │
              [GATE 1: PO approves business spec]
-                   │
+                   │   (same Tech Lead session continues)
         ┌──────────┴──────────┐
      Designer             Tech Lead
-  (flow, 2-3 options)  (ADR if needed, plan)
+  (flow, 2-3 options)  (applies answers, ADR if needed, plan)
         │                     │
   [G-UI: PO picks one]        │
         └──────────┬──────────┘
@@ -60,21 +60,21 @@ Idea ─▶ Orchestrator (load config, size) ─▶ PM writes/updates business s
 ## Task DAG (Feature mode, S3)
 
 ```
-pm-spec ─▶ [gate-1] ─┬─▶ ux-flow ─▶ ux-options ─▶ [g-ui] ────────────┐
-                     └─▶ plan (2-4 vertical slices) ─▶ arch-review* ─┴─▶ build (all slices)
+spec ─▶ [gate-1] ─┬─▶ ux-flow ─▶ ux-options ─▶ [g-ui] ────────────┐
+                  └─▶ plan (2-4 vertical slices) ─▶ arch-review* ─┴─▶ build (all slices)
                                                                      │
                                   verify ║ review-spec ║ qa ║ perf-a11y*
                                                                      │
                                      deliver (anti-ai on text) ─▶ [gate-2]
 ```
-`*` `arch-review` only when the plan touches a Solution Architect ADR (`roles/solution-architect.md` "Worker"); `perf-a11y` only when triggered.
+`spec` and `plan` are one Tech Lead dispatch; `gate-1` is its `ask`. `*` `arch-review` only when the plan touches a Solution Architect ADR (`roles/solution-architect.md` "Worker"); `perf-a11y` only when triggered.
 
 ## Other DAG shapes
 
 - **Small change (S1):** `build -> verify (anti-ai, review) -> deliver -> [gate-2]`
-- **Business rule change (S2):** `pm-spec -> [gate-1] -> qa-tests -> build -> verify -> deliver -> [gate-2]`
+- **Business rule change (S2):** `spec -> [gate-1] -> qa-tests -> build -> verify -> deliver -> [gate-2]`
 - **New screen or flow (S2):** `ux-flow -> ux-options -> [g-ui] -> build -> (verify || qa || perf-a11y*) -> deliver -> [gate-2]`
 - **PoC (S1):** from a `## PoC request` the PO names: `poc` Builder Task on branch `poc/<topic>` in its own worktree, never merged; posts the result (pass/fail per criterion, numbers, `path:line`) as a comment on the Solution Architect PR (`gh pr comment`); the PO names that PR to the Orchestrator.
 - Ticket shapes: `skills/orchestrator/references/tickets.md`.
 - One Build Task per feature; parallel Build Tasks only for disjoint slices when `flow.max_concurrent_agents` > 1.
-- Overlap head and tail: PM tidy (`roles/pm.md`) starts beside Designer and Tech Lead after Gate 1; the Delivery body (no commits) runs beside the last scoped re-review.
+- Overlap head and tail: the Designer runs beside the Tech Lead's plan after Gate 1; the Delivery body (no commits) runs beside the last scoped re-review.

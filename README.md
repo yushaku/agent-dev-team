@@ -1,6 +1,6 @@
 # Software Dev Agent Team
 
-A process for a team of coding agents working a software project inside the Orca app. A human Product Owner approves at fixed gates (business spec, new screens, delivery); an Orchestrator, which can be any coding agent, sizes the work, dispatches role workers (PM, Designer, Tech Lead, Builder, QA, reviewers, Delivery) and ends at a draft PR or a committed branch. Per-project specifics live in a project config, `.team/config.yaml`.
+A process for a team of coding agents working a software project inside the Orca app. A human Product Owner approves at fixed gates (business spec, new screens, delivery); an Orchestrator, which can be any coding agent, sizes the work, dispatches role workers (Designer, Tech Lead, Builder, QA, reviewers, Delivery) and ends at a draft PR or a committed branch. Per-project specifics live in a project config, `.team/config.yaml`.
 
 ## How it works
 

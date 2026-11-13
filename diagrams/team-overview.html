@@ -5349,7 +5349,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="Plan" x="290" y="310" width="668" height="106" rx="12" class="c-region" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="Plan" x="290" y="310" width="512" height="106" rx="12" class="c-region" stroke-width="1"/>
 
         <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="1" data-composition-frame-label="Build" x="290" y="430" width="200" height="106" rx="12" class="c-region" stroke-width="1"/>
 
@@ -5384,7 +5384,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <path data-graph-role="automatic-crossover-underlay" d="M 420 238 L 280 238" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
           <path data-edge-from="report" data-edge-to="orchestrator" data-edge-label="read when named" data-edge-key="7" data-edge-id="orch-reads" data-composition-points="420,238;280,238" data-composition-crossover="halo" data-composition-independent="true" d="M 420 238 L 280 238" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         </g>
-        <path data-edge-from="orchestrator" data-edge-to="pm" data-edge-label="dispatch" data-edge-key="8" data-edge-id="to-plan" data-composition-points="200,266;200,368;320,368" d="M 200 266 L 200 360 Q 200 368 208 368 L 320 368" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="orchestrator" data-edge-to="tech-lead" data-edge-label="dispatch" data-edge-key="8" data-edge-id="to-plan" data-composition-points="200,266;200,368;320,368" d="M 200 266 L 200 360 Q 200 368 208 368 L 320 368" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="orchestrator" data-edge-to="builder" data-edge-label="dispatch" data-edge-key="9" data-edge-id="to-build" data-composition-points="200,266;200,488;320,488" d="M 200 266 L 200 480 Q 200 488 208 488 L 320 488" class="a-default" data-animate="edge" style="--step:9" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="orchestrator" data-edge-to="antiai" data-edge-label="dispatch" data-edge-key="10" data-edge-id="to-verify" data-composition-points="200,266;200,608;320,608" d="M 200 266 L 200 600 Q 200 608 208 608 L 320 608" class="a-default" data-animate="edge" style="--step:10" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="orchestrator" data-edge-to="delivery" data-edge-label="dispatch" data-edge-key="11" data-edge-id="to-delivery" data-composition-points="200,266;200,728;320,728" d="M 200 266 L 200 720 Q 200 728 208 728 L 320 728" class="a-default" data-animate="edge" style="--step:11" stroke-width="1.5" marker-end="url(#arrowhead)"/>
@@ -5457,24 +5457,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="500" y="252" class="t-muted" font-size="9" text-anchor="middle">research/&lt;topic&gt;.md</text>
         </g>
 
-        <g id="node-pm" data-node-id="pm" data-node-label="Product Manager" tabindex="0" role="button" aria-label="Focus Product Manager, business spec, Plan" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="business spec" data-node-context="Plan">
-          <title>Product Manager · business spec · Plan</title>
-          <rect x="320" y="340" width="140" height="56" rx="8" class="c-mask"/>
-          <rect x="320" y="340" width="140" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:9" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(326 346) scale(0.6875)">
-            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
-            <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
-            <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
-            <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="390" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Product Manager</text>
-        <text data-detail="context" x="390" y="382" class="t-muted" font-size="9" text-anchor="middle">business spec</text>
-        </g>
-
         <g id="node-designer" data-node-id="designer" data-node-label="UX / UI Designer" tabindex="0" role="button" aria-label="Focus UX / UI Designer, flow, options, Plan" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="flow, options" data-node-context="Plan">
           <title>UX / UI Designer · flow, options · Plan</title>
           <rect x="476" y="340" width="140" height="56" rx="8" class="c-mask"/>
-          <rect x="476" y="340" width="140" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:6" stroke-width="1.5"/>
+          <rect x="476" y="340" width="140" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:5" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(482 346) scale(0.6875)">
             <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
             <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
@@ -5485,18 +5471,18 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="546" y="382" class="t-muted" font-size="9" text-anchor="middle">flow, options</text>
         </g>
 
-        <g id="node-tech-lead" data-node-id="tech-lead" data-node-label="Tech Lead" tabindex="0" role="button" aria-label="Focus Tech Lead, ADR, slice plan, Plan" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="ADR, slice plan" data-node-context="Plan">
-          <title>Tech Lead · ADR, slice plan · Plan</title>
-          <rect x="632" y="340" width="140" height="56" rx="8" class="c-mask"/>
-          <rect x="632" y="340" width="140" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:7" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(638 346) scale(0.6875)">
+        <g id="node-tech-lead" data-node-id="tech-lead" data-node-label="Tech Lead" tabindex="0" role="button" aria-label="Focus Tech Lead, spec, ADR, slice plan, Plan" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="spec, ADR, slice plan" data-node-context="Plan">
+          <title>Tech Lead · spec, ADR, slice plan · Plan</title>
+          <rect x="320" y="340" width="140" height="56" rx="8" class="c-mask"/>
+          <rect x="320" y="340" width="140" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:9" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(326 346) scale(0.6875)">
             <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
             <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
             <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
             <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="702" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Tech Lead</text>
-        <text data-detail="context" x="702" y="382" class="t-muted" font-size="9" text-anchor="middle">ADR, slice plan</text>
+          <text data-node-label="" data-detail-anchor="" x="390" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Tech Lead</text>
+        <text data-detail="context" x="390" y="382" class="t-muted" font-size="9" text-anchor="middle">spec, ADR, slice plan</text>
         </g>
 
         <g id="node-builder" data-node-id="builder" data-node-label="Builder" tabindex="0" role="button" aria-label="Focus Builder, all slices, Build" aria-pressed="false" data-node-kind="backend" data-node-sublabel="all slices" data-node-context="Build">
@@ -5512,16 +5498,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <g id="node-sa_worker" data-node-id="sa_worker" data-node-label="Solution Architect" tabindex="0" role="button" aria-label="Focus Solution Architect, arch review worker, Plan" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="arch review worker" data-node-context="Plan">
           <title>Solution Architect · arch review worker · Plan</title>
-          <rect x="788" y="340" width="140" height="56" rx="8" class="c-mask"/>
-          <rect x="788" y="340" width="140" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:9" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(794 346) scale(0.6875)">
+          <rect x="632" y="340" width="140" height="56" rx="8" class="c-mask"/>
+          <rect x="632" y="340" width="140" height="56" rx="8" class="c-messagebus" data-animate="node" style="--step:8" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(638 346) scale(0.6875)">
             <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
             <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
             <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
             <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="858" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Solution Architect</text>
-        <text data-detail="context" x="858" y="382" class="t-muted" font-size="9" text-anchor="middle">arch review worker</text>
+          <text data-node-label="" data-detail-anchor="" x="702" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Solution Architect</text>
+        <text data-detail="context" x="702" y="382" class="t-muted" font-size="9" text-anchor="middle">arch review worker</text>
         </g>
 
         <g id="node-antiai" data-node-id="antiai" data-node-label="Anti-AI Editor" tabindex="0" role="button" aria-label="Focus Anti-AI Editor, fresh context, Verify" aria-pressed="false" data-node-kind="external" data-node-sublabel="fresh context" data-node-context="Verify">
@@ -5539,7 +5525,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <g id="node-qa" data-node-id="qa" data-node-label="QA" tabindex="0" role="button" aria-label="Focus QA, AC to tests, Verify" aria-pressed="false" data-node-kind="external" data-node-sublabel="AC to tests" data-node-context="Verify">
           <title>QA · AC to tests · Verify</title>
           <rect x="476" y="580" width="140" height="56" rx="8" class="c-mask"/>
-          <rect x="476" y="580" width="140" height="56" rx="8" class="c-external" data-animate="node" style="--step:11" stroke-width="1.5"/>
+          <rect x="476" y="580" width="140" height="56" rx="8" class="c-external" data-animate="node" style="--step:10" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(482 586) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
@@ -5551,7 +5537,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <g id="node-reviewer" data-node-id="reviewer" data-node-label="Code Reviewer" tabindex="0" role="button" aria-label="Focus Code Reviewer, other agent, Verify" aria-pressed="false" data-node-kind="external" data-node-sublabel="other agent" data-node-context="Verify">
           <title>Code Reviewer · other agent · Verify</title>
           <rect x="632" y="580" width="140" height="56" rx="8" class="c-mask"/>
-          <rect x="632" y="580" width="140" height="56" rx="8" class="c-external" data-animate="node" style="--step:12" stroke-width="1.5"/>
+          <rect x="632" y="580" width="140" height="56" rx="8" class="c-external" data-animate="node" style="--step:11" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(638 586) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
@@ -5629,7 +5615,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="309" y="218" width="82" height="14" rx="3" class="c-mask"/>
           <text x="350" y="228" class="t-edge-default" font-size="8" text-anchor="middle">read when named</text>
         </g>
-        <g data-detail="context" data-edge-from="orchestrator" data-edge-to="pm" data-edge-label="dispatch" data-edge-key="8" data-edge-id="to-plan">
+        <g data-detail="context" data-edge-from="orchestrator" data-edge-to="tech-lead" data-edge-label="dispatch" data-edge-key="8" data-edge-id="to-plan">
           <rect x="235.8" y="348" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="260" y="358" class="t-edge-default" font-size="8" text-anchor="middle">dispatch</text>
         </g>

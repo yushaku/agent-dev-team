@@ -1,11 +1,11 @@
 # Execute and supervise
 
-1. `worker-start --task <id> --worktree <sel> --agent <id> --model <model> --effort <level> --run <run> --from <handle> --json` (Builders add `--keep-open`); agent per `coding-agents.md` "Routing", model and effort from the Task's tier (`coding-agents.md` "Model tiers").
+1. `worker-start --task <id> --worktree <sel> --agent <id> --model <model> --effort <level> --run <run> --from <handle> --json` (Builders and the Tech Lead add `--keep-open`); agent per `coding-agents.md` "Routing", model and effort from the Task's tier (`coding-agents.md` "Model tiers").
 2. Max workers = `flow.max_concurrent_agents`; with `serial: true` only one worker runs verify at a time.
 3. Parallel work only when the PO asks for speed and the files are disjoint:
    - Parallel tracks: the API worker freezes the shared contract first and reports any change; merge and verify once both finish.
    - Parallel Runs: each gets its own Run, Orchestrator terminal and worktree cut from `branches.base` or the branch the PO names; each spec names the files the other branch also edits.
-4. The PO drops steps ("only need the builder"): keep PM and Tech Lead; name the guard lost and move its checks into Builder tests, except UI rounds (`review.md` "UI rounds"). Before merge, run one review of the whole `<base>..<branch>` diff with the dropped audit's checks first, and a Delivery Task beside it.
+4. The PO drops steps ("only need the builder"): keep the Tech Lead; name the guard lost and move its checks into Builder tests, except UI rounds (`review.md` "UI rounds"). Before merge, run one review of the whole `<base>..<branch>` diff with the dropped audit's checks first, and a Delivery Task beside it.
 5. Before every commit, handoff or new spec, compare `git log --oneline origin/<base>..HEAD` with recorded shas. The PO may amend, squash, reword, revert or reset mid-Run: report it, reread files at HEAD, stop affected reviewers and re-review the final commit with a handoff listing each requested change as intended. Never reset back.
 
 ## Failures and recovery

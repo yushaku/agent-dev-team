@@ -4,7 +4,7 @@
 
 | Document | Owner | Content | Changes when |
 |---|---|---|---|
-| `docs/product/<capability>.md` | PM | Business spec (below) | The business changes |
+| `docs/product/<capability>.md` | Tech Lead | Business spec (below) | The business changes |
 | `docs/adr/NNN-title.md` | Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line; superseded by a new ADR |
 | `AGENTS.md` | PO | Repo agent rules; read-only for the team (`## AGENTS.md`) | Never by the team |
 | `.team/config.yaml` | PO (Orchestrator proposes) | Team config (`config.md`); local-only until the team adopts it | Project settings change |
@@ -34,7 +34,7 @@
 - A public repo publishes every committed doc: no secrets, personal data, client names or unreleased business terms in `docs/`.
 - Enabling Pages (Settings, Pages, source GitHub Actions) is the PO's step.
 
-## Business spec (PM output)
+## Business spec (Tech Lead output)
 
 - One file per business capability, not per feature or ticket; a feature updates the existing file.
 - English for every project; domain terms that only exist in the client's language keep the original in parentheses in the glossary.
@@ -50,7 +50,7 @@
   - Open questions (empty before Gate 1).
   - Last line: `Retired: R3, R7, AC12` (retired IDs).
 - Not allowed: solution, architecture, technology, platform, screen or component names, API, database, code, test names, file paths. A sentence that would change when the implementation changes does not belong.
-- Gate 1 answers and other PO decisions for the Run live in numbered `.team/<feature>/decisions.md` items; the PM folds decided items into rules and AC, and the spec carries no `Decided at Gate 1` or post-Gate 1 `Decisions to confirm` sections or D/A/G/Q item lists. Open questions stay in their existing section.
+- Gate 1 answers and other PO decisions for the Run live in numbered `.team/<feature>/decisions.md` items; the Tech Lead folds decided items into rules and AC, and the spec carries no `Decided at Gate 1` or post-Gate 1 `Decisions to confirm` sections or D/A/G/Q item lists. Open questions stay in their existing section.
 - Worked examples belong only in the Gate 1 `walkthrough.html` sent to the PO, never in the spec.
 - Size: target about 80 lines; past 150 lines, split the capability and move its stories, rules and ACs with the split; reference another capability's criteria as `<capability> ACn`. Long content lists such as catalogue text and card copy live in code or seed data, not the spec.
 - Traceability is one-way, code to spec: tests reference IDs with the capability file name (e.g. `garden AC3: member cannot book past the limit`); bare `AC3` is ambiguous. Never reference story IDs; the spec never references tests or code.
@@ -95,7 +95,7 @@
 ## Conflicts
 
 - ADR vs code: code wins; fix or delete the line. `AGENTS.md` or `README` vs code: code wins; tell the PO the line and the fix.
-- Business spec vs code: the PM decides which is wrong; changing a business rule is the PO's decision (Gate 1), never a silent agent edit.
+- Business spec vs code: the Tech Lead decides which is wrong; changing a business rule is the PO's decision (Gate 1), never a silent agent edit.
 
 ## Reading (token budget)
 

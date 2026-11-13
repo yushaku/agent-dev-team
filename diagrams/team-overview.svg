@@ -61,7 +61,7 @@ text.boundary-label { fill: #a5adce; }
 </pattern>
 </defs>
 <rect width="100%" height="100%" fill="url(#team-overview-grid)"/>
-<rect x="290" y="310" width="668" height="106" rx="12" class="c-region" stroke-width="1"/>
+<rect x="290" y="310" width="512" height="106" rx="12" class="c-region" stroke-width="1"/>
 <rect x="290" y="430" width="200" height="106" rx="12" class="c-region" stroke-width="1"/>
 <rect x="290" y="550" width="824" height="106" rx="12" class="c-region" stroke-width="1"/>
 <rect x="290" y="670" width="200" height="106" rx="12" class="c-region" stroke-width="1"/>
@@ -152,21 +152,9 @@ text.boundary-label { fill: #a5adce; }
 <text x="500" y="236" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Research report</text>
 <text x="500" y="252" class="t-muted" font-size="9" text-anchor="middle">research/&lt;topic&gt;.md</text>
 </g>
-<g id="team-overview-node-pm">
-<rect x="320" y="340" width="140" height="56" rx="8" class="c-mask"/>
-<rect x="320" y="340" width="140" height="56" rx="8" class="c-messagebus" style="--step: 9" stroke-width="1.5"/>
-<g aria-hidden="true" class="semantic-sigil s-messagebus" transform="translate(326 346) scale(0.6875)">
-<path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
-<circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
-<circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
-<circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
-</g>
-<text x="390" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Product Manager</text>
-<text x="390" y="382" class="t-muted" font-size="9" text-anchor="middle">business spec</text>
-</g>
 <g id="team-overview-node-designer">
 <rect x="476" y="340" width="140" height="56" rx="8" class="c-mask"/>
-<rect x="476" y="340" width="140" height="56" rx="8" class="c-messagebus" style="--step: 6" stroke-width="1.5"/>
+<rect x="476" y="340" width="140" height="56" rx="8" class="c-messagebus" style="--step: 5" stroke-width="1.5"/>
 <g aria-hidden="true" class="semantic-sigil s-messagebus" transform="translate(482 346) scale(0.6875)">
 <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
 <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
@@ -177,16 +165,16 @@ text.boundary-label { fill: #a5adce; }
 <text x="546" y="382" class="t-muted" font-size="9" text-anchor="middle">flow, options</text>
 </g>
 <g id="team-overview-node-tech-lead">
-<rect x="632" y="340" width="140" height="56" rx="8" class="c-mask"/>
-<rect x="632" y="340" width="140" height="56" rx="8" class="c-messagebus" style="--step: 7" stroke-width="1.5"/>
-<g aria-hidden="true" class="semantic-sigil s-messagebus" transform="translate(638 346) scale(0.6875)">
+<rect x="320" y="340" width="140" height="56" rx="8" class="c-mask"/>
+<rect x="320" y="340" width="140" height="56" rx="8" class="c-messagebus" style="--step: 9" stroke-width="1.5"/>
+<g aria-hidden="true" class="semantic-sigil s-messagebus" transform="translate(326 346) scale(0.6875)">
 <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
 <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
 <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
 <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
 </g>
-<text x="702" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Tech Lead</text>
-<text x="702" y="382" class="t-muted" font-size="9" text-anchor="middle">ADR, slice plan</text>
+<text x="390" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Tech Lead</text>
+<text x="390" y="382" class="t-muted" font-size="9" text-anchor="middle">spec, ADR, slice plan</text>
 </g>
 <g id="team-overview-node-builder">
 <rect x="320" y="460" width="140" height="56" rx="8" class="c-mask"/>
@@ -198,16 +186,16 @@ text.boundary-label { fill: #a5adce; }
 <text x="390" y="502" class="t-muted" font-size="9" text-anchor="middle">all slices</text>
 </g>
 <g id="team-overview-node-sa_worker">
-<rect x="788" y="340" width="140" height="56" rx="8" class="c-mask"/>
-<rect x="788" y="340" width="140" height="56" rx="8" class="c-messagebus" style="--step: 9" stroke-width="1.5"/>
-<g aria-hidden="true" class="semantic-sigil s-messagebus" transform="translate(794 346) scale(0.6875)">
+<rect x="632" y="340" width="140" height="56" rx="8" class="c-mask"/>
+<rect x="632" y="340" width="140" height="56" rx="8" class="c-messagebus" style="--step: 8" stroke-width="1.5"/>
+<g aria-hidden="true" class="semantic-sigil s-messagebus" transform="translate(638 346) scale(0.6875)">
 <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
 <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
 <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
 <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
 </g>
-<text x="858" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Solution Architect</text>
-<text x="858" y="382" class="t-muted" font-size="9" text-anchor="middle">arch review worker</text>
+<text x="702" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Solution Architect</text>
+<text x="702" y="382" class="t-muted" font-size="9" text-anchor="middle">arch review worker</text>
 </g>
 <g id="team-overview-node-antiai">
 <rect x="320" y="580" width="140" height="56" rx="8" class="c-mask"/>
@@ -221,7 +209,7 @@ text.boundary-label { fill: #a5adce; }
 </g>
 <g id="team-overview-node-qa">
 <rect x="476" y="580" width="140" height="56" rx="8" class="c-mask"/>
-<rect x="476" y="580" width="140" height="56" rx="8" class="c-external" style="--step: 11" stroke-width="1.5"/>
+<rect x="476" y="580" width="140" height="56" rx="8" class="c-external" style="--step: 10" stroke-width="1.5"/>
 <g aria-hidden="true" class="semantic-sigil s-external" transform="translate(482 586) scale(0.6875)">
 <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
 <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
@@ -231,7 +219,7 @@ text.boundary-label { fill: #a5adce; }
 </g>
 <g id="team-overview-node-reviewer">
 <rect x="632" y="580" width="140" height="56" rx="8" class="c-mask"/>
-<rect x="632" y="580" width="140" height="56" rx="8" class="c-external" style="--step: 12" stroke-width="1.5"/>
+<rect x="632" y="580" width="140" height="56" rx="8" class="c-external" style="--step: 11" stroke-width="1.5"/>
 <g aria-hidden="true" class="semantic-sigil s-external" transform="translate(638 586) scale(0.6875)">
 <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
 <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>

@@ -11,7 +11,7 @@
 - **Writes:** findings per axis in `ponytail-review` format (numbered Must fix / Should fix / Nice to have, Verdict), on the PR or in `worker_done`. Tag a Standards finding `mechanical` when a linter, type rule, CI job or pre-commit hook could catch it (`roles/tech-lead.md` "Mechanical findings").
 - **UX checks (UI diffs):** every flow state exists (empty, loading, error), existing components and tokens used, one clear primary action per screen, matches the chosen option (from code; screenshots only if the visual loop ran). A finding names screen, state and viewport.
 - **Documentation checks (verify wave):** review touched business specs and ADRs; any `AGENTS.md` or `CLAUDE.md` change in the diff is Must fix.
-- At every size, including S1, a diff that changes the assertion or expected behavior of a test with a spec ID while its spec line is unchanged is a `spec update needed` finding for the PM.
+- At every size, including S1, a diff that changes the assertion or expected behavior of a test with a spec ID while its spec line is unchanged is a `spec update needed` finding for the Tech Lead.
 - Flag no-op lines (`docs-policy.md`, Writing), code contradictions and business specs past the size limit.
 - **Re-review:** inspect only previous findings and the Task's named fix commits; mark each finding resolved or unresolved with file:line; add findings only for problems the fix introduced.
 - **Done when:** zero Must fix findings on both axes.

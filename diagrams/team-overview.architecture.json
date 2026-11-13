@@ -102,20 +102,6 @@
       ]
     },
     {
-      "id": "pm",
-      "type": "messagebus",
-      "label": "Product Manager",
-      "sublabel": "business spec",
-      "pos": [
-        320,
-        340
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
       "id": "designer",
       "type": "messagebus",
       "label": "UX / UI Designer",
@@ -133,9 +119,9 @@
       "id": "tech-lead",
       "type": "messagebus",
       "label": "Tech Lead",
-      "sublabel": "ADR, slice plan",
+      "sublabel": "spec, ADR, slice plan",
       "pos": [
-        632,
+        320,
         340
       ],
       "size": [
@@ -163,7 +149,7 @@
       "label": "Solution Architect",
       "sublabel": "arch review worker",
       "pos": [
-        788,
+        632,
         340
       ],
       "size": [
@@ -261,7 +247,6 @@
       "kind": "region",
       "label": "Plan",
       "wraps": [
-        "pm",
         "designer",
         "tech-lead",
         "sa_worker"
@@ -409,7 +394,7 @@
     {
       "id": "to-plan",
       "from": "orchestrator",
-      "to": "pm",
+      "to": "tech-lead",
       "label": "dispatch",
       "fromSide": "bottom",
       "toSide": "left",

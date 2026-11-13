@@ -20,10 +20,12 @@
 
 ## Gate 1 material
 
+- The Tech Lead (`--keep-open`) sends Gate 1 with `ask` and ends its turn. Build the walkthrough from its spec and questions, show the PO, then `reply` the answers to that question; the same session updates the spec and writes the plan.
+- The Tech Lead's context past about half the window: handoff per `SKILL.md`. A terminal lost while it waits: a new Tech Lead session reads the spec and `.team/<feature>/decisions.md`.
 - Never send only the spec. Send a plain-language walkthrough: user stories first (one line each), rules that change today's behaviour, one concrete example, short bullets. Ask the PO to confirm it. The example stays out of the spec (`docs-policy.md` "Business spec").
-- Scope answers given in the start message count as Gate 1: create no gate object; record the Run decisions per `docs-policy.md` "Business spec (PM output)". Start PM and Tech Lead together afterward.
-- Gaps found later get Orchestrator defaults in a PM update Task; tell the PO each default in one line for veto. Do not start a second round.
-- Before Gate 1, recheck derived numbers and dates in the walkthrough against the spec and new labels against the closest existing format. Send mismatches and fixes to the PM in one line.
+- Scope answers given in the start message count as Gate 1: create no gate object; record the Run decisions per `docs-policy.md` "Business spec (Tech Lead output)". The Tech Lead session then skips its Gate 1 `ask` and goes on to the plan.
+- Gaps found later get Orchestrator defaults in a Tech Lead update Task; tell the PO each default in one line for veto. Do not start a second round.
+- Before Gate 1, recheck derived numbers and dates in the walkthrough against the spec and new labels against the closest existing format. Send mismatches and fixes to the Tech Lead in one line.
 
 ## Gate 2 material
 
@@ -32,8 +34,8 @@
 ## Changed decisions
 
 - A business rule changed after Gate 1, including a UI ask that breaks an approved rule, is never an inline edit: return to Gate 1 with a diff and 2 or 3 options with one concrete example, recommended option first.
-- Spec feedback after Gate 1: one PM update Task per gate, never one per remark. Builders link the numbered decision item (`specs.md`). Show the PO only the changed rule list.
-- If current code breaks a Gate 1 answer, treat it as a bug in the same Run: PM update Task, then a Builder Task with a failing regression test. Tell the PO which answer exposed it.
+- Spec feedback after Gate 1: `send --to dispatch:<Tech Lead>` while that dispatch is open, else one Tech Lead update Task (tier work) per gate, never one per remark. Builders link the numbered decision item (`specs.md`). Show the PO only the changed rule list.
+- If current code breaks a Gate 1 answer, treat it as a bug in the same Run: Tech Lead update Task, then a Builder Task with a failing regression test. Tell the PO which answer exposed it.
 - Reopening a closed decision as a new capability is a feature, not a fix. Ask the scope questions (rules, edge behaviour, this branch or after v1), one at a time, before building.
 
 ## Escalation

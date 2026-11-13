@@ -43,7 +43,7 @@
       "id": "analyst",
       "type": "messagebus",
       "label": "Ticket Analyst",
-      "sublabel": "Plan, replaces PM"
+      "sublabel": "Plan, reads the thread"
     },
     {
       "id": "builder",

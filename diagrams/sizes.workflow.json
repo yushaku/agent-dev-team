@@ -134,7 +134,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Spec or flow",
-      "sublabel": "PM or Designer",
+      "sublabel": "Tech Lead or Designer",
       "width": 128
     },
     {
@@ -188,7 +188,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Spec, design, plan",
-      "sublabel": "PM, Designer, Tech Lead",
+      "sublabel": "Tech Lead, Designer",
       "width": 128
     },
     {

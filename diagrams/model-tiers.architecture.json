@@ -63,23 +63,9 @@
       "id": "top_0",
       "type": "messagebus",
       "label": "Tech Lead",
-      "sublabel": "ADR, plan",
+      "sublabel": "spec, ADR, plan",
       "pos": [
         40,
-        170
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "top_1",
-      "type": "messagebus",
-      "label": "PM",
-      "sublabel": "first spec S2, S3",
-      "pos": [
-        196,
         170
       ],
       "size": [
@@ -93,7 +79,7 @@
       "label": "Builder",
       "sublabel": "S3",
       "pos": [
-        352,
+        196,
         170
       ],
       "size": [
@@ -107,7 +93,7 @@
       "label": "Code Reviewer",
       "sublabel": "not below Builder",
       "pos": [
-        508,
+        352,
         170
       ],
       "size": [
@@ -121,7 +107,7 @@
       "label": "Security",
       "sublabel": "when triggered",
       "pos": [
-        664,
+        508,
         170
       ],
       "size": [
@@ -135,7 +121,7 @@
       "label": "Solution Architect",
       "sublabel": "arch review worker",
       "pos": [
-        820,
+        664,
         170
       ],
       "size": [
@@ -160,8 +146,8 @@
     {
       "id": "work_0",
       "type": "messagebus",
-      "label": "PM",
-      "sublabel": "S1, updates, tidy",
+      "label": "Tech Lead",
+      "sublabel": "spec updates",
       "pos": [
         40,
         330
@@ -291,7 +277,6 @@
       "wraps": [
         "t_top",
         "top_0",
-        "top_1",
         "top_2",
         "top_3",
         "top_4",

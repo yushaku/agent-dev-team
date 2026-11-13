@@ -40,16 +40,12 @@
       "label": "Orchestrator"
     },
     {
-      "id": "pm",
-      "label": "PM"
+      "id": "tech-lead",
+      "label": "Tech Lead"
     },
     {
       "id": "designer",
       "label": "Designer"
-    },
-    {
-      "id": "tech-lead",
-      "label": "Tech Lead"
     },
     {
       "id": "builder",
@@ -120,11 +116,11 @@
     },
     {
       "id": "spec",
-      "lane": "pm",
+      "lane": "tech-lead",
       "col": 0,
       "type": "messagebus",
       "label": "Business spec",
-      "sublabel": "pm-spec"
+      "sublabel": "same session as plan"
     },
     {
       "id": "gate1",
@@ -203,7 +199,7 @@
       "toSide": "top"
     },
     {
-      "id": "dispatch-pm",
+      "id": "dispatch-spec",
       "from": "size",
       "to": "spec",
       "fromSide": "bottom",
