@@ -8,7 +8,7 @@
 
 ## Read when
 
-Paths are relative to the team root (README "Locations").
+Paths are relative to the team root (`workflow.md` "Locations").
 Open a file only for the step at hand.
 
 | Step | Read |
@@ -18,7 +18,7 @@ Open a file only for the step at hand.
 | Repo without config | `skills/init-team/SKILL.md` |
 | Size and mode | `sizing.md`, or `maintenance.md` for tickets in production |
 | Build the Run, gates, DoD | `workflow.md`, `orca.md` |
-| Roster, principles | `README.md` |
+| Principles, goals, roster | `workflow.md`, `roles/` |
 | Dispatching a worker: agent choice, model tier, quota, free-tier agents | `coding-agents.md` |
 | Each worker spec | `orchestrator/specs.md`, `roles/<role>.md`, slots resolved |
 | Gates, gate material, changed decisions, worker questions | `orchestrator/gates.md` |

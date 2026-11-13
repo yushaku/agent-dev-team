@@ -1,6 +1,6 @@
 # Revising the process
 
-- Edit the file that owns the rule (`README.md` lists owners); never copy process text into an agent's own skill.
+- Edit the file that owns the rule (owners: `roles/orchestrator.md` "Read when"); never copy process text into an agent's own skill.
 - Team files and team-written skills are rules only: terse bullets, one rule per line, no credits, history or incident stories, rationale only when it changes behaviour, link to the owner instead of restating; `docs-policy.md` Writing; PO generic, English, no em/en dashes.
 - Process, not stack: stacks, trackers, languages and branches are per-project config.
 - Keep `maintenance.md` a diff of the dev files.

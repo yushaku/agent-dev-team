@@ -28,13 +28,13 @@ const TIER_LABEL = { top: "top", work: "work", fast: "fast" };
    A diagram anchored to a heading that no longer exists is shown at the end with a warning. */
 const TABS = {
   "tong-quan": [
-    { md: "README.md", diagrams: { "Roster": ["team-overview"] } },
+    { md: "workflow.md", only: ["Locations", "Goals", "Principles", "Product Owner"], diagrams: { "": ["team-overview"] } },
     { diagram: "sessions", title: "Phiên làm việc", detail: [["roles/researcher.md", "Discussion"], ["docs-policy.md", "Scratch"]] },
     { diagram: "docs-layout", title: "Tài liệu: ai viết, ai đọc", detail: [["docs-policy.md", "Two audiences"]] },
     { diagram: "model-tiers", title: "Chọn model", detail: [["config.md", "Model tiers"]] },
   ],
   "flow": [
-    { md: "workflow.md", diagrams: { "": ["dev-flow"] } },
+    { md: "workflow.md", skip: ["Locations", "Goals", "Principles", "Product Owner"], diagrams: { "Flow": ["dev-flow"] } },
     { diagram: "orch-wait", title: "Orchestrator chờ worker", detail: [["roles/orchestrator.md", "Every turn"], ["orchestrator/supervise.md", "Execute and supervise"], ["orchestrator/pitfalls.md", "Supervising workers"]] },
     { md: "orca.md" },
   ],
@@ -221,6 +221,8 @@ async function renderMd(panel, block, tabId, first) {
     if (t.type === "heading" && t.depth === 3) { cur = { title: t.text, tokens: [] }; doc.sections.push(cur); continue; }
     (cur ? cur.tokens : doc.intro).push(t);
   }
+  if (block.only) doc.sections = doc.sections.filter(x => block.only.includes(x.title));
+  if (block.skip) { doc.sections = doc.sections.filter(x => !block.skip.includes(x.title)); doc.intro = []; }
   const used = new Set();
   const anchors = block.diagrams || {};
   const pfx = slug(path.replace(/\.md$/, ""));
@@ -333,10 +335,10 @@ async function renderRoles(panel) {
   head.className = "panel-head";
   head.innerHTML = `<h2>Vai trò</h2>`;
   panel.append(head);
-  // PO: the Roster bullet in README
+  // PO: the Product Owner section in workflow.md
   const po = section("role-group-po", "PO (người)");
   try {
-    const r = sectionByPrefix(lex(await fileText("README.md")), "Roster");
+    const r = sectionByPrefix(lex(await fileText("workflow.md")), "Product Owner");
     const item = r && r.tokens.flatMap(t => t.type === "list" ? t.items : []).find(i => /Product Owner/.test(i.text));
     if (item) po.append(mdBlock(lex(item.text), ""));
   } catch (e) { po.insertAdjacentHTML("beforeend", `<p class="muted">${esc(e.message)}</p>`); }

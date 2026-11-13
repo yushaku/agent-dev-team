@@ -2,7 +2,7 @@
 
 - **Scope:** software in use (any platform), work arrives as tickets (bugs, change requests, questions).
 - Output ends at a delivery (per `delivery.mode`) or a reply approved at G-Reply.
-- Only the differences from dev; everything else per `README.md` and the files it lists.
+- Only the differences from dev; everything else per `workflow.md` and the files it names.
 
 ## 1. What differs from feature development
 
@@ -80,7 +80,7 @@ Triage ─▶ Analyst (confirm expected vs actual) ─▶ Investigator (reproduc
 Triage ─▶ Analyst (current requirement, gaps) ⇄ client via [G-Reply] until clear
       ─▶ Investigator (impact, estimate) ─▶ [G-Scope: PO approves scope + estimate, maybe sends it to client]
       ─▶ small: Builder ─▶ verify (Anti-AI, Reviewer) ║ QA ─▶ deliver ─▶ [G-PR] ─▶ report via [G-Reply]
-      ─▶ large: switch to Feature flow (`README.md`, `workflow.md`) (Designer, Tech Lead, business spec)
+      ─▶ large: switch to Feature flow (`workflow.md`) (Designer, Tech Lead, business spec)
 ```
 
 ### 3.4 Incident (production is broken)
