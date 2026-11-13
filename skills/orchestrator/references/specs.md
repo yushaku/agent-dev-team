@@ -1,0 +1,23 @@
+# Task specs
+
+- Write each spec to `<main checkout>/.team/<feature>/specs/<NN>-<role>.md` as an absolute path; it is git-ignored and survives the session. Pass `--spec-file <file>` and run one `task-create` per command.
+- Set the title with `--task-title "<role>: <what>"`, using the role id in `config.md` `models.roles`. Start the spec with `Role: <role>`; usage is reported per role from these specs.
+- Make each spec self-contained and include the role card with slots resolved.
+- Put skills immediately after `Role:` as absolute `SKILL.md` paths under the skills dir (`workflow.md` "Locations"): `First step, before reading code: read <path>, <path>.` Agents skip bare skill names. Put conditional skills on the next line: `Read <path> when <condition from the role card>.` Give skills that exist only in the orchestrating agent's own skills dir as absolute paths too.
+- Include `commands.verify` (plus "one at a time" when `serial`), `branches.naming`, `human_only`, UI `ui_rules` and `ui_viewports`, and the Tech Lead's `compliance` constraints for Builders.
+- For UI roles, say `visual loop: on` only when the PO asked or `ui_rules.visual_loop: on`.
+- Put the PO's inputs (reference docs, screenshots, sketches) in `.team/<run>/`, shared with the worktree through the `config.md` link; name the exact section or variant. For sketches, specify the chosen variant and pieces from others as a layout contract, not the mock's colours.
+- State the target, change, constraints, allowed files and observable acceptance criteria.
+- **Model:** name the tier, model and effort per `coding-agents.md` "Model tiers"; record the effort step and reason if moved. Tasks the Tech Lead marked `simple` (`roles/tech-lead.md` "Simple Tasks") carry the mark and route per `coding-agents.md` "Free-tier agents".
+- Include the pre-cut rule and AC IDs of this Task only, plus **Relevant code** files and symbols from the plan or one read-only explorer worker. Workers read `AGENTS.md` and the listed code, never the whole `docs/`. Do not copy IDs from a PM message (`docs-policy.md`, Business spec).
+- **Working rules** for every Builder: allow reading any file, editing only Task files, focused tests, a dev server, browser and screenshots (sub-bullets), and git status/diff/log/add/commit on the branch. With network forbidden, official docs pages are still allowed. Ask the Orchestrator with the exact command only for remote ops, push, deploy, other roles' files or an unplanned dependency. Include broken verify commands and the prior Task handoff. Never write "ask for everything else": agents then stop before reading; list what needs approval.
+  - **Dev server** (only when the Task runs the app): only in the worktree's Orca pane titled `DEV`, never in the worker's own shell or a background process; restart before giving the PO a URL, take the URL from `orca ports`; report the pane handle in `worker_done` (`orca-quirks.md` "Dev server and browser").
+  - **Browser** (only when the Task opens the app or takes shots): one isolated browser profile per test account, reused across Runs; with `ui_screenshots: true`, one shot per viewport and colour scheme into `.team/<run>/` (`orca-quirks.md` "Dev server and browser").
+  - Keep shell commands simple (`coding-agents.md` "Permission prompts").
+- Include the PO's uncommitted files as read-only in every Task spec; workers must not edit, stage or delete them.
+- A build agent that cannot commit (`coding-agents.md` "Known limits") reports changed paths instead; rerun verify and commit those explicit paths before the next Task.
+- Record a deferred capability and open questions as a numbered item in `.team/<feature>/decisions.md`; keep v1 behaviour unchanged. Link that item in every later Builder spec when a PO decision came after the plan was written.
+- Reject a plan with more than 4 slices, or split by layer, unless it states a reason.
+- Create no new `.md` files except role outputs; results go in `worker_done`.
+- A spec that deletes or rewrites files lists the files the PO chose to keep. Before Delivery commits, it compares `git status --short` deletions with that list, restores unapproved deletions and reports them at Gate 2.
+- PM and Tech Lead outputs that diverge: ask the PO about user-visible divergences one at a time; decide technical ones yourself. The Builder spec says the spec wins on user-visible behaviour.

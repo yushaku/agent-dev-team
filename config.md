@@ -2,9 +2,9 @@
 
 ## Project config
 
-- Lookup: `.team/config.yaml` in the main checkout, then a `## Team config` block in `AGENTS.md` (legacy), then the defaults below.
+- Lookup: `.team/config.yaml` in the main checkout, then the defaults below.
 - Local while experimenting: `/.team` in `.git/info/exclude` (no trailing slash, so worktree links are ignored too; per clone); never edit `AGENTS.md` or `.gitignore` for it, never commit or push team files. Shared later: commit only `.team/config.yaml`.
-- One `.team/` per repo: right after `orca worktree create` (or `worker-start --worktree new-child`), `ln -s <main checkout>/<path> <worktree>/<path>` for `.team` and each `worktree_links` path. Codex writes through the link only when `<main checkout>/.team` is in `sandbox_workspace_write.writable_roots` of `~/.codex/config.toml`.
+- One `.team/` per repo: right after `orca worktree create` (or `worker-start --worktree new-child`), `ln -s <main checkout>/<path> <worktree>/<path>` for `.team` and each `worktree_links` path. Agent-specific write limits: `skills/orchestrator/references/coding-agents.md` "Known limits".
 - Workers never read `config.yaml`: the Orchestrator puts what each needs (resolved skills, `commands.verify`, branch and delivery rules, `human_only`) in its Task spec. Agents used directly follow it through `~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md`.
 - Repo rules in `AGENTS.md` / `CLAUDE.md` win; the config only maps them to team settings.
 
@@ -30,6 +30,7 @@ delivery:
   pr_title: "[{ticket}] {summary}"
 commands:
   verify: ["<lint>", "<test>", "<build>"]   # or pointers to where the repo documents them
+  install: "<install deps>"  # run once in each new worktree
   serial: false              # true = run one at a time (shared cache or device)
 e2e: []                      # optional; heavy E2E commands, run only on request
 worktree_links: [.env]       # untracked local files linked from the main checkout
@@ -45,7 +46,7 @@ ui_rules:                    # optional; Designer, UI Builders, Reviewer
   visual_loop: off           # on = Builder screenshot loop per UI slice; off = only when the PO asks
                              # other keys (screens, platform, copy) pass as-is to the Task spec
 ui_viewports: []             # e.g. ["desktop 1280x800", "mobile 390x844"]; set when there is a UI
-ui_screenshots: false        # true = capture shots for the visual loop and G-UI (`orchestrator/specs.md` working rules)
+ui_screenshots: false        # true = capture shots for the visual loop and G-UI (`skills/orchestrator/references/specs.md` working rules)
 perf_metrics: "latency and memory of the changed path, measured before and after"
 compliance: []               # e.g. [gdpr], [appi], [vn-pdpl]; its skills go in skills.security as references, never replacing the regime
 perf_notes: <path>           # optional perf ledger for the Perf auditor
@@ -67,11 +68,11 @@ models:
 
 ## Model settings
 
-- Model ids, tiers and efforts live in `coding-agents.md` "Model tiers"; agent choice per Task in `coding-agents.md` "Routing".
-- `models.agents.<agent>: off` removes the agent from routing; its Tasks go to the next eligible agent (`coding-agents.md` "Free-tier agents" for `simple` Tasks).
+- Model ids, tiers and efforts live in `skills/orchestrator/references/coding-agents.md` "Model tiers"; agent choice per Task in the same file "Routing".
+- `models.agents.<agent>: off` removes the agent from routing; its Tasks go to the next eligible agent (same file "Free-tier agents" for `simple` Tasks).
 - Per Task the Orchestrator may move effort one step within the tier (up for money, concurrency, migrations, security; down for mechanical work) and records why in the spec.
-- `models.tiers.<tier>` remaps the agent columns of `coding-agents.md` "Model tiers" (`claude`, `codex`, `cursor`) and `effort` per project (missing keys keep the table); `models.roles` keys are the role ids of `roles/`.
-- Precedence: escalation (`orchestrator/review.md`) > role card size rule > `models.roles` > role default.
+- `models.tiers.<tier>` remaps the agent columns of the same "Model tiers" table (`claude`, `codex`, `cursor`) and `effort` per project (missing keys keep the table); `models.roles` keys are the role ids of `roles/`.
+- Precedence: escalation (`skills/orchestrator/references/review.md`) > role card size rule > `models.roles` > role default.
 
 ## Skill slots
 

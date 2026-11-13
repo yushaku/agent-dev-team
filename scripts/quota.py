@@ -4,6 +4,9 @@
 Usage: quota.py [--fresh]
 Cache: ~/.cache/agent-team/quota.json, 15 minutes (--fresh bypasses).
 Output: {agent: {used_pct, remaining_pct, window, resets_at, plan, source, ok, error}}
+Probes: claude and cursor run /usage in a q_<agent> tmux session under $AGENT_TEAM_SCRATCH;
+codex reads the last logged rate_limits sample (sample_age_min); copilot calls gh api.
+A failed probe sets ok false and error; a missing CLI is a failure, never a crash.
 """
 import datetime
 import glob

@@ -51,7 +51,7 @@
   - Last line: `Retired: R3, R7, AC12` (retired IDs).
 - Not allowed: solution, architecture, technology, platform, screen or component names, API, database, code, test names, file paths. A sentence that would change when the implementation changes does not belong.
 - Gate 1 answers and other PO decisions for the Run live in numbered `.team/<feature>/decisions.md` items; the PM folds decided items into rules and AC, and the spec carries no `Decided at Gate 1` or post-Gate 1 `Decisions to confirm` sections or D/A/G/Q item lists. Open questions stay in their existing section.
-- Running examples belong only in the Gate 1 `walkthrough.html` sent to the PO, never in the spec.
+- Worked examples belong only in the Gate 1 `walkthrough.html` sent to the PO, never in the spec.
 - Size: target about 80 lines; past 150 lines, split the capability and move its stories, rules and ACs with the split; reference another capability's criteria as `<capability> ACn`. Long content lists such as catalogue text and card copy live in code or seed data, not the spec.
 - Traceability is one-way, code to spec: tests reference IDs with the capability file name (e.g. `garden AC3: member cannot book past the limit`); bare `AC3` is ambiguous. Never reference story IDs; the spec never references tests or code.
 - IDs: never reuse or renumber R, AC or US IDs. A wording fix keeps its ID; a meaning change gets the next free ID and retires the old one.
@@ -71,13 +71,13 @@
 - `.team/` (ignored, never committed):
   - `<feature>/`: `plan.md` (`roles/tech-lead.md`), `decisions.md` (numbered PO decisions for the Run, including Gate 1 answers, scope cuts and Orchestrator defaults), `walkthrough.html` (Gate 1 HTML for the PO), `handoff.md`, `design/`, `specs/`, and role reports named `<role>-r<N>.md` (round number, e.g. `reviewer-r1.md`, `builder-fix-r1.md`); no other entries per feature.
   - `research/<topic>.md`: outcome of a Researcher session (product discovery): problem, who has it, how others solve it, options, smallest scope, risks, decision, open points, sources; under 60 lines; written in the Researcher session, read by the Orchestrator only when a todo item or the PO names it.
-  - `carry-over.md`: numbered leftovers (file:line, why); lifecycle in `orchestrator/delivery.md`.
+  - `carry-over.md`: numbered leftovers (file:line, why); lifecycle in `skills/orchestrator/references/delivery.md`.
 - `.team/config.yaml` is the only file in `.team/` that may be committed.
-- Cleanup: `orchestrator/delivery.md`.
+- Cleanup: `skills/orchestrator/references/delivery.md`.
 
 ## Audit
 
-- Docs audit request: S0 (`sizing.md`): a table per committed doc and `.team/` file (keep, migrate to `docs/product/`, legacy, delete) with the reason, missing required docs, stale cross-references; then propose one S1 cleanup Run. Files the PO names stay (`docs.legacy`). Nothing changes before the PO's go.
+- Docs audit request: S0 (`skills/orchestrator/references/sizing.md`): a table per committed doc and `.team/` file (keep, migrate to `docs/product/`, legacy, delete) with the reason, missing required docs, stale cross-references; then propose one S1 cleanup Run. Files the PO names stay (`docs.legacy`). Nothing changes before the PO's go.
 
 ## Writing
 

@@ -53,6 +53,8 @@ jq -r '.skills | to_entries | group_by(.value.source)[]
   skills-lock.json | sh
 ```
 
+Every downloaded skill a role card or `config.md` names is pinned in `skills-lock.json` and never edited in place. Add one by running `npx skills add <repo> -s <name> -a claude-code -y` in a scratch git dir and copying its `skills-lock.json` entry here.
+
 4. Link the team's own skills (`init-team`, `orchestrator`, `anti-ai`, `frappe-docs`).
 
 ```sh
@@ -86,14 +88,11 @@ No `missing:` lines means every skill is in place.
 
 ## Layout
 
-- `workflow.md`: locations, goals, principles, flow, gates, Definition of Done
-- `sizing.md`: request sizes S0 to S3 and work modes
-- `roles/`: one card per role, including the Orchestrator
-- `orchestrator/`: the Orchestrator's step files
+- `workflow.md`: locations, goals, principles, flow, DAG shapes
+- `roles/`: one card per worker role
+- `skills/orchestrator/`: the Orchestrator skill; `references/` holds its step files, sizing, coding agents, ticket mode and Orca quirks
 - `config.md`: project config schema and model settings
-- `coding-agents.md`: agent registry, model tiers, routing, quota
 - `docs-policy.md`: which documents exist and who owns them
-- `maintenance.md`: process for projects in production
 - `skills/`: skills the team wrote
 - `skills-lock.json`: pinned downloaded skills
 - `scripts/`: helpers such as the quota probe
