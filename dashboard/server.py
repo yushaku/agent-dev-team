@@ -1,9 +1,9 @@
 #!/usr/bin/python3
-"""Team app: team docs + token dashboard, local server on 127.0.0.1:4747.
+"""Token metrics dashboard, local server on 127.0.0.1:4747.
 
-GET /                 web/index.html (tabs: team docs read live, then the token dashboard)
+GET /                 web/index.html (the metrics page)
 GET /css/*.css, /js/*.js, /vendor/*   no-build static assets (whitelist in STATIC)
-GET /api/team/*       read-only team endpoints, see backend/team_docs.py
+GET /api/team/skill?name=N  SKILL.md body for the side panel, see backend/team_docs.py
 GET /api/data?days=N  aggregated JSON, computed fresh on each request.
 GET /api/quota[?fresh=1]  agent quotas from scripts/quota.py (cached 15 min; fresh re-probes).
 
@@ -18,7 +18,6 @@ Python 3.9 stdlib only.
 
 import json
 import os
-import re
 import sys
 import threading
 import time
@@ -59,10 +58,6 @@ class Handler(BaseHTTPRequestHandler):
             res = team_docs.handle(u.path, parse_qs(u.query))
             if res:
                 return self.send(*res)
-        m = re.match(r"^/diagrams/([a-z0-9][a-z0-9-]*)\.html$", u.path)
-        if m and os.path.isfile(os.path.join(team_docs.DIAGRAMS, m.group(1) + ".html")):
-            with open(os.path.join(team_docs.DIAGRAMS, m.group(1) + ".html"), "rb") as f:
-                return self.send(200, f.read(), "text/html; charset=utf-8")
         if u.path == "/api/quota":
             fresh = parse_qs(u.query).get("fresh", ["0"])[0] in ("1", "true")
             return self.send(200, json.dumps(quota.get(fresh), separators=(",", ":")).encode(), "application/json")

@@ -44,7 +44,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
       renderOverview() { if (renderError) throw renderError; },
       renderRoles() {}, renderRepos() {}, renderRuns() {}, runInfo() {},
       renderRunTimeline() {}, markRunSelection() {}, renderSessions() {},
-      showSession() {}, renderSkills() {}, renderTokens() {},
+      showSession() {}, renderSkills() {}, renderTokens() {}, renderOverall() {},
     };
     return new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
