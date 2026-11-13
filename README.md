@@ -18,21 +18,71 @@ What each request size runs:
 
 ## Requirements
 
-- Orca app
-- A coding agent CLI, such as Claude Code or Codex
-- `gh`
-- `node`, for `npx skills`
+- macOS with Homebrew
+- Claude Code or Codex, installed and signed in
+- Everything else is installed below
 
 ## Install
 
-1. Clone this repo to `~/.agents/teams`, or elsewhere and set `AGENT_TEAM_HOME`.
-2. Install the pinned downloaded skills with the command in `orchestrator/revising.md`.
-3. Link the team's own skills: `ln -s $AGENT_TEAM_HOME/skills/* ~/.agents/skills/`
+Copy each block into a terminal.
+
+1. Tools: Orca, GitHub CLI, jq, Node.
+
+```sh
+brew install --cask orca
+brew install gh jq node
+gh auth login
+```
+
+Open Orca once and turn on its CLI, then check: `orca --version`.
+
+2. Clone this repo to `~/.agents/teams` (the default team root).
+
+```sh
+git clone https://github.com/yushaku/agent-dev-team.git ~/.agents/teams
+```
+
+Cloned elsewhere: `export AGENT_TEAM_HOME=/path/to/clone` in your shell profile.
+
+3. Install the pinned skills globally for Claude Code and Codex.
+
+```sh
+cd ~/.agents/teams
+jq -r '.skills | to_entries | group_by(.value.source)[]
+  | "npx -y skills add \(.[0].value.source) -g -y -a claude-code codex " + (map("-s " + .key) | join(" ")) + " </dev/null"' \
+  skills-lock.json | sh
+```
+
+4. Link the team's own skills (`init-team`, `orchestrator`, `anti-ai`, `frappe-docs`).
+
+```sh
+cd ~/.agents/teams
+mkdir -p ~/.agents/skills ~/.claude/skills
+for d in skills/*/; do
+  n=$(basename "$d")
+  ln -sfn "$PWD/skills/$n" ~/.agents/skills/"$n"
+  ln -sfn "$PWD/skills/$n" ~/.claude/skills/"$n"
+done
+```
+
+Codex reads `~/.agents/skills` directly; Claude Code reads `~/.claude/skills`.
+
+5. Check.
+
+```sh
+cd ~/.agents/teams
+for n in $(jq -r '.skills | keys[]' skills-lock.json) $(ls skills); do
+  test -e ~/.agents/skills/"$n"/SKILL.md || echo "missing: $n"
+done; echo "check done"
+```
+
+No `missing:` lines means every skill is in place.
 
 ## Quickstart
 
-1. In a project repo, run `/init-team` to create `.team/config.yaml`.
-2. Run `/orchestrator <job>`.
+1. Open the project repo in Orca and start Claude Code or Codex in a terminal there.
+2. Run `/init-team`: it reads the repo, asks a few questions one at a time and writes `.team/config.yaml` (local, never committed).
+3. Run `/orchestrator <job>`, for example `/orchestrator add CSV export to the reports page`.
 
 ## Layout
 
