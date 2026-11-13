@@ -5,14 +5,14 @@
 | Document | Owner | Content | Changes when |
 |---|---|---|---|
 | `docs/product/<capability>.md` | PM | Business spec (below) | The business changes |
-| `docs/adr/NNN-title.md` | Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line (no-op deletions excepted, below); superseded by a new ADR |
+| `docs/adr/NNN-title.md` | Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line; superseded by a new ADR |
 | `AGENTS.md` | PO | Repo agent rules; read-only for the team (`## AGENTS.md`) | Never by the team |
 | `.team/config.yaml` | PO (Orchestrator proposes) | Team config (`config.md`); local-only until the team adopts it | Project settings change |
 | `DESIGN.md` | Designer | Visual identity: tokens in use, type, spacing, component rules | The PO picks an option at G-UI that sets a new rule |
 | `README.md` | PO | What it is, how to run it | The PO asks |
-| `CHANGELOG.md` | Builder | One line per user-visible commit | In the same `feat` or `fix` commit |
+| `todo.md` | PO | Roadmap; each item has **Goal**, **Outcome** (may name story IDs), a checkbox, optional `Ref: .team/research/<topic>.md` | The PO adds items; the Delivery Engineer removes shipped ones |
 | `docs/diagrams/<name>.json` | Tech Lead; Solution Architect for system design diagrams | Archify spec of a kept diagram (source) | The shape it shows changes |
-| `docs/diagrams/<name>.html` | Delivery Engineer; Solution Architect for its own diagrams | Archify render of that spec (`frappe-docs` pipeline) | Its spec changes |
+| `docs/diagrams/<name>.html` | Whoever changes its spec | Archify render of that spec (`frappe-docs` pipeline) | Its spec changes, in the same commit |
 | `.github/workflows/pages.yml` | Delivery Engineer; the PO reviews the PR | Publishes the docs site when `docs.site: pages` (`## Published site`) | The publish list changes |
 
 - No-op and contradiction findings are fixed by the document owner.
@@ -23,9 +23,9 @@
 
 - Markdown and JSON specs are the source, written for agents. HTML is the human view, generated from them; it adds no fact the sources lack.
 - Agents read sources only, never diagram HTML or the published site.
-- Never hand-edit HTML; change the source and regenerate.
-- Kept diagrams (`docs/diagrams/`): system overview always; deployment ownership when infra has more than one runtime; a lifecycle per business entity with real states; a sequence for each cross-service path a spec relies on; data lineage when data moves between stores. Anything else is drawn on demand and not stored.
-- Regenerate at delivery when a source changed (`roles/delivery.md`); the delivery body lists regenerated files.
+- Never hand-edit HTML; change the source and render it.
+- Kept diagrams (`docs/diagrams/`): system overview as a C4 container view of the current system, always; deployment when infra has more than one runtime. Anything else is drawn on demand in a PR or discussion and not stored, unless the PO asks to keep one.
+
 ## Published site
 
 - Opt-in per repo: `docs.site: pages`; off by default.
@@ -68,8 +68,6 @@
 
 ## Scratch
 
-- `todo.md` (committed, repo root): roadmap; each item has **Goal**, **Outcome** and a checkbox, optional `Ref: .team/research/<topic>.md`. An Outcome may name story IDs. Owner: PO.
-- Delivery Engineer todo updates: `roles/delivery.md`.
 - `.team/` (ignored, never committed):
   - `<feature>/`: `plan.md` (`roles/tech-lead.md`), `decisions.md` (numbered PO decisions for the Run, including Gate 1 answers, scope cuts and Orchestrator defaults), `walkthrough.html` (Gate 1 HTML for the PO), `handoff.md`, `design/`, `specs/`, and role reports named `<role>-r<N>.md` (round number, e.g. `reviewer-r1.md`, `builder-fix-r1.md`); no other entries per feature.
   - `research/<topic>.md`: outcome of a Researcher session (product discovery): problem, who has it, how others solve it, options, smallest scope, risks, decision, open points, sources; under 60 lines; written in the Researcher session, read by the Orchestrator only when a todo item or the PO names it.
@@ -93,12 +91,10 @@
 - Read-only for the team: no agent edits `AGENTS.md` or `CLAUDE.md`; every agent reads `AGENTS.md`.
 - Verify commands: `commands.verify` in `.team/config.yaml`.
 - Conventions and gotchas: a lint, CI or test check (`roles/tech-lead.md` "Mechanical findings"); one a check cannot hold is an ADR.
-- Load and quality targets: a Solution Architect ADR.
-- A wrong or stale `AGENTS.md` line: tell the PO the line and the fix.
 
 ## Conflicts
 
-- ADR vs code: code wins; fix or delete the line. `AGENTS.md` or `README` vs code: code wins; tell the PO the line.
+- ADR vs code: code wins; fix or delete the line. `AGENTS.md` or `README` vs code: code wins; tell the PO the line and the fix.
 - Business spec vs code: the PM decides which is wrong; changing a business rule is the PO's decision (Gate 1), never a silent agent edit.
 
 ## Reading (token budget)

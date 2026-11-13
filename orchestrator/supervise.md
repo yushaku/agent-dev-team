@@ -9,7 +9,7 @@ Waiting and reading results: `roles/orchestrator.md` "Every turn".
 3. Long waits: report status; resume from Orca state (`orchestrator/start.md`, resume first) when the PO comes back.
 4. The PO changed the process mid-Run: reread only the team files newer than the Run's start (`find $AGENT_TEAM_HOME -type f -newer <Run's first scratch file>`), add the Tasks the deltas require when a slot frees, leave finished and running workers as they are, and tell the PO which deltas changed the Run and which steps ran the old way.
 5. The PO drops steps ("only need the builder"): keep PM and Tech Lead; name the guard lost and move its checks into Builder tests, except UI rounds (`orchestrator/review.md` "UI rounds").
-   - After build, follow Board status in `orca.md` and list undone items (review, CHANGELOG).
+   - After build, follow Board status in `orca.md` and list undone items (review).
    - Before merge, run one review of the whole `<base>..<branch>` diff with the dropped audit's checks first, and a Delivery Task beside it.
 6. The PO flags slowness or token burn: offer merge options with time estimates instead of continuing silently.
 

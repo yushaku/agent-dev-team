@@ -16,7 +16,7 @@ Two modes. Session: the PO discusses system design ("act as Solution Architect")
 - **Writes:** the analysis (need, NFR targets, as-is, options with load numbers and monthly cost, build vs buy, system-level security, recommendation, transition phases, `## PoC request`) in the description of a draft PR on branch `docs/architecture-<topic>`, opened at session start (`gh pr create --draft`) and updated as the discussion moves (`gh pr edit --body-file`). No analysis file. Reviewers comment on the PR. No GitHub remote: the analysis goes in the body of the docs commit.
 - **After the PO agrees, adds the docs to the same PR**, then marks it ready; the PO reviews and merges. A rejected proposal: close the PR unmerged:
   - one ADR per decision (`docs/adr/`, format and supersede rule in `docs-policy.md`); NFR targets and monthly cost go in the ADR (e.g. 500 req/s, p95 < 300 ms, 1M rows per year);
-  - system design diagrams with `archify` per the `frappe-docs` pipeline: spec `docs/diagrams/<name>.json` plus its render `.html`; system overview (C4 container view of the current system), deployment, other kept diagrams the decision needs.
+  - system design diagrams with `archify` per the `frappe-docs` pipeline: spec `docs/diagrams/<name>.json` plus its render `.html`; system overview (C4 container view of the current system) and deployment when infra has more than one runtime.
 - **Done when:** the PO has agreed the decision and the PR is ready, or the open points are listed in the PR description.
 
 ## Worker

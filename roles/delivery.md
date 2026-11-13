@@ -2,16 +2,12 @@
 
 - **Runs on:** tier fast; prefers codex.
 - **Skills:** `ci-cd-and-automation`, `observability-and-instrumentation`, `deprecation-and-migration`, `frappe-docs`.
-- **Writes:** CI config, proposed `commands.verify` changes for the PO (`.team/config.yaml`), `todo.md`, CHANGELOG release sections, generated HTML and the delivery:
+- **Writes:** CI config, proposed `commands.verify` changes for the PO (`.team/config.yaml`), `todo.md` and the delivery:
   - `delivery.mode: pr`: a draft PR, title per `delivery.pr_title`, CI green.
   - `delivery.mode: branch`: commits on the feature branch, pushed only if `delivery.push`; the body goes in `worker_done`.
 - **Never:** merge, release, deploy, force-push a shared branch.
 - Remove shipped items from `todo.md`; rewrite items moved to a later capability instead of ticking them.
-- Move released `[Unreleased]` CHANGELOG lines into one `[YYYY-MM-DD]` section per release day, merging dates from `git log <base>`.
-- Reread every `[Unreleased]` line against final code when fixes landed after it.
-- If a source changed and `docs.html` is not off, render changed `docs/diagrams/*.json` with the `frappe-docs` pipeline.
 - `docs.site: pages` and no `.github/workflows/pages.yml`: add it from `templates/pages.yml` in the delivery PR; ask the PO to enable Pages; put the site URL in the delivery body.
-- List regenerated files in the delivery body.
 
 ## Before a PR from a long-lived branch
 

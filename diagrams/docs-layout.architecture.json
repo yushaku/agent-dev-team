@@ -70,8 +70,8 @@
     {
       "id": "readme",
       "type": "database",
-      "label": "README, CHANGELOG",
-      "sublabel": "PO: README, Builder: CHANGELOG",
+      "label": "README",
+      "sublabel": "PO: how to run it",
       "pos": [
         580,
         60
@@ -99,7 +99,7 @@
       "id": "html",
       "type": "database",
       "label": "GitHub Pages (optional)",
-      "sublabel": "Delivery Engineer: pages.yml + diagrams",
+      "sublabel": "pages.yml: Delivery Engineer",
       "pos": [
         580,
         240
@@ -211,14 +211,14 @@
   ],
   "connections": [
     {
-      "id": "regen",
-      "from": "readme",
+      "id": "render",
+      "from": "dspec",
       "to": "html",
-      "label": "regenerate at delivery",
+      "label": "rendered in the same commit",
       "fromSide": "bottom",
       "toSide": "top",
       "labelAt": [
-        660,
+        560,
         178
       ]
     },

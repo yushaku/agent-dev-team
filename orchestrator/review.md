@@ -9,7 +9,7 @@
 - If the visual loop ran, UI Builders attach screenshots for the Reviewer to check.
 - Group findings into 2 or 3 sequential fix Tasks by area; test first and reject wrong findings with a reason.
 - Run no more than 2 fix rounds, then escalate to the PO.
-- Route document findings by the owner column in `docs-policy.md`; use a Builder Task only for `CHANGELOG.md`.
+- Route document findings by the owner column in `docs-policy.md`.
 - Keep Business spec edits in a separate PM Task.
 - Review-finding fixes go into the commit they fix before Gate 2 (amend or fixup); UI asks follow "UI rounds" below.
 - Send a fix to the settled Builder of that area (`orca.md` "Commands"); start fresh only if `worker-list` cannot prove it reusable or the fix needs another tier or agent. Reviewers and re-reviews always start fresh.

@@ -96,7 +96,7 @@ pm-spec ─▶ [gate-1] ─┬─▶ ux-flow ─▶ ux-options ─▶ [g-ui] ─
 - A feature calling an external service (push, mail, payments): one real end-to-end call on a production preview, its evidence in the delivery; mocked tests do not count.
 - UI changes: screenshots in the delivery only when the visual loop ran; otherwise "UI check: PO" under Human steps.
 - Delivered per `delivery.mode` with the body in `roles/delivery.md`.
-- CHANGELOG line in the change; human docs regenerated if a source changed; scratch deleted at close.
+- Scratch deleted at close.
 - PO approved the delivery at Gate 2.
 
 ## Escalation

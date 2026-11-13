@@ -4,7 +4,7 @@ name: Docs site
 on:
   push:
     branches: [main]
-    paths: ["docs/**", "README.md", "DESIGN.md", "CHANGELOG.md", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "README.md", "DESIGN.md", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
         run: |
           mkdir site
           cp -r docs README.md site/
-          for f in DESIGN.md CHANGELOG.md; do [ -f "$f" ] && cp "$f" site/; done
+          for f in DESIGN.md; do [ -f "$f" ] && cp "$f" site/; done
           printf 'title: %s docs\n' "${GITHUB_REPOSITORY#*/}" > site/_config.yml
       - uses: actions/configure-pages@v6
       - uses: actions/jekyll-build-pages@v1
