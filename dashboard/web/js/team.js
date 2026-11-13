@@ -36,7 +36,6 @@ const TABS = {
   "flow": [
     { md: "workflow.md", skip: ["Locations", "Goals", "Principles", "Product Owner"], diagrams: { "Flow": ["dev-flow"] } },
     { diagram: "orch-wait", title: "Orchestrator chờ worker", detail: [["roles/orchestrator.md", "Every turn"], ["orchestrator/supervise.md", "Execute and supervise"], ["orchestrator/pitfalls.md", "Supervising workers"]] },
-    { md: "orca.md" },
   ],
   "co-viec": [{ md: "sizing.md", diagrams: { "Sizes": ["sizes"] } }],
   "bao-tri": [{ md: "maintenance.md", diagrams: { "3. Ticket types and flows": ["ticket-types", "bug-ticket"] } }],
