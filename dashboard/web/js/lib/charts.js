@@ -265,6 +265,30 @@ export function gantt(i, ttok, role = state.role, id = "#g-" + i.r.id) {
     legend: statusesUsed.map(s => ({ name: (statuses[s] || [s])[0], color: (statuses[s] || [s, "var(--overlay2)"])[1] })).concat(gkinds.map(k => ({ name: "Cổng " + GATE[k][0].toLowerCase() + (k === "approve" ? " (tròn)" : k === "changes" ? " (thoi)" : " (vuông)"), color: GATE[k][1] }))),
     caption: `<span class="chip ${i.st[0]}">${i.st[1]}</span> · ${tasks.filter(x => x.t.status === "completed").length}/${tasks.length} task đã xong · ${esc(i.r.repo)}. Đọc từ trên xuống theo lúc bắt đầu; thanh dài là thời gian làm, thanh nét đứt là đang chạy. Rê chuột hoặc chọn tên task để xem chi tiết.` });
 }
+export function tokenTimeline(i, ttok, role = state.role, id = "#gt-" + i.r.id) {
+  const rows = i.r.tasks.filter(t => !role || t.role === role).map(t => ({ t, s: t.started || t.created })).sort((a, b) => (a.s || 0) - (b.s || 0));
+  const fixN = new Map(i.fixes.map(t => [t.id, t.measurement.round]));
+  let acc = 0;
+  const bars = rows.map(({ t }) => { const v = ttok(t), b = { t, v, a: acc, fx: fixN.get(t.id) }; acc += v; return b; });
+  const taskTotal = acc, ags = agentsF(), orch = sum(ags, a => (i.r.orchestrator_by_agent || {})[a] || 0);
+  if (orch > 0) bars.push({ orch: true, v: orch, a: acc });
+  const total = taskTotal + (orch > 0 ? orch : 0), pctRun = v => total ? (100 * v / total).toFixed(1) : "0";
+  const W = Math.max(760, widthOf(id)), LW = 310, Rm = 20, rowH = 52, T = 56, pw = W - LW - Rm, H = T + bars.length * rowH + 32, g = [];
+  const sc = scale(total, Math.max(3, Math.floor(pw / 90))), X = v => r1(LW + pw * v / (sc.top || 1)), chars = Math.floor((LW - 8) / 6.6);
+  g.push(`<text x="0" y="14">Task / token</text><text x="${LW}" y="14">Token cộng dồn →</text>`);
+  sc.ticks.forEach(v => g.push(`<line class="gl" x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${T + bars.length * rowH}"/><text x="${X(v)}" y="${T - 8}" text-anchor="middle">${fmt(v)}</text><text x="${X(v)}" y="${T + bars.length * rowH + 16}" text-anchor="middle">${fmt(v)}</text>`));
+  bars.forEach((b, k) => {
+    const y = T + k * rowH, cy = y + rowH / 2, t = b.t, col = b.orch ? GROUPS.orch[1] : roleCol(t.role);
+    const name = b.orch ? "Orchestrator" : t.title, e = t && (t.ended || t.completed), s0 = t && (t.started || t.created);
+    const tip = b.orch ? ["Orchestrator", "Token: " + fmt(b.v), pctRun(b.v) + "% run"] : [t.title, t.role ? "Vai: " + t.role + " (" + GROUPS[groupOf(t.role)][0] + ")" : null, t.agent ? AG[t.agent] || t.agent : null, "Token: " + fmt(b.v), pctRun(b.v) + "% run", s0 && e ? "Thời lượng: " + dur(e - s0) : null, b.fx ? "Vòng sửa " + b.fx : null];
+    g.push(`<text class="task-name" x="0" y="${cy - 4}"${A({ tip })} tabindex="0">${esc(cut(name, chars - 5))}</text><text x="0" y="${cy + 15}" style="fill:var(--overlay2)">${fmt(b.v)} · ${pctRun(b.v)}% run${b.fx ? " · Sửa vòng " + b.fx : ""}</text>`);
+    g.push(`<rect x="${X(b.a)}" y="${y + 17}" width="${Math.max(3, r1(X(b.a + b.v) - X(b.a)))}" height="18" rx="3" style="fill:${col};stroke:${b.fx ? "var(--yellow)" : "none"};stroke-width:2"${A({ tip })}/>`);
+  });
+  g.push(`<line class="ax" x1="${LW}" x2="${LW}" y1="${T}" y2="${T + bars.length * rowH}"/>`);
+  const used = [...new Set(bars.map(b => b.orch ? "orch" : groupOf(b.t.role)))];
+  fig(id, { title: "Token theo thứ tự task", body: bars.length ? svg(W, H, "Token theo thứ tự task của run " + i.r.objective, g.join("")).replace("<svg ", '<svg style="min-width:760px" ') : "", legend: groupLegend(used),
+    caption: `Độ dài thanh là số token, xếp theo thứ tự bắt đầu; thanh nối tiếp nhau nên điểm cuối là tổng token của run. Tổng: ${fmt(total)} token.` });
+}
 /* Tooltip: one fixed box, text from data-tip, follows the pointer or the focused element. */
 export const tipEl = $("#tip");
 export function showTip(el, x, y) {

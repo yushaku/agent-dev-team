@@ -1,5 +1,5 @@
 import * as C from "../lib/charts.js";
-import { $, esc, sessionsF, agentsF, sum, gantt } from "../lib/charts.js";
+import { $, esc, sessionsF, agentsF, sum, gantt, tokenTimeline } from "../lib/charts.js";
 
 export function runInfo(S) {
   const d = C.state.data;
@@ -50,8 +50,9 @@ export function renderRunTimeline(info, selectedId, role = C.state.role, contain
   if (!i) { $(container).innerHTML = '<p class="muted">Không có run nào trong khoảng này.</p>'; return; }
   const ags = agentsF(), ttok = t => sum(ags, a => t.tokens[a] || 0);
   const id = prefix + i.r.id;
-  $(container).innerHTML = `<figure class="chart" id="${esc(id)}"></figure>`;
+  $(container).innerHTML = `<figure class="chart" id="${esc(id)}"></figure><figure class="chart" id="${esc(prefix + "tok-" + i.r.id)}"></figure>`;
   gantt(i, ttok, role, "#" + id);
+  tokenTimeline(i, ttok, role, "#" + prefix + "tok-" + i.r.id);
 }
 $("#run-picker").addEventListener("change", e => {
   C.state.run = e.target.value;

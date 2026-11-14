@@ -136,3 +136,15 @@ test("run timeline distinguishes blocked and queued tasks from running work", ()
   assert.match(html, /min-width:760px/);
   assert.doesNotMatch(html, /Vai builder, bấm để lọc/);
 });
+
+test("token timeline chains bars to the run total", () => {
+  C.state.data = { generated_at: 1000 };
+  const tasks = [3, 5].map((v, n) => ({ id: String(n), title: "T" + n, role: "builder", status: "completed", created: 100 + n, started: 100 + n, completed: 200, tokens: { codex: v * 1e6 } }));
+  const r = { id: "tk", objective: "Tok", created: 100, repo: "test", tasks, gates: [], tokens: {}, orchestrator_by_agent: { codex: 2e6 } };
+  C.tokenTimeline(runDetail(r), t => t.tokens.codex || 0, "", "#tok");
+  const html = element("#tok").innerHTML;
+  assert.match(html, /Token theo thứ tự task/);
+  assert.match(html, /Orchestrator/);
+  assert.match(html, /Tổng: 10M token/);
+  assert.equal((html.match(/<rect /g) || []).length, 3);
+});
