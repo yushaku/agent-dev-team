@@ -3,6 +3,7 @@
 - Write each spec to `<main checkout>/.team/<feature>/specs/<NN>-<role>.md` as an absolute path; it is git-ignored and survives the session. Pass `--spec-file <file>` and run one `task-create` per command.
 - Set the title with `--task-title "<role>: <what>"`, using the role id in `config.md` `models.roles`. Start the spec with `Role: <role>`; usage is reported per role from these specs.
 - Make each spec self-contained and include the role card with slots resolved.
+- Every spec names its output paths: report `.team/<feature>/<role>-r<N>.md`, logs `.team/<feature>/logs/`; never `/tmp`. `worker_done` still carries the summary inline.
 - Put skills immediately after `Role:` as absolute `SKILL.md` paths under the skills dir (`workflow.md` "Locations"): `First step, before reading code: read <path>, <path>.` Agents skip bare skill names. Put conditional skills on the next line: `Read <path> when <condition from the role card>.` Give skills that exist only in the orchestrating agent's own skills dir as absolute paths too.
 - Include `commands.verify` (plus "one at a time" when `serial`), `branches.naming`, `human_only`, UI `ui_rules` and `ui_viewports`, and the Tech Lead's `compliance` constraints for Builders.
 - For UI roles, say `visual loop: on` only when the PO asked or `ui_rules.visual_loop: on`.

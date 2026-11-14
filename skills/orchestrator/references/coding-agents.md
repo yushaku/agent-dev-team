@@ -60,6 +60,7 @@ Before each dispatch wave, pick an agent for every Task:
 
 - `codex`: in a worktree of the main checkout it cannot `git add`; its Builder specs say not to commit and to report changed paths (`specs.md`), and its Delivery specs are edit-only, with no commits.
 - `codex`: writes through the `.team` link only when `<main checkout>/.team` is in `sandbox_workspace_write.writable_roots` of `~/.codex/config.toml`.
+- `claude`: writes through the `.team` link only when `<main checkout>/.team` is in `permissions.additionalDirectories` and `sandbox.filesystem.allowWrite` of `~/.claude/settings.json`.
 - `codex`: stops before reading files when a spec says "ask for everything else"; list what needs approval instead.
 - `claude`: skips bare skill names; give absolute `SKILL.md` paths (`specs.md`).
 
