@@ -4,7 +4,7 @@ export const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "
 export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes" };
 export const AGENTS = ["claude", "codex", "copilot", "hermes"];
 export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0 });
-export const state = { split: false, days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", run: "", data: null, auto: true, sort: { key: "start", dir: -1 }, q: "", timer: null };
+export const state = { split: false, days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", data: null, auto: true, sort: { key: "start", dir: -1 }, q: "", timer: null };
 try { const s = JSON.parse(localStorage.getItem("team-dashboard") || "{}"); Object.assign(state, { days: s.days || 7, repo: s.repo || "", agent: s.agent || "", role: s.role || "", wt: s.wt || "", runF: s.runF || "", taskF: s.taskF || "", auto: s.auto !== false }); } catch (e) {}
 export const persist = () => { try { localStorage.setItem("team-dashboard", JSON.stringify({ days: state.days, repo: state.repo, agent: state.agent, role: state.role, wt: state.wt, runF: state.runF, taskF: state.taskF, auto: state.auto })); } catch (e) {} };
 
@@ -74,16 +74,15 @@ export function buckets() {
 export const bval = (s, b) => (s[b.src] && s[b.src][b.k]) || null;
 
 /* ---------- SVG kit ---------- */
-/* Interactive attributes: tooltip lines, cross filter, session, run. */
+/* Interactive attributes: tooltip lines, cross filter, session, skill. */
 export function A(o) {
   let s = "";
   if (o.tip) s += ` data-tip="${esc(o.tip.filter(x => x != null && x !== "").join("\n"))}"`;
   if (o.f) s += ` data-f="${esc(o.f)}"`;
   if (o.sid) s += ` data-sid="${esc(o.sid)}"`;
-  if (o.run) s += ` data-run="${esc(o.run)}"`;
   if (o.skill) s += ` data-skill="${esc(o.skill)}"`;
   if (o.pressed != null) s += ` aria-pressed="${o.pressed}"`;
-  if (o.f || o.sid || o.run || o.skill) s += ` tabindex="0" role="button" aria-label="${esc((o.tip || [o.f || o.sid || o.run || o.skill]).join(", "))}"`;
+  if (o.f || o.sid || o.skill) s += ` tabindex="0" role="button" aria-label="${esc((o.tip || [o.f || o.sid || o.skill]).join(", "))}"`;
   return s;
 }
 export const svg = (W, H, label, inner) => `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(label)}">${inner}</svg>`;
@@ -148,7 +147,7 @@ export function vBars(o) {
   if (o.xTitle) g.push(`<text x="${L + pw / 2}" y="${H - 6}" text-anchor="middle">${esc(o.xTitle)}</text>`);
   return svg(W, H, o.aria, g.join(""));
 }
-/* Horizontal stacked bars. rows: { label, f, run, sid, dot, segs:[{v,color,name,f}], tip:[], right:[{t,color}] } */
+/* Horizontal stacked bars. rows: { label, f, sid, dot, segs:[{v,color,name,f}], tip:[], right:[{t,color}] } */
 export function hBars(o) {
   const W = o.W, rowH = o.rowH || 28, T = 8, B = 40;
   const LW = Math.min(o.LW || 220, Math.round(W * 0.36)), RW = Math.min(o.RW || 70, Math.round(W * 0.3)), pw = W - LW - RW - 12;
@@ -162,8 +161,8 @@ export function hBars(o) {
     const y = T + i * rowH, cy = y + rowH / 2;
     let lx = 0;
     if (r.dot) { g.push(`<rect x="0" y="${cy - 5}" width="10" height="10" rx="2" ${fill(r.dot)}/>`); lx = 16; }
-    const act = r.f || r.run || r.sid || r.skill;
-    g.push(`<text x="${lx}" y="${cy + 4}"${act ? ' class="v"' : ""}${A({ f: r.f, run: r.run, sid: r.sid, skill: r.skill, pressed: r.run ? r.run === o.selected : null, tip: [r.full || r.label, r.f ? "Bấm để lọc" : r.sid ? "Bấm để xem phiên" : r.run ? "Bấm để xem dòng thời gian" : r.skill ? "Bấm để đọc skill" : null] })}>${esc(cut(r.label, chars - (r.dot ? 2 : 0)))}</text>`);
+    const act = r.f || r.sid || r.skill;
+    g.push(`<text x="${lx}" y="${cy + 4}"${act ? ' class="v"' : ""}${A({ f: r.f, sid: r.sid, skill: r.skill, tip: [r.full || r.label, r.f ? "Bấm để lọc" : r.sid ? "Bấm để xem phiên" : r.skill ? "Bấm để đọc skill" : null] })}>${esc(cut(r.label, chars - (r.dot ? 2 : 0)))}</text>`);
     let x = LW;
     r.segs.forEach(s => {
       if (!(s.v > 0)) return;

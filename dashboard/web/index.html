@@ -13,7 +13,7 @@
 <header class="topbar">
   <div class="wrap">
     <a class="brand" href="#tk-tong-quan" aria-label="Orca team dashboard, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>Orca team dashboard</span></a>
-    <nav id="tk-nav" aria-label="Mục token"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-vai">Theo vai</button><button type="button" data-view="tk-theo-repo">Theo repo / task</button><button type="button" data-view="tk-runs">Runs</button><button type="button" data-view="tk-phien">Phiên</button><button type="button" data-view="tk-skills">Skill đã dùng</button><button type="button" data-view="tk-rtk">Tiết kiệm RTK</button><a href="#tk-cach-tinh" id="tk-help" data-view="tk-cach-tinh" title="Cách tính" aria-label="Cách tính">?</a></nav>
+    <nav id="tk-nav" aria-label="Mục token"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-vai">Theo vai</button><button type="button" data-view="tk-theo-repo">Theo repo / task</button><button type="button" data-view="tk-dang-chay">Đang chạy</button><button type="button" data-view="tk-phien">Phiên</button><button type="button" data-view="tk-skills">Skill đã dùng</button><button type="button" data-view="tk-rtk">Tiết kiệm RTK</button><a href="#tk-cach-tinh" id="tk-help" data-view="tk-cach-tinh" title="Cách tính" aria-label="Cách tính">?</a></nav>
     <a class="doc-link" href="https://yushaku.github.io/agent-dev-team/docs/" target="_blank" rel="noopener">Tài liệu</a>
   </div>
 </header>
@@ -104,17 +104,13 @@
     </section>
   </section>
 
-  <section class="dash-view" id="tk-runs" aria-labelledby="tk-runs-h" hidden>
-    <div class="panel-head">
-      <h3 id="tk-runs-h">Runs</h3>
-      <p class="muted">Tiến độ task và các lần duyệt của từng Run.</p>
+  <section class="dash-view" id="tk-dang-chay" aria-labelledby="tk-dang-chay-h" hidden>
+    <div class="panel-head live-head">
+      <div><h3 id="tk-dang-chay-h">Đang chạy</h3><p class="muted">Orchestrator đang điều phối đội ngay lúc này, làm mới mỗi 3 giây. <span id="live-updated"></span></p></div>
+      <button type="button" id="live-toggle" aria-pressed="false">Chi tiết</button>
     </div>
-    <div class="callout warn" id="run-data-warning" role="status" hidden></div>
-    <section aria-labelledby="h-gantt">
-      <label for="run-picker" id="h-gantt">Chọn Run</label>
-      <select id="run-picker"></select>
-      <div class="runs" id="run-list"></div>
-    </section>
+    <div class="callout warn" id="live-warning" role="status" hidden></div>
+    <div class="live-root" id="live-root"></div>
   </section>
 
   <section class="dash-view" id="tk-phien" aria-labelledby="tk-phien-h" hidden>
@@ -174,6 +170,7 @@
         <dt>GitHub Copilot CLI</dt><dd><code>~/.copilot/session-state/&lt;uuid&gt;/events.jsonl</code> cùng <code>workspace.yaml</code> (cwd, nhánh, <code>client_name</code> làm cột nguồn). Mỗi sự kiện <code>session.usage_record</code> là một lượt gọi, khóa theo <code>accounting.sourceSessionId</code> và <code>sequence</code>; model và effort lấy từ chính bản ghi đó. <code>accountingSnapshot</code> trong <code>session.usage_checkpoint</code> và <code>session.shutdown</code> là số cộng dồn của cả phiên (giữ qua lần resume), chỉ dùng để đối chiếu: tổng từng lượt khớp đúng snapshot cuối. Hạn mức tháng lấy từ <code>quotaSnapshots</code> trong <code>model.model_call_success</code>. Thư mục phiên không có <code>events.jsonl</code> là phiên rỗng, bỏ qua.</dd>
         <dt>Hermes</dt><dd><code>~/.hermes/state.db</code> (SQLite, đọc chỉ). Mỗi phiên một hàng <code>sessions</code> với token tổng hợp (xếp vào ngày bắt đầu phiên, không phải thời điểm từng lượt gọi); prompt đầu và skill nạp lấy từ bảng <code>messages</code>. Title bắt đầu <code>orchestrator:</code> hoặc nạp skill <code>orchestrator</code> thì vai là Orchestrator.</dd>
         <dt>Orca</dt><dd><code>orca orchestration run-list, task-list, gate-list, worker-list, worker-show --json</code>, làm mới mỗi 60 giây ở nền. Orca không chạy thì các tab khác vẫn hoạt động.</dd>
+        <dt>Đang chạy</dt><dd><code>GET /api/live</code> gọi riêng <code>orca orchestration run-list, task-list, worker-list, gate-list, inbox --json</code> (trang hỏi mỗi 3 giây khi tab đang mở). Run đang chạy là Run có Task chưa xong, cổng PO đang chờ hoặc terminal của worker chưa được cho nghỉ. Orca không có mốc thời gian cho việc cho nghỉ, nên dashboard ghi lại lần đầu thấy và lưu ở <code>.cache/live-state.json</code>.</dd>
         <dt>RTK</dt><dd><code>~/Library/Application Support/rtk/history.db</code> (SQLite, đọc chỉ). Mỗi lệnh RTK nén là một bản ghi <code>commands</code>: token gốc, token tiết kiệm, thời gian chạy, dự án. Tab Tiết kiệm RTK gộp theo ngày, lệnh và dự án.</dd>
         <dt>Thẻ hạn mức</dt><dd><code>GET /api/quota</code> chạy <code>scripts/quota.py</code> (kết quả giữ 15 phút, <b>Đo lại</b> chạy <code>--fresh</code>, mất khoảng 30 giây). Claude và Cursor đọc từ <code>/usage</code> trong terminal, Codex từ mẫu <code>rate_limits</code> mới nhất trong log, Copilot từ <code>gh api /copilot_internal/user</code>. Màu: đỏ khi còn dưới 15%, vàng dưới 35%, còn lại xanh. Nhãn "nhiều hạn mức nhất" là agent còn nhiều hơn giữa Claude và Codex, cũng là agent mà bước chọn agent của team ưu tiên.</dd>
         <dt>Tier</dt><dd>Bảng Model tiers trong <code>skills/orchestrator/references/coding-agents.md</code> và dòng Runs on trong <code>roles/*.md</code>.</dd>

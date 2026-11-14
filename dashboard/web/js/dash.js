@@ -5,7 +5,7 @@ import {
 import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
 import { renderRepos } from "./tabs/repos.js";
-import { renderRuns, runInfo, renderRunTimeline } from "./tabs/runs.js";
+import { renderLive } from "./tabs/live.js";
 import { renderSessions, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderTokens } from "./tabs/tokens.js";
@@ -46,7 +46,7 @@ function render() {
   renderRunFilter(d);
   renderFilterBar();
   const S = sessionsF();
-  renderOverall(S); renderOverview(S); renderRoles(S); renderRepos(S); renderRuns(S); renderSessions(S); renderSkills(S); renderTokens();
+  renderOverall(S); renderOverview(S); renderRoles(S); renderRepos(S); renderLive(); renderSessions(S); renderSkills(S); renderTokens();
 }
 
 /* ---------- cross filter ---------- */
@@ -126,25 +126,18 @@ function setTimer() {
 }
 $("#auto").addEventListener("click", () => { C.state.auto = !C.state.auto; persist(); setAuto(); setTimer(); });
 function activate(el) {
-  if (el.dataset.run && el.closest("#tk-runs")) {
-    C.state.run = el.dataset.run;
-    renderRunTimeline(runInfo(sessionsF()));
-    $("#run-picker").value = C.state.run;
-    return;
-  }
   if (el.dataset.clear) return clearFilter(el.dataset.clear);
   if (el.dataset.f) return applyFilter(el.dataset.f);
-  if (el.dataset.run) { const t = document.getElementById("run-" + el.dataset.run); if (t) t.scrollIntoView(); return; }
   if (el.dataset.sid) return showSession(el.dataset.sid);
 }
 document.addEventListener("click", e => {
   const th = e.target.closest("th[data-key]");
   if (th) { const k = th.dataset.key; C.state.sort = { key: k, dir: C.state.sort.key === k ? -C.state.sort.dir : -1 }; renderSessions(); return; }
-  const el = e.target.closest("[data-clear], [data-f], [data-run], [data-sid]");
-  if (el) { hideTip(); if (el.dataset.run && el.closest("#tk-runs")) e.preventDefault(); activate(el); }
+  const el = e.target.closest("[data-clear], [data-f], [data-sid]");
+  if (el) { hideTip(); activate(el); }
 });
 document.addEventListener("keydown", e => {
-  const el = e.target.closest && e.target.closest("[data-f], [data-run], [data-sid]");
+  const el = e.target.closest && e.target.closest("[data-f], [data-sid]");
   if (el && (e.key === "Enter" || (e.key === " " && el.tagName !== "BUTTON"))) { e.preventDefault(); activate(el); }
 });
 let resizeTimer = null, lastW = window.innerWidth;
@@ -158,6 +151,7 @@ const viewBtns = [...document.querySelectorAll("#tk-nav [data-view]")];
 const VKEY = "team-app:token-view";
 export function showView(id, { hash = true } = {}) {
   if (id === "tk-toan-dien") id = "tk-theo-repo";
+  if (id === "tk-runs") id = "tk-dang-chay";
   if (!views.some(v => v.id === id)) id = views[0].id;
   views.forEach(v => { v.hidden = v.id !== id; });
   viewBtns.forEach(b => { const on = b.dataset.view === id; if (b.tagName === "A") { if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); } else b.setAttribute("aria-pressed", String(on)); });
