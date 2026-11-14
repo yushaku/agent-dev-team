@@ -22,7 +22,7 @@ Read when an Orca command fails or a worker stalls. Flags are in `orca <command>
 ## Reading a worker
 
 - `worker-read --dispatch <id> --limit 400 --json > <scratch>/worker.json` returns the oldest messages; grep `"(type|text|exitCode|command)"`. Text is clipped. Minute gaps after a `system` "Allow Bash?" mean a permission wait.
-- A report that points to "the full report" or an earlier message: read the worker timeline (`coding-agents.md` "Transcripts").
+- A `worker_done` with no report file: send the same worker a follow-up Task to write it ("Recovery"); the transcript (`coding-agents.md` "Transcripts") is a last resort.
 
 ## Recovery
 

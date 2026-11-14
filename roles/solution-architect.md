@@ -24,5 +24,5 @@ Two modes. Session: the PO discusses system design ("act as Solution Architect")
 - **Runs on:** tier top; prefers claude.
 - **Task:** `arch-review` of the Tech Lead's `plan.md` in an S3 Run whose plan touches a Solution Architect ADR (`workflow.md` "Task DAG").
 - **Does:** check the plan against the ADRs and their NFR targets; report `conform` or the deviations, each with the ADR line. Never rewrite the plan.
-- **Deviation needing a new decision:** report it in `worker_done`; the Orchestrator takes it to the PO for a Solution Architect session.
-- **Done when:** `worker_done` states conform or lists every deviation with its ADR line.
+- **Deviation needing a new decision:** report it in the Task report; the Orchestrator takes it to the PO for a Solution Architect session.
+- **Done when:** the Task report states conform or lists every deviation with its ADR line.

@@ -3,7 +3,7 @@
 - Create each gate on the Task it blocks, then show the PO its material.
 - Gate 2: create a `close` Task depending on the last review, then run `gate-create --task <close> --options '["approve","changes"]' --question "<branch> into <target>" --from <handle>`.
 - G-UI: use an `after G-UI` Task and options `["A","B","changes"]`.
-- Keep placeholder specs for gate Tasks in the current Run's scratch directory.
+- Gate Task placeholder specs are Task files like any other (`docs-policy.md` "Task files").
 - After the PO answers, run `gate-resolve --id <gate> --resolution "<the PO's answer>" --from <handle>`, then `task-update --id <close> --status completed`.
 - Material per gate:
   - Gate 1: walkthrough in `languages.po` (`## Gate 1 material`).

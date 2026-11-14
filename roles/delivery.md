@@ -4,7 +4,7 @@
 - **Skills:** `ci-cd-and-automation`, `observability-and-instrumentation`, `deprecation-and-migration`, `frappe-docs`.
 - **Writes:** CI config, proposed `commands.verify` changes for the PO (`.team/config.yaml`), `todo.md` and the delivery:
   - `delivery.mode: pr`: a draft PR, title per `delivery.pr_title`, CI green.
-  - `delivery.mode: branch`: commits on the feature branch, pushed only if `delivery.push`; the body goes in `worker_done`.
+  - `delivery.mode: branch`: commits on the feature branch, pushed only if `delivery.push`; the body goes in the report's `## Commit body`.
 - **Never:** merge, release, deploy, force-push a shared branch.
 - Remove shipped items from `todo.md`; rewrite items moved to a later capability instead of ticking them.
 - `docs.site: pages` and no `.github/workflows/pages.yml`: add it from `templates/pages.yml` in the delivery PR; ask the PO to enable Pages; put the site URL in the delivery body.

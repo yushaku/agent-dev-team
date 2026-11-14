@@ -16,7 +16,7 @@
 - **Plan:** keep `plan.md` under about 150 lines; rewrite in place, without history, decision trace or copied PO decisions; link `.team/<feature>/decisions.md` items.
 - **Plan contents:** slices with story/rule/AC IDs (story IDs first; stories may span slices or Runs), files and symbols, data/API shapes (one line each), fast check, test seam (highest existing seam for the ACs; one per feature when possible; add one only if none exists), and risks. No SQL or code.
 - **Simple Tasks:** mark a Task `simple` in the plan when it is a rename, lint fix, text change, single-file edit covered by existing tests, or other mechanical edit; routing in `skills/orchestrator/references/coding-agents.md` "Free-tier agents". Mark nothing else `simple`.
-- **Open technical questions:** report in `worker_done`, not `plan.md`.
+- **Open technical questions:** report in the Task report (`docs-policy.md` "Task files"), not `plan.md`.
 - **Mechanical findings:** when the Reviewer's `mechanical` finding recurs in a repo (second time), add a lint or CI rule (Tech Lead, or the Builder in that Run) instead of a line in a role card (never `AGENTS.md`).
 - Each repo with `docs/product/` has a spec ID check in `commands.verify`: every `<capability> Rn|ACn` in test names exists in `docs/product/<capability>.md` and is not on its `Retired:` line. The Tech Lead adds it in the first Run that lacks it as a small script in the repo's own tooling.
 - **Done when (spec):** a non-technical stakeholder can agree or disagree with every rule in the spec, every AC belongs to at least one story, a grep of the spec for each actor or behaviour the change touches and for every retired ID finds no rule left contradicting it, and `wc -l` confirms the spec is within the limit (`docs-policy.md`).

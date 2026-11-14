@@ -5,7 +5,7 @@
 - `verify` writes `## Standards`; at S1 it also writes `## Spec`.
 - At S2/S3, a fresh Reviewer Task writes `## Spec` only, using the diff, capability spec and plan, at the Reviewer's tier.
 - QA and Perf/A11y are separate parallel Tasks only when size or a trigger requires them.
-- List Builder-reported leftovers in each spec. If the visual loop ran, UI Builders attach screenshots for the Reviewer to check.
+- List Builder-reported leftovers in each spec. If the visual loop ran, the Reviewer checks the UI Builder's `shots/`.
 - Group findings into 2 or 3 sequential fix Tasks by area; test first and reject wrong findings with a reason.
 - A `spec gap` line goes to the Tech Lead as a Task on its terminal; it edits and commits the spec itself, with no re-review. Other document findings go to their owner in `docs-policy.md`.
 - Review-finding fixes go into the commit they fix before Gate 2 (amend or fixup); UI asks follow "UI rounds" below.

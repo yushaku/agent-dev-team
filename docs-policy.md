@@ -69,10 +69,32 @@
 ## Scratch
 
 - `.team/` (ignored, never committed):
-  - `<feature>/`: `plan.md` (`roles/tech-lead.md`), `decisions.md` (numbered PO decisions for the Run, including Gate 1 answers, scope cuts and Orchestrator defaults), `walkthrough.html` (Gate 1 HTML for the PO), `handoff.md`, `design/`, `specs/`, role reports named `<role>-r<N>.md` (round number, e.g. `reviewer-r1.md`, `builder-fix-r1.md`), `logs/` (verify, test and tool output such as `WRANGLER_LOG_PATH`) and `commit-body.txt`; no other entries per feature. Workers write every report, log and commit body here through the worktree's `.team` link, never `/tmp`.
+  - `<feature>/`: the Run's files, laid out in "Task files" below; no other entries per feature.
   - `research/<topic>.md`: outcome of a Researcher session (product discovery): problem, who has it, how others solve it, options, smallest scope, risks, decision, open points, sources; under 60 lines; written in the Researcher session, read by the Orchestrator only when a todo item or the PO names it.
   - `carry-over.md`: numbered leftovers (file:line, why); lifecycle in `skills/orchestrator/references/delivery.md`.
 - `.team/config.yaml` is the only file in `.team/` that may be committed.
+
+## Task files
+
+File is the source, message is the pointer. Every file of a Run lives in `.team/<feature>/`, reached from a worktree through its `.team` link; never `/tmp` or `.team/<run>/`.
+
+| Path | Writer | Content |
+|---|---|---|
+| `specs/NN-<role>[-rN].md` | Orchestrator | Task input; every Task has one, follow-ups and gate placeholders included |
+| `reports/NN-<role>[-rN].md` | The worker of Task NN | Task output, same NN as its spec |
+| `logs/NN-<command>.log` | The worker of Task NN | Full verify, test and tool output (`WRANGLER_LOG_PATH` included) |
+| `inputs/` | Orchestrator, from the PO | Reference docs, screenshots, sketches |
+| `shots/` | Designer, Builder (visual loop) | Screenshots per viewport and colour scheme |
+| `design/` | Designer | `flow.md`, `option-a.html`... |
+| `decisions.md` | Orchestrator | Numbered PO decisions: Gate 1 answers, scope cuts, Orchestrator defaults |
+| `plan.md` | Tech Lead | `roles/tech-lead.md` |
+| `walkthrough.html` | Orchestrator | Gate 1 HTML for the PO |
+| `handoff.md` | Orchestrator | `skills/orchestrator/SKILL.md` |
+
+- A Task spec lists every file the worker reads by path; it never pastes another role's text.
+- A report has these sections, empty ones omitted: `## Result` (verdict first), `## Evidence` (summary lines pointing to `logs/`), `## Findings` (Reviewer, numbered by severity), `## Changed paths`, `## Commit body`, `## Leftovers`.
+- `worker_done` carries the verdict, at most 5 summary lines and the report path. The Orchestrator reads the report file, never the transcript.
+- Committed documents are edited and committed by their owner (table above); the commit body lives in that commit.
 - Cleanup: `skills/orchestrator/references/delivery.md`.
 
 ## Audit
