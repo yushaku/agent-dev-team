@@ -24,5 +24,6 @@
   2. **Resume first:** `orchestration run-list --json`, objective contains the key.
   3. Create an Orchestrator terminal before `run-create`, titled `orchestrator <key>`, open for the Run's life. Pass `--from <its handle>` (`orca terminal show --json`) on every orchestration command and `--terminal <handle>` on `check`; the Run records it as `coordinator_handle`, so worker `ask`, heartbeats and `worker_done` land in its inbox.
   4. `run-create --objective "<key> [<mode>]"`; create the worktree from pushed `origin/<branches.base>` with branch `branches.naming`, setup skipped, the ticket URL in `--reference` or `--comment`. Link `.team` and `worktree_links` (`config.md`), add references and set Board status.
+     Bind the coordinator session for token attribution with `run-use --id <run> --from <its handle>` after creation and on resume; keep explicit `--run <run>` on dispatch commands. Tokens before the binding remain unassigned.
   5. Install dependencies in the worktree (`commands.install`), then run each verify command once and keep its summary line as the Builder baseline. A broken baseline script: report it to the PO as pre-existing and use the nearest check.
 - No-code flows: no worktree; workers read `git show origin/<client_visible>:<path>`, never the working tree.
