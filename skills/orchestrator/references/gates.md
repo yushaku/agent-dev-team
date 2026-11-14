@@ -34,7 +34,7 @@
 ## Changed decisions
 
 - A business rule changed after Gate 1, including a UI ask that breaks an approved rule, is never an inline edit: return to Gate 1 with a diff and 2 or 3 options with one concrete example, recommended option first.
-- Spec feedback after Gate 1: `send --to dispatch:<Tech Lead>` while that dispatch is open, else one Tech Lead update Task (tier work) per gate, never one per remark. Builders link the numbered decision item (`specs.md`). Show the PO only the changed rule list.
+- Spec feedback after Gate 1: `send --to dispatch:<Tech Lead>` while that dispatch is open, else one Tech Lead update Task (tier work) on the same Tech Lead terminal per gate, never one per remark. Builders link the numbered decision item (`specs.md`). Show the PO only the changed rule list.
 - If current code breaks a Gate 1 answer, treat it as a bug in the same Run: Tech Lead update Task, then a Builder Task with a failing regression test. Tell the PO which answer exposed it.
 - Reopening a closed decision as a new capability is a feature, not a fix. Ask the scope questions (rules, edge behaviour, this branch or after v1), one at a time, before building.
 

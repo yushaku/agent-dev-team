@@ -27,7 +27,7 @@ Read when an Orca command fails or a worker stalls. Flags are in `orca <command>
 ## Recovery
 
 - Re-dispatch: `worker-release`, `task-update --id <task> --status ready --run <run> --from <handle>`, then `worker-start`.
-- Fix on a settled Builder: `worker-start --task <fix> --run <run> --worktree <its workspace> --terminal <its agent terminal>`, no `--agent/--model/--effort`.
+- Follow-up on a settled worker (fix, spec update, re-review, missing report): `worker-start --task <new> --run <run> --worktree <its workspace> --terminal <its agent terminal>`, no `--agent/--model/--effort`. Never `worker-release` before Run cleanup.
 - Stop an active worker with `worker-stop --dispatch <id>` when scope changes; release only a settled worker or Orca returns `dispatch_inactive`. Read `argv` in `worker-show` `projection.nextAction`.
 - Settle a stopped worker that named a commit: `worker-stop`, then `task-update --status completed --result "<summary>"`.
 - Cancel a merged Task: `task-update --status failed --result "cancelled: merged into <task>"`.

@@ -9,7 +9,7 @@
 - Group findings into 2 or 3 sequential fix Tasks by area; test first and reject wrong findings with a reason.
 - Document findings go to the owner in `docs-policy.md`; Business spec edits are a Tech Lead Task.
 - Review-finding fixes go into the commit they fix before Gate 2 (amend or fixup); UI asks follow "UI rounds" below.
-- Reuse the settled Builder of that area for a fix (`orca-quirks.md` "Recovery"); start fresh only if `worker-list` cannot prove it reusable or the fix needs another tier or agent. Reviewers and re-reviews always start fresh.
+- Send a fix to the Builder of that area and a re-review to the Reviewer that raised the findings, in the same session (`orca-quirks.md` "Recovery"). Never close or replace a worker while its Task line is unfinished. Start a fresh one only when Orca refuses the reuse (terminal released or gone) or the fix needs another tier or agent; `unverifiable` liveness alone is no reason. A fresh replacement gets a handoff.
 - An approved mechanic's inherent limit is not a finding; record it in ADR Consequences and tell the PO it is accepted.
 - Run one scoped re-review per finding axis each round; include Anti-AI and Security findings. Security audits each Run once.
 - Re-review specs contain only prior numbered findings and fix commits (`git show <fix sha>`), never the full spec or branch diff.

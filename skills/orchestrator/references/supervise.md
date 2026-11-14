@@ -1,6 +1,6 @@
 # Execute and supervise
 
-1. `worker-start --task <id> --worktree <sel> --agent <id> --model <model> --effort <level> --run <run> --from <handle> --json` (Builders and the Tech Lead add `--keep-open`); agent per `coding-agents.md` "Routing", model and effort from the Task's tier (`coding-agents.md` "Model tiers").
+1. `worker-start --task <id> --worktree <sel> --agent <id> --model <model> --effort <level> --run <run> --from <handle> --json` (every worker adds `--keep-open`; Tech Lead, Builder and Reviewer take their follow-ups in the same session; release only at Run cleanup); agent per `coding-agents.md` "Routing", model and effort from the Task's tier (`coding-agents.md` "Model tiers").
 2. Max workers = `flow.max_concurrent_agents`; with `serial: true` only one worker runs verify at a time.
 3. Parallel work only when the PO asks for speed and the files are disjoint:
    - Parallel tracks: the API worker freezes the shared contract first and reports any change; merge and verify once both finish.
