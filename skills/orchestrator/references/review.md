@@ -7,7 +7,7 @@
 - QA and Perf/A11y are separate parallel Tasks only when size or a trigger requires them.
 - List Builder-reported leftovers in each spec. If the visual loop ran, UI Builders attach screenshots for the Reviewer to check.
 - Group findings into 2 or 3 sequential fix Tasks by area; test first and reject wrong findings with a reason.
-- Document findings go to the owner in `docs-policy.md`; Business spec edits are a Tech Lead Task.
+- A `spec gap` line goes to the Tech Lead as a Task on its terminal; it edits and commits the spec itself, with no re-review. Other document findings go to their owner in `docs-policy.md`.
 - Review-finding fixes go into the commit they fix before Gate 2 (amend or fixup); UI asks follow "UI rounds" below.
 - Send a fix to the Builder of that area and a re-review to the Reviewer that raised the findings, in the same session (`orca-quirks.md` "Recovery"). Never close or replace a worker while its Task line is unfinished. Start a fresh one only when Orca refuses the reuse (terminal released or gone) or the fix needs another tier or agent; `unverifiable` liveness alone is no reason. A fresh replacement gets a handoff.
 - An approved mechanic's inherent limit is not a finding; record it in ADR Consequences and tell the PO it is accepted.
