@@ -38,7 +38,6 @@ export function fmt(n) {
   if (a >= 1e3) return +(n / 1e3).toFixed(a >= 1e4 ? 0 : 1) + "K";
   return String(Math.round(n));
 }
-export const usd = n => "$" + (n >= 100 ? n.toFixed(0) : n >= 10 ? n.toFixed(1) : n.toFixed(2));
 export const pct = (a, b) => b ? (100 * a / b).toFixed(1) + "%" : "0%";
 export const pad = n => String(n).padStart(2, "0");
 export const dt = ts => { if (!ts) return "?"; const d = new Date(ts * 1000); return pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()); };
@@ -47,7 +46,7 @@ export const dm = ts => { const d = new Date(ts * 1000); return pad(d.getDate())
 export const dur = s => { if (!s || s < 0) return "0 ph"; const m = Math.round(s / 60); return m < 60 ? m + " ph" : Math.floor(m / 60) + " g " + (m % 60) + " ph"; };
 export const median = a => { if (!a.length) return 0; const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : Math.round((b[m - 1] + b[m]) / 2); };
 export const sum = (a, f) => a.reduce((t, x) => t + (f(x) || 0), 0);
-export const costCell = s => s.agent === "copilot" ? "$0" : s.unpriced > 0 ? (s.cost > 0 ? usd(s.cost) + " + ?" : "?") : usd(s.cost);
+export const sessionCount = S => new Set(S.map(s => s.agent + ":" + (s.session_id || s.id))).size;
 export const cut = (s, n) => { s = String(s || ""); return s.length > n ? s.slice(0, Math.max(1, n - 1)) + "…" : s; };
 export const r1 = n => Math.round(n * 10) / 10;
 
@@ -66,7 +65,7 @@ export function sessionsF() {
     && (!state.runF || s.run_id === state.runF) && (!state.taskF || s.task_id === state.taskF));
 }
 export const agentsF = () => AGENTS.filter(a => !state.agent || a === state.agent);
-/* Buckets: hours for a 1 day range, days otherwise. Each value is [fin, cr, cw, out, cost]. */
+/* Buckets: hours for a 1 day range, days otherwise. Each value is [fin, cr, cw, out, premium requests]. */
 export function buckets() {
   const d = state.data;
   if (d.days === 1) return Array.from({ length: 24 }, (_, h) => ({ k: d.dates[0] + " " + pad(h), label: pad(h) + "h", long: d.dates[0].slice(8) + "/" + d.dates[0].slice(5, 7) + " " + pad(h) + ":00", src: "hours" }));
@@ -225,27 +224,29 @@ export const spark = (vals, color) => {
 export function gantt(i, ttok, role = state.role, id = "#g-" + i.r.id) {
   const d = state.data, now = d.generated_at;
   const tasks = i.r.tasks.filter(t => !role || t.role === role).map(t => {
-    const s = t.started || t.created, done = t.status === "completed" || t.status === "failed";
+    const s = t.started || t.created, done = ["completed", "failed", "cancelled", "canceled"].includes(t.status);
     const e = t.ended || t.completed || (t.started && !done ? now : null);
-    return { t, s, e, running: !!t.started && !done };
+    return { t, s, e, running: !!t.started && !done && !["blocked", "pending", "queued"].includes(t.status) };
   }).sort((a, b) => (a.s || 0) - (b.s || 0));
-  const fixN = new Map(i.fixes.map((t, n) => [t.id, n + 1]));
+  const fixN = new Map(i.fixes.map(t => [t.id, t.measurement.round || "?"]));
   const times = [i.r.created].concat(...tasks.map(x => [x.s, x.e]), i.r.gates.map(g => g.resolved)).filter(Boolean);
   const t0 = Math.min(...times), t1 = Math.max(t0 + 600, ...times);
-  const W = widthOf(id), LW = Math.min(250, Math.round(W * 0.34)), Rm = 12, rowH = 24, T = 8, pw = W - LW - Rm, H = T + tasks.length * rowH + 40, g = [];
+  const W = Math.max(760, widthOf(id)), LW = 310, Rm = 20, rowH = 52, T = 56, pw = W - LW - Rm, H = T + tasks.length * rowH + 32, g = [];
+  const statuses = { completed: ["Đã xong", "var(--green)"], in_progress: ["Đang chạy", "var(--yellow)"], running: ["Đang chạy", "var(--yellow)"], blocked: ["Bị chặn", "var(--red)"], failed: ["Lỗi", "var(--red)"], pending: ["Chưa chạy", "var(--overlay2)"], queued: ["Chưa chạy", "var(--overlay2)"], cancelled: ["Đã hủy", "var(--overlay2)"], canceled: ["Đã hủy", "var(--overlay2)"] };
+  g.push(`<text x="0" y="14">Task / trạng thái</text><text x="${LW}" y="14">Thời gian →</text>`);
   const X = t => r1(LW + pw * (t - t0) / (t1 - t0));
-  timeTicks(t0, t1, Math.max(3, Math.floor(pw / 64))).forEach(([t, lab]) => g.push(`<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${T + tasks.length * rowH}"/><text x="${X(t)}" y="${T + tasks.length * rowH + 16}" text-anchor="middle">${lab}</text>`));
+  timeTicks(t0, t1, Math.max(3, Math.floor(pw / 64))).forEach(([t, lab]) => g.push(`<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${T + tasks.length * rowH}"/><text x="${X(t)}" y="${T - 8}" text-anchor="middle">${lab}</text><text x="${X(t)}" y="${T + tasks.length * rowH + 16}" text-anchor="middle">${lab}</text>`));
   const gatesBy = {};
   i.r.gates.forEach(gt => (gatesBy[gt.task] = gatesBy[gt.task] || []).push(gt));
   const chars = Math.floor((LW - 8) / 6.6);
   tasks.forEach((x, k) => {
-    const t = x.t, y = T + k * rowH, cy = y + rowH / 2, col = roleCol(t.role), fx = fixN.get(t.id);
-    g.push(`<text x="0" y="${cy + 4}"${t.role ? A({ f: "role:" + t.role, tip: [t.title, "Vai " + t.role + ", bấm để lọc"] }) : ""}${t.role ? ' class="v"' : ""}>${esc(cut((fx ? "Vòng sửa " + fx + ": " : "") + t.title, chars))}</text>`);
-    const tip = [t.title, t.role ? "Vai: " + t.role + " (" + GROUPS[groupOf(t.role)][0] + ")" : null, "Trạng thái: " + t.status, t.agent ? AG[t.agent] || t.agent : "chưa có worker", x.s ? "Bắt đầu: " + dt(x.s) : null, x.e ? (x.running ? "Đang chạy, " + dur(x.e - x.s) : "Xong: " + dt(x.e) + ", " + dur(x.e - x.s)) : "Chưa chạy", "Token: " + fmt(ttok(t)), fx ? "Vòng sửa " + fx : null];
+    const t = x.t, y = T + k * rowH, cy = y + rowH / 2, fx = fixN.get(t.id);
+    const [status, col] = statuses[t.status] || [t.status || "Chưa rõ", "var(--overlay2)"];
+    g.push(`<text class="task-name" x="0" y="${cy - 4}"${A({ tip: [t.title, status] })} tabindex="0">${esc(cut(t.title, chars - 5))}</text><text x="0" y="${cy + 15}" style="fill:${col}">${esc(status)}${fx ? " · Sửa vòng " + fx : ""}</text>`);
+    const tip = [t.title, t.role ? "Vai: " + t.role + " (" + GROUPS[groupOf(t.role)][0] + ")" : null, "Trạng thái: " + status, t.agent ? AG[t.agent] || t.agent : "chưa có worker", t.started ? "Bắt đầu: " + dt(t.started) : x.s ? "Tạo: " + dt(x.s) : null, x.e ? (t.ended || t.completed ? "Kết thúc: " + dt(x.e) + ", " + dur(x.e - x.s) : status + ", tính đến " + dt(x.e)) : "Chưa chạy", "Token: " + fmt(ttok(t)), fx ? "Vòng sửa " + fx : null];
     if (x.s && x.e) {
       const w = Math.max(3, X(x.e) - X(x.s));
-      g.push(`<rect x="${X(x.s)}" y="${y + 5}" width="${r1(w)}" height="${rowH - 10}" rx="3" style="fill:${x.running ? mixc(col, 35) : col};stroke:${x.running || t.status === "failed" ? (t.status === "failed" ? "var(--red)" : col) : "none"};stroke-width:2${x.running ? ";stroke-dasharray:4 3" : ""}"${A({ tip })}/>`);
-      if (fx) g.push(`<text x="${r1(X(x.s) + w + 4)}" y="${cy + 4}" style="fill:var(--red);font-weight:600">sửa ${fx}</text>`);
+      g.push(`<rect x="${X(x.s)}" y="${y + 17}" width="${r1(w)}" height="18" rx="3" style="fill:${x.running ? mixc(col, 35) : col};stroke:${x.running || t.status === "failed" ? (t.status === "failed" ? "var(--red)" : col) : "none"};stroke-width:2${x.running ? ";stroke-dasharray:4 3" : ""}"${A({ tip })}/>`);
     } else if (x.s) {
       g.push(`<circle cx="${X(x.s)}" cy="${cy}" r="5" style="fill:none;stroke:${col};stroke-width:2"${A({ tip })}/>`);
     }
@@ -256,13 +257,13 @@ export function gantt(i, ttok, role = state.role, id = "#g-" + i.r.id) {
       else g.push(`<rect x="${gx - 6}" y="${cy - 6}" width="12" height="12" rx="2" style="fill:${gt.kind === "pending" ? "var(--mantle)" : c};stroke:${c};stroke-width:2"${A({ tip: gtip })}/>`);
     });
   });
-  if (i.st[1] === "đang chạy" && now <= t1) g.push(`<line x1="${X(now)}" x2="${X(now)}" y1="${T}" y2="${T + tasks.length * rowH}" style="stroke:var(--overlay2);stroke-dasharray:3 3"/>`);
+  if (tasks.some(x => x.running) && now <= t1) g.push(`<line x1="${X(now)}" x2="${X(now)}" y1="${T}" y2="${T + tasks.length * rowH}" style="stroke:var(--overlay2);stroke-dasharray:3 3"/>`);
   g.push(`<line class="ax" x1="${LW}" x2="${LW}" y1="${T}" y2="${T + tasks.length * rowH}"/>`);
-  const groupsUsed = [...new Set(tasks.map(x => groupOf(x.t.role)))];
+  const statusesUsed = [...new Set(tasks.map(x => x.t.status))];
   const gkinds = [...new Set(i.r.gates.map(gt => gt.kind))];
-  fig(id, { title: i.r.objective, body: tasks.length ? svg(W, H, "Dòng thời gian task của run " + i.r.objective, g.join("")) : "",
-    legend: groupLegend(groupsUsed).concat(gkinds.map(k => ({ name: "Cổng " + GATE[k][0].toLowerCase() + (k === "approve" ? " (tròn)" : k === "changes" ? " (thoi)" : " (vuông)"), color: GATE[k][1] }))),
-    caption: `<code>${esc(i.r.id)}</code>, repo ${esc(i.r.repo)}, <span class="chip ${i.st[0]}">${i.st[1]}</span> ${i.r.tokens.sessions} phiên nối được, Claude ${fmt(i.r.tokens.claude)}, Codex ${fmt(i.r.tokens.codex)}, Copilot ${fmt(i.r.tokens.copilot || 0)}. ${i.fix} vòng sửa, ${i.rer} re-review. Thanh viền đứt là task đang chạy.` });
+  fig(id, { title: i.r.objective, body: tasks.length ? svg(W, H, "Dòng thời gian task của run " + i.r.objective, g.join("")).replace("<svg ", '<svg style="min-width:760px" ') : "",
+    legend: statusesUsed.map(s => ({ name: (statuses[s] || [s])[0], color: (statuses[s] || [s, "var(--overlay2)"])[1] })).concat(gkinds.map(k => ({ name: "Cổng " + GATE[k][0].toLowerCase() + (k === "approve" ? " (tròn)" : k === "changes" ? " (thoi)" : " (vuông)"), color: GATE[k][1] }))),
+    caption: `<span class="chip ${i.st[0]}">${i.st[1]}</span> · ${tasks.filter(x => x.t.status === "completed").length}/${tasks.length} task đã xong · ${esc(i.r.repo)}. Đọc từ trên xuống theo lúc bắt đầu; thanh dài là thời gian làm, thanh nét đứt là đang chạy. Rê chuột hoặc chọn tên task để xem chi tiết.` });
 }
 /* Tooltip: one fixed box, text from data-tip, follows the pointer or the focused element. */
 export const tipEl = $("#tip");

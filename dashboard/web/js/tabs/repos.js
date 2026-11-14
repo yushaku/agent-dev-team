@@ -1,8 +1,8 @@
 import * as C from "../lib/charts.js";
 import {
   $, esc, AG, AGENTS, zeroAg, COL, PARTS, GROUPS, ROLE_SRC, GATE, groupOf, roleCol,
-  buildMixColours, mixCol, mixName, fmt, usd, pct, pad, dt, hm, dm, dur, median, sum,
-  costCell, cut, r1, splitWhy, sessionsF, agentsF, buckets, bval, A, svg, fill, widthOf,
+  buildMixColours, mixCol, mixName, fmt, pct, pad, dt, hm, dm, dur, median, sum,
+  cut, r1, splitWhy, sessionsF, agentsF, buckets, bval, A, svg, fill, widthOf,
   fig, agentLegend, partLegend, groupLegend, scale, timeTicks, yAxis, vBars, hBars,
   arcPath, donut, squarify, spark, mixc, gantt, hideTip
 } from "../lib/charts.js";

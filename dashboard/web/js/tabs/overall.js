@@ -1,5 +1,5 @@
 import * as C from "../lib/charts.js";
-import { $, esc, AG, GROUPS, groupOf, roleCol, fmt, usd, median, sum, widthOf, fig, hBars } from "../lib/charts.js";
+import { $, esc, AG, GROUPS, groupOf, roleCol, fmt, median, sum, sessionCount, widthOf, fig, hBars } from "../lib/charts.js";
 import { runDetail, renderRunTimeline } from "./runs.js";
 import { sessionRow } from "./sessions.js";
 
@@ -7,11 +7,11 @@ const text = v => String(v == null ? "" : v).replace(/[–—]/g, "-");
 const roleName = s => !s.role || s.role.toLowerCase() === "chat trực tiếp" ? "Chat trực tiếp" : text(s.role);
 
 function renderSummary(S) {
-  const tokens = sum(S, s => s.total), cost = sum(S, s => s.cost), unpriced = sum(S, s => s.unpriced);
+  const tokens = sum(S, s => s.total), assigned = sum(S.filter(s => s.run_id), s => s.total);
   $("#overall-kpi").innerHTML = [
-    ["Tổng token", fmt(tokens), `${fmt(sum(S, s => s.calls))} lượt gọi`],
-    ["Chi phí ước tính", usd(cost), unpriced ? `${fmt(unpriced)} token chưa có giá` : "Theo prices.json"],
-    ["Phiên hoạt động", String(S.length), `trung vị ${fmt(median(S.map(s => s.total)))} token mỗi phiên`],
+    ["Tổng token", fmt(tokens), `${fmt(sum(S, s => s.calls))} lượt gọi đã biết`],
+    ["Token đã phân bổ", C.pct(assigned, tokens), `${fmt(tokens - assigned)} token chưa phân bổ vào Run`],
+    ["Phiên hoạt động", String(sessionCount(S)), `trung vị ${fmt(median(S.map(s => s.total)))} token mỗi phần phiên`],
   ].map(([title, value, note]) => `<article class="card tile"><h4>${title}</h4><span class="big">${value}</span><span class="muted small">${note}</span></article>`).join("");
 }
 

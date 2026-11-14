@@ -5,7 +5,7 @@ import {
 import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
 import { renderRepos } from "./tabs/repos.js";
-import { renderRuns, runInfo, renderRunTimeline, markRunSelection } from "./tabs/runs.js";
+import { renderRuns, runInfo, renderRunTimeline } from "./tabs/runs.js";
 import { renderSessions, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderTokens } from "./tabs/tokens.js";
@@ -129,7 +129,7 @@ function activate(el) {
   if (el.dataset.run && el.closest("#tk-runs")) {
     C.state.run = el.dataset.run;
     renderRunTimeline(runInfo(sessionsF()));
-    markRunSelection();
+    $("#run-picker").value = C.state.run;
     return;
   }
   if (el.dataset.clear) return clearFilter(el.dataset.clear);

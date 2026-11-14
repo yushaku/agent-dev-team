@@ -1,8 +1,8 @@
 import * as C from "../lib/charts.js";
 import {
   $, esc, AG, AGENTS, zeroAg, COL, PARTS, GROUPS, ROLE_SRC, GATE, groupOf, roleCol,
-  buildMixColours, mixCol, mixName, fmt, usd, pct, pad, dt, hm, dm, dur, median, sum,
-  costCell, cut, r1, splitWhy, sessionsF, agentsF, buckets, bval, A, svg, fill, widthOf,
+  buildMixColours, mixCol, mixName, fmt, pct, pad, dt, hm, dm, dur, median, sum,
+  cut, r1, splitWhy, sessionsF, agentsF, buckets, bval, A, svg, fill, widthOf,
   fig, agentLegend, partLegend, groupLegend, scale, timeTicks, yAxis, vBars, hBars,
   arcPath, donut, squarify, spark, mixc, gantt, hideTip
 } from "../lib/charts.js";
@@ -33,11 +33,4 @@ function renderRtk() {
   fig("#c-rtk-project", { title: "Theo dự án", body: byProject.length ? hBars({ W: W3, LW: 240, rowH: 24, rows: byProject.map(x => ({ label: x.project, full: x.project, segs: [{ v: x.saved, color: "var(--green)", name: "Tiết kiệm" }], right: [{ t: fmt(x.saved) }, { t: x.pct + "%", color: "var(--subtext0)" }], tip: [x.project, x.n + " lệnh", "Tiết kiệm " + fmt(x.saved) + " (" + x.pct + "%)"] })), xTitle: "Token tiết kiệm", aria: "Thanh ngang token tiết kiệm theo dự án" }) : "", caption: "15 dự án tiết kiệm nhiều nhất." });
 }
 
-function renderPrices() {
-  const P = C.state.data.prices.models || {};
-  $("#price-table").innerHTML = `<table><thead><tr><th>Model (khớp tiền tố)</th><th class="num">Input</th><th class="num">Cache đọc</th><th class="num">Cache ghi</th><th class="num">Output</th><th>Ghi chú</th></tr></thead><tbody>${Object.entries(P).map(([k, p]) => `<tr><td><code>${esc(k)}</code></td><td class="num">${p.input}</td><td class="num">${p.cache_read}</td><td class="num">${p.cache_write}</td><td class="num">${p.output}</td><td>${p.assumed ? '<span class="chip warn">giả định</span> ' : ""}<span class="small muted">${esc(p.basis || "")}</span></td></tr>`).join("")}</tbody></table>
-  <p class="muted small">USD cho 1 triệu token. Model đang có log nhưng chưa có giá: ${C.state.data.unpriced_models.length ? C.state.data.unpriced_models.map(m => `<code>${esc(m)}</code>`).join(", ") : "không có"}.</p>`;
-}
-
-
-export function renderTokens() { renderRtk(); renderPrices(); }
+export function renderTokens() { renderRtk(); }

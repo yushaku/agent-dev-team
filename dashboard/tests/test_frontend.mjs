@@ -23,6 +23,8 @@ globalThis.history = { replaceState() {} };
 
 const C = await import("../web/js/lib/charts.js");
 const { renderRoles } = await import("../web/js/tabs/roles.js");
+const { runDetail, renderRuns } = await import("../web/js/tabs/runs.js");
+const { renderOverall } = await import("../web/js/tabs/overall.js");
 
 test("role charts resolve model colours after rebuilding the palette", () => {
   const sessions = ["a", "b"].map(model => ({
@@ -41,9 +43,9 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
   const dash = new SourceTextModule(await readFile(new URL("../web/js/dash.js", import.meta.url), "utf8"));
   await dash.link(specifier => {
     const exports = specifier === "./lib/charts.js" ? C : {
-      renderOverview() { if (renderError) throw renderError; },
+      renderOverall() {}, renderOverview() { if (renderError) throw renderError; },
       renderRoles() {}, renderRepos() {}, renderRuns() {}, runInfo() {},
-      renderRunTimeline() {}, markRunSelection() {}, renderSessions() {},
+      renderRunTimeline() {}, renderSessions() {},
       showSession() {}, renderSkills() {}, renderTokens() {}, renderOverall() {},
     };
     return new SyntheticModule(Object.keys(exports), function () {
@@ -81,4 +83,56 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     globalThis.fetch = originalFetch;
     console.error = originalError;
   }
+});
+
+test("fix tasks sharing a round count as one round; Gate 1 is not delivery", () => {
+  const tasks = [
+    { id: "a", title: "builder: fix a", status: "completed", measurement: { kind: "fix", round: 1, source: "metadata" } },
+    { id: "b", title: "builder: fix b", status: "completed", measurement: { kind: "fix", round: 1, source: "metadata" } },
+    { id: "c", title: "fix: legacy", status: "completed", measurement: { kind: "fix", round: null, source: "title" } },
+  ];
+  const info = runDetail({ tasks, gates: [{ kind: "approve", stage: "spec" }], stage: "unknown" });
+  assert.equal(info.fix, 3);
+  assert.equal(info.rounds, 1);
+  assert.equal(info.unknownRounds, 1);
+  assert.equal(info.estimated, 1);
+  assert.match(info.st[1], /chưa rõ delivery/);
+});
+
+test("Runs renders its picker and timeline; overview shows unassigned tokens", () => {
+  C.state.repo = C.state.wt = C.state.agent = C.state.role = C.state.runF = "";
+  C.state.data = {
+    sessions: [], generated_at: 1000, range_start: 1,
+    orca: { available: true, error: null, runs: [{
+      id: "run_a", objective: "test", created: 100, repo: "test", stage: "unknown",
+      tasks: [], gates: [{ kind: "approve", stage: "spec" }], tokens: { codex: 20, sessions: 1 },
+      window_tokens: { codex: 10 }, orchestrator_by_agent: { codex: 5 },
+    }] },
+  };
+  renderRuns([]);
+  assert.match(element("#run-picker").innerHTML, /chưa rõ delivery/);
+  assert.equal(element("#run-picker").value, "run_a");
+  assert.match(element("#run-list").innerHTML, /figure/);
+  const s = { id: "s", session_id: "s", total: 10, calls: 1, role: "orchestrator", agent: "codex", run_id: null };
+  renderOverall([s]);
+  assert.match(element("#overall-kpi").innerHTML, /10 token chưa phân bổ/);
+  assert.doesNotMatch(element("#overall-kpi").innerHTML, /USD|\$|Chi phí/);
+});
+
+test("run timeline distinguishes blocked and queued tasks from running work", () => {
+  C.state.data = { generated_at: 1000 };
+  const tasks = ["blocked", "pending", "in_progress", "completed"].map((status, n) => ({
+    id: String(n), title: "Task " + status, role: "builder", status,
+    created: 100, started: status === "pending" ? null : 200,
+    completed: status === "completed" ? 500 : null, tokens: {},
+  }));
+  const r = { id: "timeline", objective: "Test run", created: 100, repo: "test", tasks, gates: [], tokens: {} };
+  C.gantt(runDetail(r), () => 0, "", "#timeline");
+  const html = element("#timeline").innerHTML;
+  assert.match(html, /Bị chặn/);
+  assert.match(html, /Chưa chạy/);
+  assert.match(html, /Đang chạy/);
+  assert.match(html, /Đã xong/);
+  assert.match(html, /min-width:760px/);
+  assert.doesNotMatch(html, /Vai builder, bấm để lọc/);
 });

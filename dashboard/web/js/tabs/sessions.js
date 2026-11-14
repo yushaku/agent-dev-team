@@ -1,8 +1,8 @@
 import * as C from "../lib/charts.js";
 import {
   $, esc, AG, AGENTS, zeroAg, COL, PARTS, GROUPS, ROLE_SRC, GATE, groupOf, roleCol,
-  buildMixColours, mixCol, mixName, fmt, usd, pct, pad, dt, hm, dm, dur, median, sum,
-  costCell, cut, r1, splitWhy, sessionsF, agentsF, buckets, bval, A, svg, fill, widthOf,
+  buildMixColours, mixCol, mixName, fmt, pct, pad, dt, hm, dm, dur, median, sum, sessionCount,
+  cut, r1, splitWhy, sessionsF, agentsF, buckets, bval, A, svg, fill, widthOf,
   fig, agentLegend, partLegend, groupLegend, scale, timeTicks, yAxis, vBars, hBars,
   arcPath, donut, squarify, spark, mixc, gantt, hideTip
 } from "../lib/charts.js";
@@ -11,7 +11,7 @@ const COLS = [
   ["start", "Bắt đầu", s => dt(s.start) + (s.split ? ` <span class="warn-dot" title="${esc(s.split)}" aria-label="${esc(s.split)}"></span>` : "")], ["agent", "Agent", s => AG[s.agent]], ["repo", "Repo"], ["worktree", "Worktree"], ["role", "Vai"],
   ["model", "Model", s => `<code>${esc(s.model)}</code>`], ["effort", "Effort"], ["calls", "Lượt", null, 1], ["fin", "Input mới", null, 1], ["cr", "Cache đọc", null, 1],
   ["cw", "Cache ghi", null, 1], ["out", "Output", null, 1], ["reason", "Reasoning", null, 1], ["ctx_med", "Ctx trung vị", null, 1], ["ctx_max", "Ctx max", null, 1],
-  ["duration", "Thời lượng", s => dur(s.end - s.start), 1], ["cost", "Chi phí", costCell, 1], ["prem", "Premium req", s => s.agent === "copilot" ? fmt(s.prem) : "", 1], ["originator", "Nguồn"],
+  ["duration", "Thời lượng", s => dur(s.end - s.start), 1], ["prem", "Premium req", s => s.agent === "copilot" ? fmt(s.prem) : "", 1], ["originator", "Nguồn"],
 ];
 export function sessionRow(s, cells) {
   return `<tr class="click" tabindex="0" data-sid="${esc(s.id)}">${cells}</tr>`;
@@ -30,10 +30,10 @@ export function renderSessions(S) {
   const maxC = Math.max(1, ...S.map(s => s.calls));
   [...S].sort((a, b) => b.calls - a.calls).forEach(s => {
     const rad = r1(3 + 13 * Math.sqrt(s.calls / maxC));
-    g.push(`<circle cx="${X(s.t0 || s.start)}" cy="${Y(s.total)}" r="${rad}" style="fill:${COL[s.agent]};stroke:var(--mantle);stroke-width:1"${A({ sid: s.id, tip: [AG[s.agent] + ": " + s.repo + " / " + s.worktree, "Vai: " + s.role, "Bắt đầu: " + dt(s.start), "Token: " + fmt(s.total), "Lượt gọi: " + s.calls, "Model: " + s.model + " / " + s.effort, "Bấm để xem chi tiết"] })}/>`);
+    g.push(`<circle cx="${X(s.t0 || s.start)}" cy="${Y(s.total)}" r="${rad}" style="fill:${COL[s.agent]};stroke:var(--mantle);stroke-width:1"${A({ sid: s.id, tip: [AG[s.agent] + ": " + s.repo + " / " + s.worktree, "Vai: " + s.role, "Bắt đầu: " + dt(s.start), "Token: " + fmt(s.total), "Lượt gọi: " + (s.calls ?? "chưa biết"), "Model: " + s.model + " / " + s.effort, "Bấm để xem chi tiết"] })}/>`);
   });
   g.push(`<line class="ax" x1="${L}" x2="${W - R}" y1="${T + ph}" y2="${T + ph}"/><text x="12" y="${T + ph / 2}" text-anchor="middle" transform="rotate(-90 12 ${T + ph / 2})">Token (thang log)</text><text x="${L + pw / 2}" y="${H - 4}" text-anchor="middle">Lượt gọi đầu tiên trong khoảng</text>`);
-  fig("#c-scatter", { title: `${S.length} phiên theo thời gian`, body: S.length ? svg(W, H, "Biểu đồ chấm: phiên theo thời gian và token", g.join("")) : "", legend: agentLegend().concat([{ name: "Chấm to: nhiều lượt gọi", color: "var(--overlay2)" }]), caption: "Trục token theo thang log: mỗi vạch gấp 10 lần vạch dưới. Bấm một chấm để mở chi tiết phiên." });
+  fig("#c-scatter", { title: `${sessionCount(S)} phiên theo thời gian`, body: S.length ? svg(W, H, "Biểu đồ chấm: phiên theo thời gian và token", g.join("")) : "", legend: agentLegend().concat([{ name: "Chấm to: nhiều lượt gọi", color: "var(--overlay2)" }]), caption: "Trục token theo thang log: mỗi vạch gấp 10 lần vạch dưới. Bấm một chấm để mở chi tiết phiên." });
   // heatmap: day x hour
   W = widthOf("#c-heat");
   const days = d.dates, cells = {}, ags = agentsF();
@@ -62,7 +62,7 @@ export function renderSessions(S) {
   if (q) X2 = X2.filter(s => [s.id, s.repo, s.worktree, s.role, s.model, s.effort, s.originator, s.task_title, s.agent].join(" ").toLowerCase().includes(q));
   const { key, dir } = C.state.sort;
   X2.sort((a, b) => (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0) * dir);
-  $("#sessions").innerHTML = `<p class="muted small">${X2.length} phiên. Bấm tiêu đề cột để sắp xếp, bấm một dòng để xem chi tiết.</p><table><thead><tr>${COLS.map(([k, l, , n]) => `<th data-key="${k}" class="${n ? "num" : ""}" aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}">${l}${k === key ? (dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}</tr></thead><tbody>${X2.map(s => sessionRow(s, COLS.map(([k, , f, n]) => `<td class="${n ? "num" : ""}${k === "start" ? " nowrap" : ""}">${f ? f(s) : n ? fmt(s[k]) : esc(s[k])}</td>`).join(""))).join("")}</tbody></table>`;
+  $("#sessions").innerHTML = `<p class="muted small">${sessionCount(X2)} phiên, ${X2.length} phần theo Task/Run. Bấm tiêu đề cột để sắp xếp, bấm một dòng để xem chi tiết.</p><table><thead><tr>${COLS.map(([k, l, , n]) => `<th data-key="${k}" class="${n ? "num" : ""}" aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}">${l}${k === key ? (dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}</tr></thead><tbody>${X2.map(s => sessionRow(s, COLS.map(([k, , f, n]) => `<td class="${n ? "num" : ""}${k === "start" ? " nowrap" : ""}">${f ? f(s) : n ? fmt(s[k]) : esc(s[k])}</td>`).join(""))).join("")}</tbody></table>`;
 }
 export function showSession(id) {
   const d = C.state.data, s = d.sessions.find(x => x.id === id);
@@ -86,9 +86,9 @@ export function showSession(id) {
     ${s.task_id ? `<dt>Task Orca</dt><dd>${esc(s.task_title)} <code>${esc(s.task_id)}</code></dd>` : ""}
     ${run ? `<dt>Run</dt><dd>${esc(run.objective)}</dd>` : s.run_id ? `<dt>Run</dt><dd><code>${esc(s.run_id)}</code></dd>` : ""}
     <dt>Nguồn</dt><dd>${esc(s.originator)}</dd>
-    <dt>Lượt gọi</dt><dd>${s.calls}, context trung vị ${fmt(s.ctx_med)}, lớn nhất ${fmt(s.ctx_max)}</dd>
+    <dt>Phân bổ</dt><dd>${esc(({ task_id: "ID Task", run_id: "ID Run trong lệnh Orca", dispatch_window: "Suy từ một dispatch phù hợp", unassigned: "Chưa phân bổ vào Run" })[s.attribution] || "Chưa rõ")}</dd>
+    <dt>Lượt gọi</dt><dd>${s.aggregate ? "Chỉ có tổng phiên; chưa có số lượt và context mỗi lượt" : `${s.calls}, context trung vị ${fmt(s.ctx_med)}, lớn nhất ${fmt(s.ctx_max)}`}</dd>
     <dt>Token</dt><dd>input mới ${fmt(s.fin)}, cache đọc ${fmt(s.cr)}, cache ghi ${fmt(s.cw)}, output ${fmt(s.out)} (reasoning ${fmt(s.reason)}), tổng ${fmt(s.total)}</dd>
-    <dt>Chi phí ước tính</dt><dd>${costCell(s)}${s.unpriced ? ` <span class="muted small">(${fmt(s.unpriced)} token chưa có giá)</span>` : ""}${s.agent === "copilot" ? ' <span class="muted small">(Copilot Free không tính tiền theo token)</span>' : ""}</dd>
     ${s.agent === "copilot" ? `<dt>Premium request</dt><dd>${fmt(s.prem)} trong khoảng${s.snapshot ? `, cả phiên ${fmt(s.snapshot.premium)} theo accountingSnapshot (${fmt(s.snapshot.requests)} lượt gọi)` : ""}</dd>` : ""}
     ${mix ? `<dt>Model / effort</dt><dd>${mix}</dd>` : ""}
     ${sk ? `<dt>Skills nạp</dt><dd>${sk}</dd>` : ""}
