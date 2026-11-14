@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 import threading
 import time
@@ -10,6 +11,61 @@ from .parsers.common import repo_of, ts_of
 from .roles import known_roles, role_from_title
 
 orca_state = {"available": None, "runs": [], "tasks": {}, "dispatches": [], "fetched_at": None, "error": None}
+
+
+def task_measurement(task):
+    result = dict(kind="unknown", round=None, cause=None, source="unknown")
+    match = re.search(r"^Measurement:\s*(.+)$", task.get("spec") or "", re.M)
+    if match:
+        try:
+            data = json.loads(match.group(1))
+            if not isinstance(data, dict):
+                return result
+            if data.get("kind") in ("build", "review", "fix", "re-review", "delivery", "close", "spec", "qa", "merge", "other"):
+                result.update(kind=data["kind"], source="metadata")
+            n = data.get("round")
+            if type(n) is int and n > 0:
+                result["round"] = n
+            if data.get("cause") in ("defect", "requirements", "scope", "standards"):
+                result["cause"] = data["cause"]
+        except ValueError:
+            pass
+        return result
+    title = (task.get("task_title") or task.get("title") or "").lower()
+    if re.search(r"\bre-?review\b", title):
+        kind = "re-review"
+    elif re.search(r"\bfix\b", title):
+        kind = "fix"
+    else:
+        head = title.split(":", 1)[0].strip()
+        kind = {"builder": "build", "build": "build", "reviewer": "review", "review": "review",
+                "verify": "review", "delivery": "delivery", "deliver": "delivery", "close": "close",
+                "spec": "spec", "qa": "qa"}.get(head, "unknown")
+    if kind != "unknown":
+        result.update(kind=kind, source="title")
+    return result
+
+
+def run_stage(run, tasks, gates):
+    if run.get("status") in ("merged", "cancelled", "canceled"):
+        return "cancelled" if run["status"] == "canceled" else run["status"]
+    if any(t["measurement"]["kind"] == "merge" and t["status"] == "completed" for t in tasks):
+        return "merged"
+    pending = [g for g in gates if g["kind"] == "pending"]
+    if pending:
+        return "awaiting_delivery" if any(g["stage"] == "delivery" for g in pending) else "awaiting_approval"
+    if any(t["status"] == "failed" for t in tasks):
+        return "failed"
+    if any(t["status"] == "blocked" for t in tasks):
+        return "blocked"
+    if tasks and all(t["status"] in ("cancelled", "canceled") for t in tasks):
+        return "cancelled"
+    if any(t["status"] not in ("completed", "cancelled", "canceled") for t in tasks):
+        return "in_progress"
+    if any(g["stage"] == "delivery" and g["kind"] == "approve" for g in gates) and any(
+            t["measurement"]["kind"] == "delivery" and t["status"] == "completed" for t in tasks):
+        return "delivered"
+    return "unknown"
 
 def orca(*args):
     try:
@@ -35,8 +91,16 @@ def refresh_orca():
 
     def per_run(run):
         rid = run["id"]
-        return (rid, orca("task-list", "--run", rid), orca("gate-list", "--run", rid),
-                orca("worker-list", "--run", rid, "--limit", "100"))
+        workers, cursor = [], None
+        while True:
+            page = orca("worker-list", "--run", rid, "--limit", "100", *(["--cursor", cursor] if cursor else []))
+            if page is None:
+                return rid, None, None, None
+            workers.extend(page.get("workers") or [])
+            cursor = (page.get("page") or {}).get("nextCursor")
+            if not cursor:
+                break
+        return (rid, orca("task-list", "--run", rid), orca("gate-list", "--run", rid), {"workers": workers})
 
     with ThreadPoolExecutor(6) as ex:
         details = list(ex.map(per_run, runs))
@@ -67,14 +131,18 @@ def refresh_orca():
                 known[did] = info
     roles = known_roles()
     out_runs, tasks = [], {}
-    for run, (rid, tl, gl, _) in zip(runs, details):
+    errors = []
+    for run, (rid, tl, gl, wl) in zip(runs, details):
+        if any(v is None for v in (tl, gl, wl)):
+            errors.append(rid)
+            continue
         rtasks = []
         for t in (tl or {}).get("tasks") or []:
             title = t.get("task_title") or t.get("title") or ""
             rec = {"id": t["id"], "run": rid, "title": title[:120], "role": role_from_title(title, roles),
                    "status": t.get("status"), "created": ts_of(t.get("created_at")),
                    "completed": ts_of(t.get("completed_at")), "agent": None, "model": None, "effort": None,
-                   "repo": None, "worktree": None}
+                   "repo": None, "worktree": None, "measurement": task_measurement(t)}
             rtasks.append(rec)
             tasks[t["id"]] = rec
         gates = []
@@ -83,10 +151,14 @@ def refresh_orca():
             kind = ("pending" if g.get("status") != "resolved" else
                     "approve" if res.lower().startswith("approve") else
                     "changes" if res.lower().startswith("changes") else "other")
+            task = tasks.get(g.get("task_id"))
+            stage = "delivery" if task and task["measurement"]["kind"] == "close" else "other"
             gates.append({"id": g.get("id"), "task": g.get("task_id"), "question": (g.get("question") or "")[:120],
-                          "answer": res[:80], "kind": kind, "resolved": ts_of(g.get("resolved_at"))})
+                          "answer": res[:80], "kind": kind, "stage": stage,
+                          "created": ts_of(g.get("created_at")), "resolved": ts_of(g.get("resolved_at"))})
         out_runs.append({"id": rid, "objective": (run.get("objective") or "")[:160],
-                         "created": ts_of(run.get("created_at")), "tasks": rtasks, "gates": gates})
+                         "created": ts_of(run.get("created_at")), "tasks": rtasks, "gates": gates,
+                         "stage": run_stage(run, rtasks, gates)})
     dispatches = []
     for did, info in known.items():
         t = tasks.get(info.get("task"))
@@ -101,12 +173,26 @@ def refresh_orca():
     for r in out_runs:
         repos = [t["repo"] for t in r["tasks"] if t["repo"]]
         r["repo"] = max(set(repos), key=repos.count) if repos else (r["objective"].split() or ["?"])[0]
+        delivery = [g["resolved"] for g in r["gates"] if g["stage"] == "delivery" and g["kind"] == "approve" and g["resolved"]]
+        r["delivered_at"] = max(delivery) if delivery and r["stage"] in ("delivered", "merged") else None
+        end = r["delivered_at"] or time.time()
+        r["lead_seconds"] = max(0, end - r["created"]) if r["created"] else None
+        intervals = sorted((g["created"], min(end, g["resolved"] or end)) for g in r["gates"] if g["created"] and g["created"] <= end)
+        wait, last = 0, 0
+        for a, b in intervals:
+            wait += max(0, b - max(a, last))
+            last = max(last, b)
+        r["gate_wait_seconds"] = wait
+        r["attention"] = [dict(kind="gate", text=g["question"], waiting_seconds=max(0, time.time() - g["created"]) if g["created"] else None)
+                          for g in r["gates"] if g["kind"] == "pending"]
+        r["attention"] += [dict(kind="task", text=t["title"], waiting_seconds=None)
+                           for t in r["tasks"] if t["status"] in ("blocked", "failed")]
     with cache.lock:
         if known != cache.cache["dispatch"]:
             cache.cache["dispatch"] = known
             cache.cache_dirty = True
         orca_state.update(available=True, runs=out_runs, tasks=tasks, dispatches=dispatches,
-                          fetched_at=time.time(), error=None)
+                          fetched_at=time.time(), error=("Thiếu dữ liệu Orca: " + ", ".join(errors)) if errors else None)
 
 def orca_loop():
     while True:

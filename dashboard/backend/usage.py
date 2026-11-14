@@ -1,190 +1,216 @@
 import glob
-import json
 import os
 import re
 import statistics
 import time
-from datetime import datetime, timezone
 
 from . import cache
 from . import orca as orca_mod
 from .parsers import hermes
-from .config import (COPILOT_GLOB, HOME, PRICES_FILE, SKILLS_DIR, TEAMS)
-from .parsers.common import local_date, parse_rtk, repo_of, ts_of
+from .config import COPILOT_GLOB, HOME, SKILLS_DIR, TEAMS
+from .parsers.common import local_date, parse_rtk, repo_of
 from .roles import assign_role, known_roles
 
-# ---------------------------------------------------------------- config
+
 def read_tiers():
     tiers, roles = {}, {}
     try:
-        txt = open(os.path.join(TEAMS, "config.md"), encoding="utf-8").read()
-        sec = txt.split("## Model tiers", 1)[1]
-        for m in re.finditer(r"^\|\s*(\w+)\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|", sec, re.M):
-            tiers[m.group(1)] = {"claude": m.group(2), "codex": m.group(3), "effort": m.group(4)}
+        with open(os.path.join(TEAMS, "skills", "orchestrator", "references", "coding-agents.md"), encoding="utf-8") as f:
+            sec = f.read().split("## Model tiers", 1)[1].split("## Routing", 1)[0]
+        for line in sec.splitlines():
+            cells = [v.strip().strip("`") for v in line.strip("|").split("|")]
+            if len(cells) == 6 and cells[0] in ("top", "work", "fast"):
+                tiers[cells[0]] = dict(zip(("claude", "codex", "cursor", "copilot", "effort"), cells[1:]))
     except (OSError, IndexError):
         pass
     for f in glob.glob(os.path.join(TEAMS, "roles", "*.md")):
         try:
-            txt = open(f, encoding="utf-8").read()
+            with open(f, encoding="utf-8") as source:
+                txt = source.read()
         except OSError:
             continue
         m = re.search(r"\*\*Runs on:\*\*\s*(.+)", txt)
         if not m:
             continue
         line = m.group(1)
-        agent = next((a.lower() for a in re.findall(r"\b(Codex|Claude|Hermes)\b", line)), None)
+        pref = re.search(r"prefers (\w+)", line)
         tm = re.search(r"tier (top|work|fast)", line)
-        roles[os.path.basename(f)[:-3]] = {"agent": agent, "tier": tm.group(1) if tm else None,
-                                           "text": line.strip()[:200]}
+        roles[os.path.basename(f)[:-3]] = {"agent": pref.group(1) if pref else None,
+                                           "tier": tm.group(1) if tm else None, "text": line.strip()[:200]}
     return {"tiers": tiers, "order": ["fast", "work", "top"], "roles": roles}
 
-def load_prices():
-    try:
-        with open(PRICES_FILE, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return {"models": {}}
 
-def price_for(model, prices):
-    ms = prices.get("models") or {}
-    if model in ms:
-        return ms[model]
-    best = None
-    for k in ms:
-        if model and model.startswith(k) and (best is None or len(k) > len(best)):
-            best = k
-    return ms[best] if best else None
-
-# ---------------------------------------------------------------- aggregate
 def build(days):
     now = time.time()
     lt = time.localtime(now)
     start = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday - (days - 1), 0, 0, 0, 0, 0, -1))
-    parsed = cache.load_files() + hermes.parse_hermes(start)
-    prices = load_prices()
-    roles = known_roles()
+    parsed = cache.load_files() + hermes.parse_hermes(0)
     tasks = orca_mod.orca_state["tasks"]
     dispatches = orca_mod.orca_state["dispatches"]
-    # Claude: drop duplicate message ids across files (subagent files win, then oldest file).
+    run_ids = {r["id"] for r in orca_mod.orca_state["runs"]}
+    disp_index = {}
+    for d in dispatches:
+        if d.get("wt") and d.get("from") and d.get("task") in tasks:
+            disp_index.setdefault((d.get("agent"), os.path.normpath(d["wt"])), []).append(d)
     parsed.sort(key=lambda s: (s["agent"], not s.get("subagent"), s["start"] or 0))
     seen_ids = set()
-    sessions, limits, run_tokens, task_tokens = [], [], {}, {}
-    unpriced = set()
+    sessions, limits, run_tokens, task_tokens, run_sessions = [], [], {}, {}, {}
+    run_window, orch_tokens = {}, {}
+    attribution = dict(total=0, assigned=0, unassigned=0, inferred=0, aggregate=0, undated=0)
     for s in parsed:
         limits += s.get("limits") or []
         repo, wt = repo_of(s["cwd"])
-        # Every Orca task the session took ([start ts, task]); a worker chat can be reused for several.
-        stasks = sorted(((ts or 0, tasks[tid]) for tid, ts in s.get("tasks") or [] if tid in tasks), key=lambda x: x[0])
-        if not stasks and s["start"] and s["cwd"]:
-            for d in dispatches:  # fallback join: same worktree, same agent, inside the dispatch window
-                if (d.get("agent") == s["agent"] and d.get("wt") and os.path.normpath(d["wt"]) == os.path.normpath(s["cwd"])
-                        and d.get("from") and d["from"] - 120 <= s["start"] <= (d.get("to") or now) + 120
-                        and d.get("task") in tasks):
-                    stasks = [(0, tasks[d["task"]])]
-                    break
-        task = next((t for _, t in stasks if t.get("role")), stasks[0][1] if stasks else None)
-        role, role_src = assign_role(task, s)
-        row = {"id": s["id"], "agent": s["agent"], "repo": repo, "worktree": wt, "branch": s.get("branch"),
-               "role": role, "role_src": role_src, "originator": (s.get("originator") or "?") + (" (subagent)" if s.get("subagent") else ""),
-               "start": s["start"], "end": s["end"], "preview": s["preview"], "title": s.get("title") or "",
-               "task_id": task["id"] if task else None, "task_title": task["title"] if task else None,
-               "run_id": task["run"] if task else None,
-               "calls": 0, "fin": 0, "cr": 0, "cw": 0, "out": 0, "reason": 0, "cost": 0.0, "unpriced": 0, "prem": 0,
-               "snapshot": s.get("snapshot"),
-               "ctx": [], "days": {}, "hours": {}, "t0": None, "mix": {}, "models": {}, "skills": {}}
-        session_runs = set()
-        for c in s["calls"]:
+        task_events = [(ts or s["start"] or 0, tid) for tid, ts in s.get("tasks") or []]
+        run_events = [(ts or s["start"] or 0, rid) for rid, ts in s.get("runs") or []]
+        aggregate = s.get("aggregate", False)
+        s_disp = disp_index.get((s["agent"], os.path.normpath(s["cwd"])), []) if s["cwd"] else []
+        rows = {}
+        for c in sorted(s["calls"], key=lambda c: c[0] or 0):
             ts, model, eff, fin, cr, cw, out, reason, mid = c[:9]
-            prem = c[9] if len(c) > 9 else 0  # Copilot premium requests
             if mid:
-                if mid in seen_ids:
+                key = (s["agent"], mid)
+                if key in seen_ids:
                     continue
-                seen_ids.add(mid)
+                seen_ids.add(key)
             tot = fin + cr + cw + out
-            if stasks:  # tokens go to the task the session was working on at that call
-                ct = stasks[0][1]
-                for t0, t in stasks:
-                    if ts and t0 <= ts:
-                        ct = t
-                rt = run_tokens.setdefault(ct["run"], {"claude": 0, "codex": 0, "copilot": 0, "sessions": 0})
-                rt[s["agent"]] = rt.get(s["agent"], 0) + tot
-                if ct["run"] not in session_runs:
-                    session_runs.add(ct["run"])
-                    rt["sessions"] += 1
-                tt = task_tokens.setdefault(ct["id"], {"claude": 0, "codex": 0, "copilot": 0})
-                tt[s["agent"]] = tt.get(s["agent"], 0) + tot
-            if not ts or ts < start:
+            if not ts:
+                attribution["undated"] += tot
                 continue
-            p = None if s["agent"] == "copilot" else price_for(model, prices)
-            cost = None
-            if s["agent"] == "copilot":  # Copilot Free: no per token price, premium requests instead
-                cost = 0.0
-            elif p:
-                cost = (fin * p.get("input", 0) + cr * p.get("cache_read", 0) + cw * p.get("cache_write", 0)
-                        + out * p.get("output", 0)) / 1e6
-                row["cost"] += cost
-            else:
-                row["unpriced"] += tot
-                unpriced.add(model)
+            if ts > now:
+                continue
+            task, rid, source = None, None, "unassigned"
+            if aggregate:
+                # shortcut: aggregate logs cannot be split across tasks or dates; keep multi-run totals unassigned.
+                tids, rids = {x[1] for x in task_events}, {x[1] for x in run_events}
+                if len(tids) == 1 and not rids:
+                    task = tasks.get(next(iter(tids)))
+                elif len(rids) == 1 and not tids:
+                    rid = next(iter(rids))
+            elif task_events:
+                active = [tid for t0, tid in task_events if t0 <= ts]
+                task = tasks.get(active[-1]) if active else None
+            elif run_events:
+                active = [r for t0, r in run_events if t0 <= ts]
+                rid = active[-1] if active else None
+            elif not s.get("dispatcher"):
+                candidates = {d["task"] for d in s_disp if d["from"] <= ts <= (d.get("to") or now)}
+                if len(candidates) == 1:
+                    task = tasks[next(iter(candidates))]
+                    source = "dispatch_window"
+            if task:
+                rid = task["run"]
+            if rid not in run_ids:
+                rid, task, source = None, None, "unassigned"
+            if rid and source == "unassigned":
+                source = "task_id" if task else "run_id"
+            role, role_src = assign_role(task, s)
+            if rid and not task:
+                role, role_src = "orchestrator", "dispatch"
+            if rid:
+                rt = run_tokens.setdefault(rid, {})
+                rt[s["agent"]] = rt.get(s["agent"], 0) + tot
+                run_sessions.setdefault(rid, set()).add((s["agent"], s["id"]))
+                if role == "orchestrator":
+                    orch = orch_tokens.setdefault(rid, {})
+                    orch[s["agent"]] = orch.get(s["agent"], 0) + tot
+                if task:
+                    tt = task_tokens.setdefault(task["id"], {})
+                    tt[s["agent"]] = tt.get(s["agent"], 0) + tot
+            if ts < start:
+                continue
+            attribution["total"] += tot
+            attribution["assigned" if rid else "unassigned"] += tot
+            attribution["inferred"] += tot if source == "dispatch_window" else 0
+            attribution["aggregate"] += tot if aggregate else 0
+            if rid:
+                rw = run_window.setdefault(rid, {})
+                rw[s["agent"]] = rw.get(s["agent"], 0) + tot
+            key = (rid, task["id"] if task else None, role, source)
+            if key not in rows:
+                rows[key] = {"id": s["id"], "session_id": s["id"], "agent": s["agent"], "repo": repo,
+                    "worktree": wt, "branch": s.get("branch"), "role": role, "role_src": role_src,
+                    "originator": (s.get("originator") or "?") + (" (subagent)" if s.get("subagent") else ""),
+                    "start": s["start"], "end": s["end"], "preview": s["preview"], "title": s.get("title") or "",
+                    "task_id": task["id"] if task else None, "task_title": task["title"] if task else None,
+                    "run_id": rid, "attribution": source, "aggregate": aggregate,
+                    "calls": 0, "fin": 0, "cr": 0, "cw": 0, "out": 0, "reason": 0, "prem": 0,
+                    "snapshot": s.get("snapshot"), "ctx": [], "days": {}, "hours": {}, "t0": None,
+                    "mix": {}, "models": {}, "skills": {}}
+            row = rows[key]
             row["calls"] += 1
-            row["prem"] += prem
-            row["fin"] += fin
-            row["cr"] += cr
-            row["cw"] += cw
-            row["out"] += out
-            row["reason"] += reason
-            row["ctx"].append(fin + cr + cw)
+            prem = c[9] if len(c) > 9 else 0
+            for field, value in (("fin", fin), ("cr", cr), ("cw", cw), ("out", out), ("reason", reason), ("prem", prem)):
+                row[field] += value
+            if not aggregate:
+                row["ctx"].append(fin + cr + cw)
             dk = local_date(ts)
             row["t0"] = ts if row["t0"] is None else min(row["t0"], ts)
             hk = dk + " " + time.strftime("%H", time.localtime(ts))
-            for b in (row["hours"].setdefault(hk, [0, 0, 0, 0, 0.0, 0]), row["days"].setdefault(dk, [0, 0, 0, 0, 0.0, 0])):
-                b[0] += fin
-                b[1] += cr
-                b[2] += cw
-                b[3] += out
-                b[4] += cost or 0
-                b[5] += prem
-            key = "%s|%s" % (model, eff or "?")
-            row["mix"][key] = row["mix"].get(key, 0) + tot
+            for b in (row["hours"].setdefault(hk, [0, 0, 0, 0, 0]), row["days"].setdefault(dk, [0, 0, 0, 0, 0])):
+                for i, value in enumerate((fin, cr, cw, out, prem)):
+                    b[i] += value
+            mix_key = "%s|%s" % (model, eff or "?")
+            row["mix"][mix_key] = row["mix"].get(mix_key, 0) + tot
             row["models"][model] = row["models"].get(model, 0) + tot
-        if row["calls"] == 0:
-            continue
         for name, ts in s["skills"]:
-            if ts and ts >= start:
-                k = row["skills"].setdefault(name, [0, 0])
-                k[0] += 1
-                k[1] = max(k[1], ts)
-        row["hooks"] = {n: h[1] for n, h in (s.get("hooks") or {}).items() if h[0] and h[0] >= start}
-        row["model"] = max(row["models"], key=row["models"].get)
-        effs = {}
-        for k, v in row["mix"].items():
-            if k.startswith(row["model"] + "|"):
-                effs[k.split("|", 1)[1]] = effs.get(k.split("|", 1)[1], 0) + v
-        row["effort"] = max(effs, key=effs.get) if effs else "?"
-        row["ctx_med"] = int(statistics.median(row["ctx"]))
-        row["ctx_max"] = max(row["ctx"])
-        row["total"] = row["fin"] + row["cr"] + row["cw"] + row["out"]
-        sessions.append(row)
+            if not ts or ts < start:
+                continue
+            tids = [tid for t0, tid in task_events if t0 <= ts]
+            rids = [rid for t0, rid in run_events if t0 <= ts]
+            candidates = [r for r in rows.values() if
+                          (tids and r["task_id"] == tids[-1]) or
+                          (not tids and rids and r["run_id"] == rids[-1])]
+            target = candidates[0] if candidates else next(iter(rows.values()), None)
+            if target:
+                value = target["skills"].setdefault(name, [0, 0])
+                value[0] += 1
+                value[1] = max(value[1], ts)
+        for i, row in enumerate(rows.values()):
+            if len(rows) > 1:
+                row["id"] += ":part:" + str(i)
+            row["hooks"] = {n: h[1] for n, h in (s.get("hooks") or {}).items() if h[0] and h[0] >= start}
+            row["model"] = max(row["models"], key=row["models"].get)
+            effs = {}
+            for k, v in row["mix"].items():
+                if k.startswith(row["model"] + "|"):
+                    effs[k.split("|", 1)[1]] = effs.get(k.split("|", 1)[1], 0) + v
+            row["effort"] = max(effs, key=effs.get) if effs else "?"
+            row["ctx_med"] = int(statistics.median(row["ctx"])) if row["ctx"] else None
+            row["ctx_max"] = max(row["ctx"]) if row["ctx"] else None
+            if aggregate:
+                row["calls"] = None
+            row["total"] = row["fin"] + row["cr"] + row["cw"] + row["out"]
+            sessions.append(row)
     sessions.sort(key=lambda r: r["start"] or 0, reverse=True)
     runs = []
     for r in orca_mod.orca_state["runs"]:
         rr = dict(r)
-        rr["tokens"] = run_tokens.get(r["id"], {"claude": 0, "codex": 0, "copilot": 0, "sessions": 0})
-        rr["tasks"] = [dict(t, tokens=task_tokens.get(t["id"], {"claude": 0, "codex": 0, "copilot": 0})) for t in r["tasks"]]
+        rr["tokens"] = dict(run_tokens.get(r["id"], {}), sessions=len(run_sessions.get(r["id"], [])))
+        rr["window_tokens"] = run_window.get(r["id"], {})
+        rr["orchestrator_by_agent"] = orch_tokens.get(r["id"], {})
+        rr["orchestrator_tokens"] = sum(rr["orchestrator_by_agent"].values())
+        rr["worker_tokens"] = sum(v for k, v in rr["tokens"].items() if k != "sessions") - rr["orchestrator_tokens"]
+        rr["tasks"] = [dict(t, tokens=task_tokens.get(t["id"], {})) for t in r["tasks"]]
+        rr["fix_tokens_by_cause"] = {}
+        for t in rr["tasks"]:
+            measurement = t.get("measurement") or {}
+            if measurement.get("kind") == "fix":
+                cause = measurement.get("cause") or "unknown"
+                counts = rr["fix_tokens_by_cause"].setdefault(cause, {})
+                for agent, value in t["tokens"].items():
+                    counts[agent] = counts.get(agent, 0) + value
         runs.append(rr)
     installed = sorted(d for d in os.listdir(SKILLS_DIR)
                        if os.path.isfile(os.path.join(SKILLS_DIR, d, "SKILL.md"))) if os.path.isdir(SKILLS_DIR) else []
     return {
         "generated_at": now, "days": days, "range_start": start,
         "dates": [local_date(start + 86400 * i + 3600) for i in range(days)],
-        "sessions": sessions,
+        "sessions": sessions, "attribution": attribution,
         "codex_limit": codex_limit(limits, now),
         "copilot_dirs": len(glob.glob(os.path.join(HOME, ".copilot", "session-state", "*", ""))),
         "orca": {"available": orca_mod.orca_state["available"], "error": orca_mod.orca_state["error"],
                  "fetched_at": orca_mod.orca_state["fetched_at"], "runs": runs},
-        "roles_cfg": read_tiers(), "known_roles": roles,
-        "skills_installed": installed,
-        "prices": prices, "unpriced_models": sorted(m for m in unpriced if m),
+        "roles_cfg": read_tiers(), "known_roles": known_roles(), "skills_installed": installed,
         "rtk": parse_rtk(time.strftime("%Y-%m-%d", time.localtime(start))),
     }
 

@@ -11,7 +11,7 @@ Sources (read only): ~/.claude/projects/**/*.jsonl, ~/.codex/sessions/**/*.jsonl
 ~/.copilot/session-state/<uuid>/{workspace.yaml,events.jsonl} (GitHub Copilot CLI),
 ~/.hermes/state.db (Hermes sessions, read only),
 `orca orchestration ... --json` (refreshed in a background thread every 60 s),
-config.md + roles/*.md under the team root (model tiers), the skills dir (installed skills).
+coding-agents.md + roles/*.md under the team root (model tiers), the skills dir (installed skills).
 Parsed files are cached in .cache/cache.json keyed by path + size + mtime.
 Python 3.9 stdlib only.
 """

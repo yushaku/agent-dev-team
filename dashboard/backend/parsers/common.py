@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shlex
 import time
 from datetime import datetime, timezone
 
@@ -12,7 +13,7 @@ ORCA_SKILL_RE = re.compile(r"orca skills get ([A-Za-z0-9._-]+)")
 TASK_RE = re.compile(r"Your task ID is:\s*(task_[0-9a-f]+)")
 # A coordinator starts workers: the command itself, not a mention, a grep or --help.
 ORCH_RE = re.compile(r"(?:^|[;&|(\n]|\bsh\s+-l?c\s+['\"])\s*(?:rtk\s+(?:proxy\s+)?)?orca\s+orchestration\s+"
-                     r"(?:worker-start|task-create|dispatch)\b(?![^;&|\n]*--help)")
+                     r"(?:worker-start|task-create|dispatch|run-use)\b(?![^;&|\n]*--help)")
 CMD_STR_RE = re.compile(r"""\bcmd\s*:\s*(["'`])((?:\\.|(?!\1).)*)\1""", re.S)  # Codex exec: exec_command({cmd:"..."})
 CLAUDE_CMD_RE = re.compile(r"<command-name>/([^<\s]+)</command-name>")
 HERMES_SKILL_RE = re.compile(r'^\[IMPORTANT: The user has invoked the "([^"]+)" skill')
@@ -72,6 +73,21 @@ def cmd_text(v):
         v = "\n".join(e for e in v if " " in e) or " ".join(v)
     return v if isinstance(v, str) else ""
 
+def note_orca(s, command, ts):
+    for match in ORCH_RE.finditer(command):
+        s["dispatcher"] = True
+        try:
+            args = shlex.split(re.split(r"[;\n]", command[match.end():])[0])
+        except ValueError:
+            continue
+        for i, arg in enumerate(args):
+            flag = "--id" if "run-use" in match.group() else "--run"
+            rid = args[i + 1] if arg == flag and i + 1 < len(args) else arg[len(flag) + 1:] if arg.startswith(flag + "=") else ""
+            if re.fullmatch(r"run_[0-9a-z]+", rid):
+                runs = s.setdefault("runs", [])
+                if not runs or runs[-1][0] != rid:
+                    runs.append([rid, ts])
+
 def hook_skill(text, s, ts):
     """Record a hook-injected skill once per session, with its level when the header has one."""
     head = (text or "")[:200]
@@ -95,10 +111,13 @@ def finish_first(s):
     # Discussion roles are PO sessions; a subagent (Hermes title "Subagent: ...") never is one.
     sub = s.get("subagent") or (s.get("title") or "").startswith("Subagent:")
     s["discussion"] = None if sub else discussion_role(txt) or s.get("discussion_read")
-    seen = set()
-    s["tasks"] = [x for x in s.get("tasks") or [] if not (x[0] in seen or seen.add(x[0]))]
+    tasks = []
+    for item in s.get("tasks") or []:
+        if not tasks or tasks[-1][0] != item[0]:
+            tasks.append(item)
+    s["tasks"] = tasks
     m = TASK_RE.search(txt)
-    if m and m.group(1) not in seen:
+    if m and not any(x[0] == m.group(1) for x in tasks):
         s["tasks"].insert(0, [m.group(1), s["start"]])
     return s
 

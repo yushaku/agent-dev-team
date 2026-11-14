@@ -3,7 +3,7 @@ import os
 import time
 
 from ..config import HERMES_DB
-from .common import HERMES_ARGS_MARK, HERMES_SKILL_RE, ORCH_RE, cmd_text, finish_first
+from .common import HERMES_ARGS_MARK, HERMES_SKILL_RE, cmd_text, finish_first, note_orca
 from ..roles import note_discussion_tool
 
 _HERMES_CACHE = {"start": None, "ts": 0.0, "data": []}
@@ -43,8 +43,7 @@ def parse_hermes(start):
         for r in rows:
             first = None
             skills = []
-            dispatcher = False
-            tool_state = {"tool_count": 0}
+            tool_state = {"tool_count": 0, "runs": [], "dispatcher": False}
             for m in msgs.get(r["id"], []):
                 if m["role"] == "user":
                     txt = (m["content"] or "").lstrip()
@@ -54,15 +53,14 @@ def parse_hermes(start):
                         txt = txt.split(HERMES_ARGS_MARK, 1)[1] if HERMES_ARGS_MARK in txt else ""
                     if first is None and txt and not txt.startswith(("<", "[")):
                         first = txt
-                if m["role"] == "assistant" and m["tool_calls"] and not dispatcher:
+                if m["role"] == "assistant" and m["tool_calls"]:
                     try:
                         tool_calls = json.loads(m["tool_calls"])
                         for c in tool_calls:
                             fn = c.get("function") or {}
                             args = fn.get("arguments") or ""
                             note_discussion_tool(tool_state, fn.get("name"), args)
-                            if ORCH_RE.search(cmd_text(args)):
-                                dispatcher = True
+                            note_orca(tool_state, cmd_text(args), m["timestamp"])
                     except (ValueError, AttributeError, TypeError):
                         pass
                 if m["role"] == "tool" and m["tool_name"] == "skill_view":
@@ -77,7 +75,8 @@ def parse_hermes(start):
                 "agent": "hermes", "cwd": r["cwd"], "branch": r["git_branch"],
                 "start": r["started_at"], "end": r["ended_at"] or r["started_at"], "first": first,
                 "sid": r["id"], "originator": "hermes:" + (r["source"] or "?"),
-                "skills": skills, "subagent": False, "id": r["id"], "title": r["title"] or "", "dispatcher": dispatcher,
+                "skills": skills, "subagent": False, "id": r["id"], "title": r["title"] or "", "dispatcher": tool_state["dispatcher"],
+                "runs": tool_state["runs"], "aggregate": True,
                 "discussion_read": tool_state.get("discussion_read"),
                 "calls": [[r["started_at"], r["model"] or "unknown", None, r["input_tokens"] or 0,
                            r["cache_read_tokens"] or 0, r["cache_write_tokens"] or 0, r["output_tokens"] or 0,
