@@ -5,6 +5,7 @@ GET /                 web/index.html (the metrics page)
 GET /css/*.css, /js/*.js, /vendor/*   no-build static assets (whitelist in STATIC)
 GET /api/team/skill?name=N  SKILL.md body for the side panel, see backend/team_docs.py
 GET /api/data?days=N  aggregated JSON, computed fresh on each request.
+GET /api/live         active Orca Runs for the "Đang chạy" tab (own 3 s cache, see backend/live.py).
 GET /api/quota[?fresh=1]  agent quotas from scripts/quota.py (cached 15 min; fresh re-probes).
 
 Sources (read only): ~/.claude/projects/**/*.jsonl, ~/.codex/sessions/**/*.jsonl,
@@ -28,7 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-from backend import cache, config, orca, quota, team_docs, usage
+from backend import cache, config, live, orca, quota, team_docs, usage
 
 # ---------------------------------------------------------------- http
 class Handler(BaseHTTPRequestHandler):
@@ -61,6 +62,9 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/quota":
             fresh = parse_qs(u.query).get("fresh", ["0"])[0] in ("1", "true")
             return self.send(200, json.dumps(quota.get(fresh), separators=(",", ":")).encode(), "application/json")
+        if u.path == "/api/live":
+            fixture = parse_qs(u.query).get("fixture", ["0"])[0] in ("1", "true")
+            return self.send(200, json.dumps(live.get(fixture), separators=(",", ":")).encode(), "application/json")
         if u.path == "/api/data":
             try:
                 days = int(parse_qs(u.query).get("days", ["7"])[0])
@@ -71,6 +75,7 @@ class Handler(BaseHTTPRequestHandler):
             with cache.lock:
                 data = usage.build(days)
                 cache.save_cache()
+            live.note_build(data)
             data["build_ms"] = int((time.time() - t0) * 1000)
             return self.send(200, json.dumps(data, separators=(",", ":")).encode(), "application/json")
         self.send(404, b"not found", "text/plain")
@@ -79,6 +84,7 @@ def main():
     os.makedirs(os.path.dirname(config.CACHE_FILE), exist_ok=True)
     cache.load_cache()
     threading.Thread(target=orca.orca_loop, daemon=True).start()
+    threading.Thread(target=live.get, daemon=True).start()  # warm the live snapshot
     ThreadingHTTPServer.allow_reuse_address = True
     srv = ThreadingHTTPServer(("127.0.0.1", config.PORT), Handler)
     print("team dashboard on http://localhost:%d" % config.PORT, flush=True)
