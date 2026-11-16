@@ -54,11 +54,10 @@ def build(days):
             disp_index.setdefault((d.get("agent"), os.path.normpath(d["wt"])), []).append(d)
     parsed.sort(key=lambda s: (s["agent"], not s.get("subagent"), s["start"] or 0))
     seen_ids = set()
-    sessions, limits, run_tokens, task_tokens, run_sessions = [], [], {}, {}, {}
+    sessions, run_tokens, task_tokens, run_sessions = [], {}, {}, {}
     run_window, orch_tokens = {}, {}
     attribution = dict(total=0, assigned=0, unassigned=0, inferred=0, aggregate=0, undated=0)
     for s in parsed:
-        limits += s.get("limits") or []
         repo, wt = repo_of(s["cwd"])
         task_events = [(ts or s["start"] or 0, tid) for tid, ts in s.get("tasks") or []]
         run_events = [(ts or s["start"] or 0, rid) for rid, ts in s.get("runs") or []]
@@ -206,33 +205,9 @@ def build(days):
         "generated_at": now, "days": days, "range_start": start,
         "dates": [local_date(start + 86400 * i + 3600) for i in range(days)],
         "sessions": sessions, "attribution": attribution,
-        "codex_limit": codex_limit(limits, now),
         "copilot_dirs": len(glob.glob(os.path.join(HOME, ".copilot", "session-state", "*", ""))),
         "orca": {"available": orca_mod.orca_state["available"], "error": orca_mod.orca_state["error"],
                  "fetched_at": orca_mod.orca_state["fetched_at"], "runs": runs},
         "roles_cfg": read_tiers(), "known_roles": known_roles(), "skills_installed": installed,
         "rtk": parse_rtk(time.strftime("%Y-%m-%d", time.localtime(start))),
     }
-
-def codex_limit(samples, now):
-    weekly = [x for x in samples if x[0] and x[2] == 10080 and x[3]]
-    if not weekly:
-        return None
-    ts, used, window, resets, plan = max(weekly, key=lambda x: x[0])
-    wstart = resets - window * 60
-    stale = resets < now
-    # used % since the last reset, one point per sample (resets_at jitters by a few seconds)
-    hist = sorted({(x[0], x[1]) for x in weekly if abs(x[3] - resets) < 3600 and x[0] >= wstart - 60})
-    if len(hist) > 400:
-        step = len(hist) / 400.0
-        hist = [hist[int(i * step)] for i in range(400)] + [hist[-1]]
-    history = [] if stale else [[round(t, 1), u] for t, u in hist]
-    if stale:  # the window rolled over and no newer sample exists yet
-        used = 0.0
-        wstart, resets = resets, resets + window * 60
-    elapsed = max((now - wstart) / 86400, 1e-3)
-    pace = used / elapsed
-    hit = wstart + 100 / pace * 86400 if pace > 0 else None
-    return {"used": used, "resets_at": resets, "window_start": wstart, "sample_at": ts, "plan": plan, "history": history,
-            "pace_per_day": pace, "projected_hit": hit, "hits_before_reset": bool(hit and hit < resets),
-            "stale": stale}

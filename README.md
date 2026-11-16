@@ -1,6 +1,6 @@
 # Software Dev Agent Team
 
-A process for a team of coding agents working a software project inside the Orca app. A human Product Owner approves at fixed gates (business spec, new screens, delivery); an Orchestrator, which can be any coding agent, sizes the work, dispatches role workers (Designer, Tech Lead, Builder, QA, reviewers, Delivery) and ends at a draft PR or a committed branch. Per-project specifics live in a project config, `.team/config.yaml`.
+A process for a team of coding agents working a software project inside the Orca app. A human Product Owner approves at fixed gates (business spec, new screens, delivery); an Orchestrator, which can be any coding agent, chooses the team based on the work and risks, defaults to one Builder and one independent Reviewer, adds specialists for specific gaps and ends at a draft PR or a committed branch. Per-project specifics live in a project config, `.team/config.yaml`.
 
 Vietnamese docs for the Product Owner: https://yushaku.github.io/agent-dev-team/
 
@@ -10,13 +10,11 @@ Who hands work to whom: the PO talks to the Orchestrator and to discussion sessi
 
 ![Who hands work to whom](diagrams/team-overview.svg)
 
-The main flow for a new capability (S3), with the PO's gates:
+An example with planning and design for a new capability, with the PO's gates:
 
 ![Main dev flow](diagrams/dev-flow.svg)
 
-What each request size runs:
-
-![What each size runs](diagrams/sizes.svg)
+The Builder covers diagnosis, implementation, tests, related docs and delivery. One Reviewer checks the result; the Orchestrator adds specialists only for uncovered needs. For team selection, see [Team decisions](skills/orchestrator/references/start.md#team-decisions).
 
 ## Requirements
 
@@ -90,14 +88,13 @@ No `missing:` lines means every skill is in place.
 
 ## Layout
 
-- `workflow.md`: locations, goals, principles, flow, DAG shapes
+- `workflow.md`: short overview, decision boundaries and reading index
 - `roles/`: one card per worker role
-- `skills/orchestrator/`: the Orchestrator skill; `references/` holds its step files, sizing, coding agents, ticket mode and Orca quirks
-- `config.md`: project config schema and model settings
-- `docs-policy.md`: which documents exist and who owns them
+- `skills/orchestrator/`: the Orchestrator skill; `references/` holds its step files, coding agents and ticket mode; Orca commands come from the version-matched skills
+- `config.md`: project config schema, defaults and overrides; platform presets live under `skills/init-team/references/`
+- `docs-policy.md`: document ownership and authoring rules; worker reports use `skills/orchestrator/references/specs.md`
 - `skills/`: skills the team wrote
 - `skills-lock.json`: pinned downloaded skills
-- `scripts/`: helpers such as the quota probe
 - `templates/`: file templates for projects
 - `diagrams/`: architecture diagrams
 - `docs/`: Vietnamese docs site (GitHub Pages)

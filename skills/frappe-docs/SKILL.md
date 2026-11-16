@@ -18,7 +18,7 @@ description: "Use when writing a system doc or diagram. Fills the Frappe tabbed 
 - Keep template CSS and JS unchanged; add content, not styles.
 - Do not invent colours, font sizes, spacing, radii or shadows; use template tokens only.
 - Delete unused example tabs and components; leave no placeholder copy.
-- Verify at 1280px and 390px: tabs work, no console errors and no page-level horizontal scroll.
+- PO owns browser and visual checks: tabs, console errors, page-level horizontal scroll and diagram layout at 1280px and 390px. Agents run automated validation, deliver the artifact link and mark browser/visual checks as pending PO review; use a browser only when the PO asks.
 
 ## Token use
 
@@ -59,7 +59,6 @@ description: "Use when writing a system doc or diagram. Fills the Frappe tabbed 
 - Never use the archify viewer export or an iframe to embed.
 - Every frame has a `ul.legend` with only shown tiers and line styles, a figcaption naming the question it answers, and `details.diagram-text` listing every node and edge.
 - Split when archify validation asks or above about 12 primary nodes; use one diagram per question.
-- Opening archify output in a browser is the PO's job unless asked.
 
 ## Content
 

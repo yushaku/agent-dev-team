@@ -6,7 +6,6 @@ GET /css/*.css, /js/*.js, /vendor/*   no-build static assets (whitelist in STATI
 GET /api/team/skill?name=N  SKILL.md body for the side panel, see backend/team_docs.py
 GET /api/data?days=N  aggregated JSON, computed fresh on each request.
 GET /api/live         active Orca Runs for the "Đang chạy" tab (own 3 s cache, see backend/live.py).
-GET /api/quota[?fresh=1]  agent quotas from scripts/quota.py (cached 15 min; fresh re-probes).
 
 Sources (read only): ~/.claude/projects/**/*.jsonl, ~/.codex/sessions/**/*.jsonl,
 ~/.copilot/session-state/<uuid>/{workspace.yaml,events.jsonl} (GitHub Copilot CLI),
@@ -29,7 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-from backend import cache, config, live, orca, quota, team_docs, usage
+from backend import cache, config, live, orca, team_docs, usage
 
 # ---------------------------------------------------------------- http
 class Handler(BaseHTTPRequestHandler):
@@ -59,9 +58,6 @@ class Handler(BaseHTTPRequestHandler):
             res = team_docs.handle(u.path, parse_qs(u.query))
             if res:
                 return self.send(*res)
-        if u.path == "/api/quota":
-            fresh = parse_qs(u.query).get("fresh", ["0"])[0] in ("1", "true")
-            return self.send(200, json.dumps(quota.get(fresh), separators=(",", ":")).encode(), "application/json")
         if u.path == "/api/live":
             fixture = parse_qs(u.query).get("fixture", ["0"])[0] in ("1", "true")
             return self.send(200, json.dumps(live.get(fixture), separators=(",", ":")).encode(), "application/json")

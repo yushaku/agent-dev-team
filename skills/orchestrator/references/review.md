@@ -1,21 +1,17 @@
 # Verification and fix rounds
 
-- Write verification specs while the last build runs.
-- One `verify` Task runs Anti-AI, then Security when triggered, then Review in one session at the highest tier of the roles it covers, on an agent meeting every capability and constraint of those roles (`coding-agents.md` "Routing").
-- `verify` writes `## Standards`; at S1 it also writes `## Spec`.
-- At S2/S3, a fresh Reviewer Task writes `## Spec` only, using the diff, capability spec and plan, at the Reviewer's tier.
-- QA and Perf/A11y are separate parallel Tasks only when size or a trigger requires them.
-- List Builder-reported leftovers in each spec. If the visual loop ran, the Reviewer checks the UI Builder's `shots/`.
-- Group findings into 2 or 3 sequential fix Tasks by area; test first and reject wrong findings with a reason.
-- A `spec gap` line goes to the Tech Lead as a Task on its terminal; it edits and commits the spec itself, with no re-review. Other document findings go to their owner in `docs-policy.md`.
+- One independent Reviewer runs `verify`: requirements, code, tests, changed docs and delivery body. Include Anti-AI and triggered Security checks in that session, at the highest required tier. A second reviewer needs a specific uncovered risk (`start.md` "Team decisions").
+- `verify` writes `## Standards` and `## Spec`; deduplicate findings across them. Include Builder leftovers and screenshots when the visual loop ran.
+- The Builder supplies tests and relevant measurements. Add QA or Perf/A11y only for evidence the existing workers cannot provide; keep required checks even when responsibilities are combined.
+- Reuse passing verification evidence for the reviewed revision. Run targeted checks for a disputed finding, changed behavior or suspect evidence; run full `commands.verify` once after the final code fix. Repeating review or editing prose alone does not require another full suite.
+- Send one consolidated set of blocking findings to the existing Builder. Before editing, it reproduces the issue or traces the failing path; it may reject a false premise with evidence. The Reviewer confirms the rejection or supplies a counterexample. Unresolved blockers remain open and escalate to the PO after the round limit.
+- Fix rounds cover blockers and regressions introduced by the fixes. Optional improvements go to delivery leftovers; start work on them only if the PO requests it. Review must not turn an accepted tradeoff into a new defect.
+- The assigned author finalizes related docs once the solution settles, before final review. A changed business rule goes through Gate 1; wording or implementation alignment does not need another Tech Lead Task.
 - Review-finding fixes go into the commit they fix before Gate 2 (amend or fixup); UI asks follow "UI rounds" below.
-- Send a fix to the Builder of that area and a re-review to the Reviewer that raised the findings, in the same session (`orca-quirks.md` "Recovery"). Never close or replace a worker while its Task line is unfinished. Start a fresh one only when Orca refuses the reuse (terminal released or gone) or the fix needs another tier or agent; `unverifiable` liveness alone is no reason. A fresh replacement gets a handoff.
-- An approved mechanic's inherent limit is not a finding; record it in ADR Consequences and tell the PO it is accepted.
-- Run one scoped re-review per finding axis each round; include Anti-AI and Security findings. Security audits each Run once.
-- Re-review specs contain only prior numbered findings and fix commits (`git show <fix sha>`), never the full spec or branch diff.
-- After 2 failed fix rounds, ask the PO how to proceed. Offer one tier up as the recommended option; never tier up automatically.
-- After round 2, send any remaining Should fix to Gate 2 as an explicit "approve" or "approve + fix X" choice with size and real-world risk; never run a silent third round.
-- A finding that asks to undo shipped or applied work goes to the PO with why it was not done.
+- Reuse the Builder and Reviewer sessions. Replace a worker only when Orca refuses reuse or the work requires another capability/tier; provide a handoff. Keep workers whose Tasks are unfinished.
+- One scoped re-review per fix round covers the prior findings, rejection evidence, named fix commits and finalized docs/delivery text. Add findings only for regressions introduced by the fix; Security checks the affected path, not a second full audit.
+- After 2 failed fix rounds, ask the PO how to proceed, with one tier up as an option. Never start a silent third round or automatically raise the tier.
+- At Gate 2, list nonblocking leftovers with their concrete risks. Zero Must fix and zero high-severity audit findings remain required for delivery.
 
 ## UI rounds (one Builder Task, no full Run)
 
@@ -26,6 +22,6 @@
 - If unsure which element or layout the PO means, ask, with options and the recommended one first.
 - A reference screenshot is the chosen redesign: no Designer or G-UI; ask only about placement that changes structure (tab, full page, sheet). Map it to the app's real data and controls using app tokens, not the reference colours.
 - A reference offered as mood needs a Designer Task with 2 options in light and dark, then G-UI.
-- If the PO skips the Designer for a new screen, skip UX Tasks and G-UI; the Tech Lead plan names layout from existing screens and components, then the PO polishes.
+- If the PO skips the Designer for a new screen, skip UX Tasks and G-UI; the Builder Task or existing plan names layout from existing screens and components, then the PO polishes.
 - If a UI ask implies a missing capability, ship the UI-only part and ask whether to build the capability (recommended: a team Run), keep old behaviour, or reuse what exists.
 - After merge, put such a tweak on a fresh branch from `main` in the delivered worktree.

@@ -12,7 +12,7 @@ def codex_call(ts, model, eff, u):
 
 def parse_codex(path):
     s = {"agent": "codex", "cwd": None, "branch": None, "start": None, "end": None,
-         "first": None, "id": None, "originator": None, "skills": [], "hooks": {}, "subagent": False, "limits": [],
+         "first": None, "id": None, "originator": None, "skills": [], "hooks": {}, "subagent": False,
          "tasks": [], "dispatcher": False}
     turns = {}
     cur = (None, None)
@@ -55,12 +55,6 @@ def parse_codex(path):
                 if info.get("last_token_usage") and tot != last_total:
                     last_total = tot
                     counts.append(codex_call(ts, cur[0], cur[1], info["last_token_usage"]))
-                rl = p.get("rate_limits") or {}
-                pr = rl.get("primary") or {}
-                if pr.get("used_percent") is not None:
-                    smp = [ts, pr.get("used_percent"), pr.get("window_minutes"), pr.get("resets_at"), rl.get("plan_type")]
-                    if not s["limits"] or s["limits"][-1][1:] != smp[1:]:
-                        s["limits"].append(smp)
             elif t == "response_item":
                 pt = p.get("type")
                 if pt == "message" and p.get("role") == "developer":

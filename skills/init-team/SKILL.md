@@ -5,16 +5,16 @@ description: "Use when the user runs /init-team or a repo has no .team/config.ya
 
 # Init team config
 
-Creates or updates `.team/config.yaml` in the main checkout. Schema, defaults and platform starting values: `$AGENT_TEAM_HOME/config.md` (default `~/.agents/teams`); read it first.
+Creates or updates `.team/config.yaml` in the main checkout. Schema and defaults: `$AGENT_TEAM_HOME/config.md` (default `~/.agents/teams`); read it first.
 
 ## 1. Read the repo (derive, never guess)
 
-1. `git check-ignore -v .team`; not ignored: append `/.team` to `.git/info/exclude`. Agent write limits for `.team`: `skills/orchestrator/references/coding-agents.md` "Known limits". Leave existing `.team/<feature>/` scratch untouched.
+1. `git check-ignore -v .team`; not ignored: append `/.team` (no trailing slash) to `.git/info/exclude`; keep `AGENTS.md` and `.gitignore` unchanged. Agent write limits for `.team`: `skills/orchestrator/references/coding-agents.md` "Known limits". Leave existing `.team/<feature>/` scratch untouched.
 2. `worktree_links`: `git ls-files --others --ignored --exclude-standard | grep -E '(^|/)(\.env[^/]*|\.dev\.vars)$'`, minus build output and dependencies.
 3. `branches.base`: where recent PRs land (`gh pr list --state all -L 8 --json baseRefName,headRefName`). `client_visible`: the deploy workflow branch in `.github/workflows`. `naming`: the PO's local branches.
 4. `commands.verify` from `package.json` scripts, Makefile and README (typecheck, lint, module tests). Heavy E2E needing a DB and seeds: `e2e`, run only on request. Shared build cache or device: `commands.serial: true`.
 5. `skills.project`: repo skills in `.claude/skills` or `.agents/skills`.
-6. Platform: slots and facts from `config.md` "Starting values by platform" (web, apple; else empty slots). Every slot skill must exist in `~/.agents/skills` (`test -e`); list missing ones.
+6. Platform: slots and facts from `references/platforms.md` (web, apple; else empty slots). Every slot skill must exist in `~/.agents/skills` (`test -e`); list missing ones.
 7. `human_only` candidates: merge, deploy workflows, migrations on shared DBs, live payment settings, `.env` and secrets.
 8. Repo rules in `AGENTS.md` / `CLAUDE.md` win; map them, never contradict them.
 

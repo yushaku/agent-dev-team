@@ -1,10 +1,11 @@
 # Project config
 
-## Project config
+Schema, defaults and overrides for Orchestrator and `init-team`. Platform starting values live in `skills/init-team/references/platforms.md`. Dispatched workers receive resolved values in their Task.
+
+## Resolution
 
 - Lookup: `.team/config.yaml` in the main checkout, then the defaults below.
-- Local while experimenting: `/.team` in `.git/info/exclude` (no trailing slash, so worktree links are ignored too; per clone); never edit `AGENTS.md` or `.gitignore` for it, never commit or push team files. Shared later: commit only `.team/config.yaml`.
-- One `.team/` per repo: right after `orca worktree create` (or `worker-start --worktree new-child`), `ln -s <main checkout>/<path> <worktree>/<path>` for `.team` and each `worktree_links` path. Agent-specific write limits: `skills/orchestrator/references/coding-agents.md` "Known limits".
+- `.team/` stays local; only `.team/config.yaml` may be shared when the PO explicitly asks. Initialization handles ignore rules (`skills/init-team/SKILL.md`).
 - Workers never read `config.yaml`: the Orchestrator puts what each needs (resolved skills, `commands.verify`, branch and delivery rules, `human_only`) in its Task spec. Agents used directly follow it through `~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md`.
 - Repo rules in `AGENTS.md` / `CLAUDE.md` win; the config only maps them to team settings.
 
@@ -52,8 +53,6 @@ compliance: []               # e.g. [gdpr], [appi], [vn-pdpl]; its skills go in 
 perf_notes: <path>           # optional perf ledger for the Perf auditor
 human_only: []               # steps agents only list for the PO, e.g. ["on-device testing"]
 flow:
-  default_size: auto         # auto | S0 | S1 | S2 | S3
-  max_size: S3
   max_concurrent_agents: 3
 docs:
   legacy: []                 # existing docs kept read-only
@@ -72,31 +71,10 @@ models:
 - `models.agents.<agent>: off` removes the agent from routing; its Tasks go to the next eligible agent (same file "Free-tier agents" for `simple` Tasks).
 - Per Task the Orchestrator may move effort one step within the tier (up for money, concurrency, migrations, security; down for mechanical work) and records why in the spec.
 - `models.tiers.<tier>` remaps the agent columns of the same "Model tiers" table (`claude`, `codex`, `cursor`) and `effort` per project (missing keys keep the table); `models.roles` keys are the role ids of `roles/`.
-- Precedence: escalation (`skills/orchestrator/references/review.md`) > role card size rule > `models.roles` > role default.
+- Precedence: escalation (`skills/orchestrator/references/review.md`) > `models.roles` > role default.
 
 ## Skill slots
 
 - Slots: `design`, `architecture`, `build.ui`, `build.core`, `qa`, `review`, `security`, `perf`.
 - Resolution: project `skills.<slot>` > empty (role core skills only). A slot skill not installed: tell the PO once, never skip silently.
 - A config with a `profile:` key: ignore the key.
-
-## Starting values by platform
-
-Used only by the `init-team` skill; written into the project's `.team/config.yaml`, which then owns them. Other platforms: empty slots.
-
-- **web**
-  - `design`: [design-taste-frontend]
-  - `build.ui`: [frontend-ui-engineering]; React/Next.js: add vercel-react-best-practices
-  - `build.core`: [api-and-interface-design, database-schema-designer, security-and-hardening]
-  - `qa`: [orca-cli]
-  - `perf`: [browser-testing-with-devtools, frontend-ui-engineering] (DevTools MCP for perf traces only; the Orca browser records none)
-  - `perf_metrics`: "LCP, INP, CLS, bundle size, axe findings"
-  - `ui_screenshots`: true
-  - `ui_viewports`: ["desktop 1280x800", "mobile 390x844", "mobile dark"]
-- **apple** (iOS, iPadOS, macOS)
-  - `security`: [security-and-hardening]
-  - `build.ui`: the project's own SwiftUI skill (`skills.project`)
-  - `perf_metrics`: "launch time, main-thread hangs, memory, scroll hitches (Instruments)"
-  - `ui_screenshots`: false unless the project allows simulator or device capture
-  - `ui_viewports`: ["iPhone 16", "iPhone 16 dark", "Mac window"] (mockups only)
-  - `commands.serial`: true; `flow.max_concurrent_agents`: low (xcodebuild shares DerivedData, each new worktree is a cold build; prefer one Builder at a time)

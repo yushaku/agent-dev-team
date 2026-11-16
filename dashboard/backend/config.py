@@ -12,7 +12,7 @@ SKILLS_DIR = os.environ.get("AGENT_SKILLS_DIR") or os.path.join(HOME, ".agents",
 SKILL_LOCK = os.environ.get("AGENT_SKILL_LOCK") or os.path.join(os.path.dirname(SKILLS_DIR), ".skill-lock.json")
 CLAUDE_SKILLS = os.path.join(HOME, ".claude", "skills")
 CACHE_FILE = os.path.join(HERE, ".cache", "cache.json")
-PARSER_VERSION = 8
+PARSER_VERSION = 9
 PORT = 4747
 ORCA_TTL = 60
 LIVE_TTL = 3
@@ -23,6 +23,6 @@ JS = "text/javascript; charset=utf-8"
 STATIC = {"/js/main.js": JS, "/js/sheet.js": JS, "/js/dash.js": JS, "/js/md.js": JS,
           "/js/lib/charts.js": JS, "/js/tabs/overview.js": JS, "/js/tabs/roles.js": JS, "/js/tabs/repos.js": JS,
           "/js/tabs/runs.js": JS, "/js/tabs/live.js": JS, "/js/tabs/sessions.js": JS, "/js/tabs/skills.js": JS, "/js/tabs/tokens.js": JS,
-          "/js/tabs/overall.js": JS, "/js/tabs/quota.js": JS,
+          "/js/tabs/overall.js": JS,
           "/css/app.css": "text/css; charset=utf-8",
           "/vendor/marked.min.js": JS}

@@ -328,12 +328,6 @@ details.tbl[open] > summary { margin-bottom: var(--s-3); }
 }
 @media print { .dash-filters, .fbar, #tk-nav { display: none; } .dash-view[hidden] { display: grid; } }
 
-.quota { display: grid; gap: var(--s-2); margin-bottom: var(--s-5); }
-.quota-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-.quota-card .big { font-size: var(--fs-5); }
-.quota-bar { display: block; height: var(--s-1); background: var(--surface0); border-radius: var(--r-pill); overflow: hidden; }
-.quota-bar i { display: block; height: 100%; border-radius: var(--r-pill); }
-.quota-card .chip { justify-self: start; }
 .dash button.linkbtn { background: none; padding: 0; color: var(--lavender); text-decoration: underline; text-underline-offset: 3px; }
 .dash button.linkbtn:disabled { color: var(--subtext0); text-decoration: none; cursor: default; }
 

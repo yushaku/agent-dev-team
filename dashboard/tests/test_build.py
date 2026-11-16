@@ -14,7 +14,7 @@ class BuildTests(unittest.TestCase):
             set(data),
             {
                 "generated_at", "days", "range_start", "dates", "sessions",
-                "codex_limit", "copilot_dirs", "orca",
+                "copilot_dirs", "orca",
                 "roles_cfg", "known_roles", "skills_installed",
                 "rtk", "attribution",
             },

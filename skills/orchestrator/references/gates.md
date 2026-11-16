@@ -1,52 +1,34 @@
-# Gates (human)
+# Gates and PO decisions
 
-- Create each gate on the Task it blocks, then show the PO its material.
-- Gate 2: create a `close` Task depending on the last review, then run `gate-create --task <close> --options '["approve","changes"]' --question "<branch> into <target>" --from <handle>`.
-- G-UI: use an `after G-UI` Task and options `["A","B","changes"]`.
-- Gate Task placeholder specs are Task files like any other (`docs-policy.md` "Task files").
-- After the PO answers, run `gate-resolve --id <gate> --resolution "<the PO's answer>" --from <handle>`, then `task-update --id <close> --status completed`.
-- Material per gate:
-  - Gate 1: walkthrough in `languages.po` (`## Gate 1 material`).
-  - G-UI (`ui_rules.gate` on): screenshots of 2 or 3 options per viewport.
-  - G-Reply: draft in `languages.client` with a `languages.po` translation.
-  - G-Scope: scope and estimate.
-  - Gate 2 / G-PR: the draft PR link or branch and delivery body, merge danger first.
-- If the PO is away, choose the option that changes nothing outside the repo and tell the PO; never resolve a gate.
-- Worker questions: answer with `orchestration reply --id <question msg id>` (a worker that asked has ended its turn; `send` does not wake it). Answer technical choices yourself and state them in the next PO update:
-  - A technical choice no user would notice (edge case, a guard or test-only config edit the plan missed, a forced visible fallback): follow existing behaviour, name the test after the AC, state it in the next PO update for veto.
-  - Reviewer Nice to have and "PO decision?" notes no user would notice: take them as defaults, one line each for veto.
-  - Anything a customer or user would notice goes to the PO as questions, one at a time, recommended option first.
-- A bug the PO finds while Gate 2 is open: one Builder fix Task (failing reproduction first) on that branch; the fix joins the delivery and the gate stays pending.
+## When to ask
+
+| Gate | Trigger | Material for the PO |
+|---|---|---|
+| Gate 1 | New or changed business rules | Plain-language stories, changed rules, one example, unresolved decisions |
+| G-UI | New screen/flow with `ui_rules.gate` on | Chosen design alternatives and required viewport screenshots |
+| Gate 2 / G-PR | Reviewed delivery | PR/branch, evidence, merge risks, leftovers and human checks |
+| G-Reply | Client-facing reply | Draft in client language and PO translation |
+| G-Scope | Ticket scope or estimate commitment | Scope, exclusions and estimate |
+
+- Record gates using the version-matched Orca guide on the work they block. Gate 2 uses a close Task after final review; its metadata follows `specs.md`. A gate needs its decision material, not a separate placeholder document.
+- Only the PO resolves a gate. A merge request for the delivered branch counts as Gate 2 approval. An absent PO is not approval.
+- Explicit scope answers already supplied by the PO count toward Gate 1; record them and ask only about unresolved decisions. Avoid asking twice.
+- Within approved requirements, the Orchestrator/Builder chooses implementation details. Ask when user-visible behavior or scope would differ from what was approved, or a risk requires PO acceptance. Optional review suggestions stay deferred.
+- Answer worker questions through the version-matched ask/reply flow. Present the material before asking; one question at a time, recommended option first.
 
 ## Gate 1 material
 
-- The Tech Lead (`--keep-open`) sends Gate 1 with `ask` and ends its turn. Build the walkthrough from its spec and questions, show the PO, then `reply` the answers to that question; the same session updates the spec and writes the plan.
-- The Tech Lead's context past about half the window: handoff per `SKILL.md`. A terminal lost while it waits: a new Tech Lead session reads the spec and `.team/<feature>/decisions.md`.
-- Never send only the spec. Send a plain-language walkthrough: user stories first (one line each), rules that change today's behaviour, one concrete example, short bullets. Ask the PO to confirm it. The example stays out of the spec (`docs-policy.md` "Business spec").
-- Scope answers given in the start message count as Gate 1: create no gate object; record the Run decisions per `docs-policy.md` "Business spec (Tech Lead output)". The Tech Lead session then skips its Gate 1 `ask` and goes on to the plan.
-- Gaps found later get Orchestrator defaults in a Tech Lead update Task; tell the PO each default in one line for veto. Do not start a second round.
-- Before Gate 1, recheck derived numbers and dates in the walkthrough against the spec and new labels against the closest existing format. Send mismatches and fixes to the Tech Lead in one line.
+- The assigned author sends the spec and open questions. The Orchestrator presents the business change in `languages.po`, checks derived numbers/dates, records PO answers in `decisions.md`, and returns them to the same author.
+- Show only changed rules for a follow-up. New business behavior returns to Gate 1; correcting code to meet an already approved rule is a bug fix, not another spec approval.
+- Technical clarifications update the existing Task. A new capability needs its own scope decision.
 
 ## Gate 2 material
 
-- For a component with no automated tests and no rendered review, list the exact manual checks and recommend "test first, then approve"; keep the gate pending until the PO answers.
-
-## Changed decisions
-
-- A business rule changed after Gate 1, including a UI ask that breaks an approved rule, is never an inline edit: return to Gate 1 with a diff and 2 or 3 options with one concrete example, recommended option first.
-- Spec feedback after Gate 1: `send --to dispatch:<Tech Lead>` while that dispatch is open, else one Tech Lead update Task (tier work) on the same Tech Lead terminal per gate, never one per remark. Builders link the numbered decision item (`specs.md`). Show the PO only the changed rule list.
-- If current code breaks a Gate 1 answer, treat it as a bug in the same Run: Tech Lead update Task, then a Builder Task with a failing regression test. Tell the PO which answer exposed it.
-- Reopening a closed decision as a new capability is a feature, not a fix. Ask the scope questions (rules, edge behaviour, this branch or after v1), one at a time, before building.
+- Every criterion has suitable evidence or an explicit pending human check. If neither automated tests nor rendered review cover a component, name the manual checks and recommend testing before approval.
+- A bug found while Gate 2 is open goes to the existing Builder, with reproduction evidence; review the fix and keep the gate pending.
 
 ## Escalation
 
-Ping the PO immediately when:
+Notify the PO for two failed fix rounds, unresolved evidence-based disagreement, ambiguous approved rules, scope changes, high-severity security findings, suspected personal-data breaches or confirmed worker blocks.
 
-- A task fails its fix loop twice (`review.md`).
-- Two roles disagree and no ADR settles it.
-- Code and business spec disagree (`docs-policy.md` "Conflicts").
-- Scope must change versus the approved spec.
-- A security finding is high severity.
-- A personal data breach is suspected, in any flow: report at once with what is known; the legal deadline is the PO's.
-- A worker is blocked for more than a few minutes.
-- Any action is irreversible: force-pushing shared branches, migrations against real data, deleting branches or data, spending money.
+Irreversible actions and actions reserved by `human_only` require the applicable authorization. Report the concrete action and consequence; follow existing explicit authorization instead of asking again.

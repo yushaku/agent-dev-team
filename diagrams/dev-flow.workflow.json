@@ -2,7 +2,7 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "Main dev flow (S3)",
+    "title": "New capability flow",
     "output": "diagrams/dev-flow.html",
     "locale": "en",
     "quality_profile": "showcase",
@@ -111,8 +111,8 @@
       "lane": "orch",
       "col": 0,
       "type": "cloud",
-      "label": "Load + size",
-      "sublabel": "config.yaml, size"
+      "label": "Choose team",
+      "sublabel": "config.yaml, risks"
     },
     {
       "id": "spec",

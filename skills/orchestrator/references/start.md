@@ -1,29 +1,34 @@
-# Start a Run
+# Start and coordinate
 
 ## Preflight
 
-1. Identify the repo; ask if unclear. Read `.team/config.yaml`; none: use the `config.md` defaults and offer `/init-team` (skill `init-team`).
-2. Resolve each role's skills: role card core + slot skills (project `skills.<slot>`) + `skills.project`. Report once any slot skill not installed.
-3. **Size before creating anything** (`sizing.md`). Tell the PO one line: size, mode or ticket type, reason. Name the triggered audits (role card **Trigger** lines) in the DAG now.
-4. Ticket work: fetch it with the configured access (`github`: `gh issue view --comments`; `manual`: ask the PO to paste it; other trackers: the tracker's skill or MCP), plus related tickets the thread names. Summarize in `languages.po`.
-5. Resume: if `.team/*/handoff.md` exists, read the newest one with its Orca Run state and continue from its next step; tell the PO one line which feature and step.
-6. Context for picking work: `todo.md`, `.team/carry-over.md`, and only the `.team/research/<topic>.md` files the todo item or PO names. Open-ended product or design discussion: point the PO to a Researcher or Solution Architect session instead of holding it here.
-7. An older `.team/<feature>/plan.md` or Orca Run contradicts what the PO points to now: ask which is the source of truth; never resume the old Run silently.
-8. Ask the open preflight decisions one at a time: ticket, missing config handling, uncommitted changes in the main checkout (leave or move to the worktree), and which branch holds the latest work (`git log --oneline <base>..<branch>`). No answer on the branch: cut from it and say so.
-9. Check sign-in for each agent the dispatch wave uses (`coding-agents.md` "Registry").
+1. Identify the repo and read `.team/config.yaml` (`config.md` defaults when absent). Resume the Run the PO names; otherwise match its objective and handoff. Ask only when the repo, scope or source branch remains ambiguous. Preserve uncommitted user work.
+2. Read the relevant request/ticket, `todo.md`, carry-over and research notes it names. Choose the team below; resolve only its role skills and project slots. Report missing required skills once.
+3. Select agents through `coding-agents.md`. Use the version-matched Orca guides for Run/workspace creation, dispatch and receipts; resume existing work before creating more state.
+4. For code changes, use a feature worktree from the configured base or PO-named branch. Link `.team` and each `worktree_links` path to its main-checkout counterpart (one shared `.team/` per repo); follow install/verify commands and `serial`. Keep baseline failures distinct from regressions.
 
-## Orca setup (none at S0)
+## Team decisions
 
-- **Mapping:**
-  - Feature or ticket = one worktree, from S1 up; stage = workspace status; ticket or PR link = `worktree set --issue/--pr`, `reference add`.
-  - One feature = one Run; role work = Task with deps, titled `<role>: <what>`.
-  - Gate 1, G-UI, Gate 2 = decision gates; recurring checks = automations.
-- **Board mapping:** Run started = `in-progress`, delivered and Gate 2 open = `in-review`, merged = `completed`.
-- **S1 and up**, in order:
-  1. `orca status --json` ready.
-  2. **Resume first:** `orchestration run-list --json`, objective contains the key.
-  3. Create an Orchestrator terminal before `run-create`, titled `orchestrator <key>`, open for the Run's life. Pass `--from <its handle>` (`orca terminal show --json`) on every orchestration command and `--terminal <handle>` on `check`; the Run records it as `coordinator_handle`, so worker `ask`, heartbeats and `worker_done` land in its inbox.
-  4. `run-create --objective "<key> [<mode>]"`; create the worktree from pushed `origin/<branches.base>` with branch `branches.naming`, setup skipped, the ticket URL in `--reference` or `--comment`. Link `.team` and `worktree_links` (`config.md`), add references and set Board status.
-     Bind the coordinator session for token attribution with `run-use --id <run> --from <its handle>` after creation and on resume; keep explicit `--run <run>` on dispatch commands. Tokens before the binding remain unassigned.
-  5. Install dependencies in the worktree (`commands.install`), then run each verify command once and keep its summary line as the Builder baseline. A broken baseline script: report it to the PO as pre-existing and use the nearest check.
-- No-code flows: no worktree; workers read `git show origin/<client_visible>:<path>`, never the working tree.
+- Default: one Builder owns diagnosis, implementation, tests, relevant measurements, related docs and delivery; one independent Reviewer checks the result.
+- Before adding a worker, name the question/evidence it supplies and why existing workers cannot cover it. Risk-triggered checks still run; they need not be separate workers. The Orchestrator selects the roster without another PO gate.
+- New or changed business rules need a spec and Gate 1. The Builder can author it; add a Tech Lead for unresolved requirements or design. New screens follow G-UI and `ui_rules`; delivery and tickets keep their gates (`gates.md`).
+- Architecture impact without an accepted ADR (external vendor/system, data store, deployment topology, load target or personal-data boundary): ask the PO for a Solution Architect session before planning.
+- Read-only questions may use one Investigator without a Run/worktree. Respect `flow.max_concurrent_agents`; parallel work needs disjoint ownership or isolated workspaces and an integration owner.
+- PO roster overrides apply. Ignore legacy `flow.default_size` and `flow.max_size`.
+
+## Dispatch and follow-ups
+
+- Use `specs.md` for Task inputs and dashboard metadata. Dispatch through `orchestration`, then end the turn; Orca wakes you. Follow the receipt's `next`. With `serial: true`, only one worker runs verify at a time.
+- Send follow-ups to the existing Dispatch; preserve round metadata and use the receipt's Task identity. Keep sessions open only when the PO will keep using them.
+- At handoff, or when HEAD changes unexpectedly, compare the reviewed revision with the current branch. Preserve PO edits; redirect affected workers to the new revision and review only what changed.
+- A missing report gets a follow-up asking the same worker to supply it. A commit hash alone is not completion evidence.
+- Before retry, stop, release or reassignment, load the version-matched recovery/cleanup reference. Preserve Task identity and retry limits. Silence and uncertain liveness do not prove failure.
+- Report confirmed permission blocks with the exact command; follow `coding-agents.md` "Permission prompts". Never change global agent permissions automatically.
+
+## Board mapping
+
+- One feature worktree; use a Run when dependencies or several Tasks need tracking. Link the ticket/PR to the workspace.
+- Started = `in-progress`; delivered with Gate 2 pending = `in-review`; merged = `completed`.
+- No-code production investigations read the configured `branches.client_visible` remote ref, not an unrelated working tree.
+
+Evaluate the default over the next three delivered changes using existing reports: Task count, elapsed time, PO interventions and post-delivery defects. Fewer Tasks alone is not success.

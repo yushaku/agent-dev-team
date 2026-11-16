@@ -1,21 +1,26 @@
 # Documentation policy
 
+Read when creating, editing or reviewing documentation; load only the relevant sections. Routine worker reports use `skills/orchestrator/references/specs.md` "Report".
+
 ## Committed documents (complete list)
 
 | Document | Owner | Content | Changes when |
 |---|---|---|---|
-| `docs/product/<capability>.md` | Tech Lead | Business spec (below) | The business changes |
-| `docs/adr/NNN-title.md` | Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line; superseded by a new ADR |
+| `docs/product/<capability>.md` | Builder; Tech Lead when assigned | Business spec (below) | The business changes |
+| `docs/adr/NNN-title.md` | Builder or assigned Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line; superseded by a new ADR |
 | `AGENTS.md` | PO | Repo agent rules; read-only for the team (`## AGENTS.md`) | Never by the team |
 | `.team/config.yaml` | PO (Orchestrator proposes) | Team config (`config.md`); local-only until the team adopts it | Project settings change |
 | `DESIGN.md` | Designer | Visual identity: tokens in use, type, spacing, component rules | The PO picks an option at G-UI that sets a new rule |
 | `README.md` | PO | What it is, how to run it | The PO asks |
-| `todo.md` | PO | Roadmap; each item has **Goal**, **Outcome** (may name story IDs), a checkbox, optional `Ref: .team/research/<topic>.md` | The PO adds items; the Delivery Engineer removes shipped ones |
-| `docs/diagrams/<name>.json` | Tech Lead; Solution Architect for system design diagrams | Archify spec of a kept diagram (source) | The shape it shows changes |
+| `todo.md` | PO | Roadmap; each item has **Goal**, **Outcome** (may name story IDs), a checkbox, optional `Ref: .team/research/<topic>.md` | The PO adds items; the delivery owner removes shipped ones |
+| `docs/diagrams/<name>.json` | Builder or assigned Tech Lead; Solution Architect for system design diagrams | Archify spec of a kept diagram (source) | The shape it shows changes |
 | `docs/diagrams/<name>.html` | Whoever changes its spec | Archify render of that spec (`frappe-docs` pipeline) | Its spec changes, in the same commit |
-| `.github/workflows/pages.yml` | Delivery Engineer; the PO reviews the PR | Publishes the docs site when `docs.site: pages` (`## Published site`) | The publish list changes |
+| `.github/workflows/pages.yml` | Delivery owner; the PO reviews the PR | Publishes the docs site when `docs.site: pages` (`## Published site`) | The publish list changes |
 
-- No-op and contradiction findings are fixed by the document owner.
+- Committed documents are edited and committed by their assigned owner; the commit body lives in that commit.
+- The Builder owns related documentation by default. Assign a specialist author only for a specific requirements or design need; include assigned paths in the Task. Existing read-only documents stay read-only unless the PO authorizes changes.
+- Finalize implementation-related docs once the solution settles, before final review; do not dispatch an author for each intermediate code adjustment. Accepted ADRs remain immutable.
+- No-op and contradiction findings are fixed by the assigned document owner.
 - Existing docs outside this list are read-only reference until the PO migrates or deletes them (`docs.legacy`).
 - API reference, schema docs: generate from code when needed, never store.
 
@@ -34,7 +39,7 @@
 - A public repo publishes every committed doc: no secrets, personal data, client names or unreleased business terms in `docs/`.
 - Enabling Pages (Settings, Pages, source GitHub Actions) is the PO's step.
 
-## Business spec (Tech Lead output)
+## Business spec
 
 - One file per business capability, not per feature or ticket; a feature updates the existing file.
 - English for every project; domain terms that only exist in the client's language keep the original in parentheses in the glossary.
@@ -50,7 +55,7 @@
   - Open questions (empty before Gate 1).
   - Last line: `Retired: R3, R7, AC12` (retired IDs).
 - Not allowed: solution, architecture, technology, platform, screen or component names, API, database, code, test names, file paths. A sentence that would change when the implementation changes does not belong.
-- Gate 1 answers and other PO decisions for the Run live in numbered `.team/<feature>/decisions.md` items; the Tech Lead folds decided items into rules and AC, and the spec carries no `Decided at Gate 1` or post-Gate 1 `Decisions to confirm` sections or D/A/G/Q item lists. Open questions stay in their existing section.
+- Gate 1 answers and other PO decisions for the Run live in numbered `.team/<feature>/decisions.md` items; the assigned author folds decided items into rules and AC, and the spec carries no `Decided at Gate 1` or post-Gate 1 `Decisions to confirm` sections or D/A/G/Q item lists. Open questions stay in their existing section.
 - Worked examples belong only in the Gate 1 `walkthrough.html` sent to the PO, never in the spec.
 - Size: target about 80 lines; past 150 lines, split the capability and move its stories, rules and ACs with the split; reference another capability's criteria as `<capability> ACn`. Long content lists such as catalogue text and card copy live in code or seed data, not the spec.
 - Traceability is one-way, code to spec: tests reference IDs with the capability file name (e.g. `garden AC3: member cannot book past the limit`); bare `AC3` is ambiguous. Never reference story IDs; the spec never references tests or code.
@@ -66,40 +71,9 @@
 - Immutable: a changed decision gets a new ADR; the only edit to an old ADR is its Status line (`superseded by NNN`), made by the new ADR's author in the same PR.
 - Agents read only `accepted` ADRs.
 
-## Scratch
-
-- `.team/` (ignored, never committed):
-  - `<feature>/`: the Run's files, laid out in "Task files" below; no other entries per feature.
-  - `research/<topic>.md`: outcome of a Researcher session (product discovery): problem, who has it, how others solve it, options, smallest scope, risks, decision, open points, sources; under 60 lines; written in the Researcher session, read by the Orchestrator only when a todo item or the PO names it.
-  - `carry-over.md`: numbered leftovers (file:line, why); lifecycle in `skills/orchestrator/references/delivery.md`.
-- `.team/config.yaml` is the only file in `.team/` that may be committed.
-
-## Task files
-
-File is the source, message is the pointer. Every file of a Run lives in `.team/<feature>/`, reached from a worktree through its `.team` link; never `/tmp` or `.team/<run>/`.
-
-| Path | Writer | Content |
-|---|---|---|
-| `specs/NN-<role>[-rN].md` | Orchestrator | Task input; every Task has one, follow-ups and gate placeholders included |
-| `reports/NN-<role>[-rN].md` | The worker of Task NN | Task output, same NN as its spec |
-| `logs/NN-<command>.log` | The worker of Task NN | Full verify, test and tool output (`WRANGLER_LOG_PATH` included) |
-| `inputs/` | Orchestrator, from the PO | Reference docs, screenshots, sketches |
-| `shots/` | Designer, Builder (visual loop) | Screenshots per viewport and colour scheme |
-| `design/` | Designer | `flow.md`, `option-a.html`... |
-| `decisions.md` | Orchestrator | Numbered PO decisions: Gate 1 answers, scope cuts, Orchestrator defaults |
-| `plan.md` | Tech Lead | `roles/tech-lead.md` |
-| `walkthrough.html` | Orchestrator | Gate 1 HTML for the PO |
-| `handoff.md` | Orchestrator | `skills/orchestrator/SKILL.md` |
-
-- A Task spec lists every file the worker reads by path; it never pastes another role's text.
-- A report has these sections, empty ones omitted: `## Result` (verdict first), `## Evidence` (summary lines pointing to `logs/`), `## Findings` (Reviewer, numbered by severity), `## Changed paths`, `## Commit body`, `## Leftovers`.
-- `worker_done` carries the verdict, at most 5 summary lines and the report path. The Orchestrator reads the report file, never the transcript.
-- Committed documents are edited and committed by their owner (table above); the commit body lives in that commit.
-- Cleanup: `skills/orchestrator/references/delivery.md`.
-
 ## Audit
 
-- Docs audit request: S0 (`skills/orchestrator/references/sizing.md`): a table per committed doc and `.team/` file (keep, migrate to `docs/product/`, legacy, delete) with the reason, missing required docs, stale cross-references; then propose one S1 cleanup Run. Files the PO names stay (`docs.legacy`). Nothing changes before the PO's go.
+- Docs audit request: read-only: a table per committed doc and `.team/` file (keep, migrate to `docs/product/`, legacy, delete) with the reason, missing required docs, stale cross-references; then propose a scoped cleanup. Files the PO names stay (`docs.legacy`). Nothing changes before the PO's go.
 
 ## Writing
 
@@ -117,7 +91,7 @@ File is the source, message is the pointer. Every file of a Run lives in `.team/
 ## Conflicts
 
 - ADR vs code: code wins; fix or delete the line. `AGENTS.md` or `README` vs code: code wins; tell the PO the line and the fix.
-- Business spec vs code: the Tech Lead decides which is wrong; changing a business rule is the PO's decision (Gate 1), never a silent agent edit.
+- Business spec vs code: the assigned author establishes which is wrong against approved decisions; changing a business rule is the PO's decision (Gate 1), never a silent agent edit.
 
 ## Reading (token budget)
 

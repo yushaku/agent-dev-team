@@ -87,7 +87,7 @@
       "from": "orch",
       "to": "po",
       "y": 224,
-      "label": "Bug, S1, one-line reason",
+      "label": "Bug, team, one-line reason",
       "variant": "return"
     },
     {

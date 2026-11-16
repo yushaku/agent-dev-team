@@ -28,10 +28,9 @@ def parse_copilot(path):
     ws = read_yaml_flat(os.path.join(os.path.dirname(path), "workspace.yaml"))
     s = {"agent": "copilot", "cwd": ws.get("cwd"), "branch": ws.get("branch"), "start": ts_of(ws.get("created_at")),
          "end": None, "first": None, "id": ws.get("id") or os.path.basename(os.path.dirname(path)),
-         "originator": ws.get("client_name"), "skills": [], "subagent": False, "limits": [], "quota": [],
+         "originator": ws.get("client_name"), "skills": [], "subagent": False,
          "snapshot": None, "tasks": []}
     calls = {}
-    last_q = {}
     with open(path, encoding="utf-8", errors="replace") as source:
         for line in source:
             head = line[:48]
@@ -74,15 +73,6 @@ def parse_copilot(path):
                                  "cr": tc("cache_read"), "cw": tc("cache_write"), "out": tc("output"),
                                  "requests": sum(((m.get("requests") or {}).get("count") or 0)
                                                  for m in (a.get("modelMetrics") or {}).values())}
-            elif t == "model.model_call_success":
-                for bucket, q in (p.get("quotaSnapshots") or {}).items():
-                    smp = [ts, bucket, q.get("entitlementRequests"), q.get("usedRequests"), q.get("remainingPercentage"),
-                           bool(q.get("isUnlimitedEntitlement")), bool(q.get("overageAllowedWithExhaustedQuota")),
-                           q.get("resetDate")]
-                    if last_q.get(bucket) != smp[2:]:
-                        last_q[bucket] = smp[2:]
-                        s["quota"].append(smp)
-                    s["quota_seen"] = ts
             elif t in ("skill.invoked", "skill.invoked_ref"):
                 if p.get("name"):
                     s["skills"].append([p["name"], ts])

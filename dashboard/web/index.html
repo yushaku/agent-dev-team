@@ -35,18 +35,9 @@
   <section class="dash-view" id="tk-tong-quan" aria-labelledby="tk-tong-quan-h">
     <div class="panel-head">
       <h3 id="tk-tong-quan-h">Tổng quan</h3>
-      <p class="lead" id="ov-lead">Token Claude, Codex, Copilot và Hermes trong khoảng đã chọn, hạn mức còn lại của Claude, Codex, Copilot và Cursor, và các phiên tốn nhất.</p>
+      <p class="lead" id="ov-lead">Token Claude, Codex, Copilot và Hermes trong khoảng đã chọn, và các phiên tốn nhất.</p>
       <p class="muted small" id="measurement-note" role="status"></p>
     </div>
-    <section aria-labelledby="h-limit">
-      <h4 id="h-limit">Hạn mức</h4>
-      <div id="quota" class="quota"></div>
-      <div class="charts">
-        <figure class="chart" id="c-gauge"></figure>
-        <figure class="chart" id="c-limit"></figure>
-      </div>
-      <div class="callout info" role="note"><p><span class="callout-label">Lưu ý</span>Hạn mức là của cả tài khoản, không theo bộ lọc. Claude và Cursor lấy từ lệnh <code>/usage</code> qua <code>scripts/quota.py</code> (Claude không ghi hạn mức vào log). Hạn mức Copilot gồm cả lượt dùng ở VS Code và github.com.</p></div>
-    </section>
     <section aria-labelledby="h-kpi">
       <h4 id="h-kpi">Chỉ số chính</h4>
       <div class="grid" id="kpi"></div>
@@ -154,13 +145,12 @@
       <h4 id="h-src">Nguồn dữ liệu</h4>
       <dl class="kv">
         <dt>Claude Code</dt><dd><code>~/.claude/projects/**/*.jsonl</code>, gồm cả file subagent. Mỗi dòng assistant có <code>message.usage</code>; cùng <code>message.id</code> lặp lại theo từng khối nội dung nên chỉ đếm một lần (kể cả giữa các file).</dd>
-        <dt>Codex</dt><dd><code>~/.codex/sessions/YYYY/MM/DD/*.jsonl</code>. Mỗi bản ghi <code>token_usage_record</code> là một lượt gọi; model và effort lấy từ <code>turn_context</code> của cùng turn. Hạn mức tuần lấy từ <code>rate_limits.primary</code>: mẫu mới nhất cho đồng hồ, mọi mẫu từ lần reset gần nhất cho đường % đã dùng.</dd>
-        <dt>GitHub Copilot CLI</dt><dd><code>~/.copilot/session-state/&lt;uuid&gt;/events.jsonl</code> cùng <code>workspace.yaml</code> (cwd, nhánh, <code>client_name</code> làm cột nguồn). Mỗi sự kiện <code>session.usage_record</code> là một lượt gọi, khóa theo <code>accounting.sourceSessionId</code> và <code>sequence</code>; model và effort lấy từ chính bản ghi đó. <code>accountingSnapshot</code> trong <code>session.usage_checkpoint</code> và <code>session.shutdown</code> là số cộng dồn của cả phiên (giữ qua lần resume), chỉ dùng để đối chiếu: tổng từng lượt khớp đúng snapshot cuối. Hạn mức tháng lấy từ <code>quotaSnapshots</code> trong <code>model.model_call_success</code>. Thư mục phiên không có <code>events.jsonl</code> là phiên rỗng, bỏ qua.</dd>
+        <dt>Codex</dt><dd><code>~/.codex/sessions/YYYY/MM/DD/*.jsonl</code>. Mỗi bản ghi <code>token_usage_record</code> là một lượt gọi; model và effort lấy từ <code>turn_context</code> của cùng turn.</dd>
+        <dt>GitHub Copilot CLI</dt><dd><code>~/.copilot/session-state/&lt;uuid&gt;/events.jsonl</code> cùng <code>workspace.yaml</code> (cwd, nhánh, <code>client_name</code> làm cột nguồn). Mỗi sự kiện <code>session.usage_record</code> là một lượt gọi, khóa theo <code>accounting.sourceSessionId</code> và <code>sequence</code>; model và effort lấy từ chính bản ghi đó. <code>accountingSnapshot</code> trong <code>session.usage_checkpoint</code> và <code>session.shutdown</code> là số cộng dồn của cả phiên (giữ qua lần resume), chỉ dùng để đối chiếu: tổng từng lượt khớp đúng snapshot cuối. Thư mục phiên không có <code>events.jsonl</code> là phiên rỗng, bỏ qua.</dd>
         <dt>Hermes</dt><dd><code>~/.hermes/state.db</code> (SQLite, đọc chỉ). Mỗi phiên một hàng <code>sessions</code> với token tổng hợp (xếp vào ngày bắt đầu phiên, không phải thời điểm từng lượt gọi); prompt đầu và skill nạp lấy từ bảng <code>messages</code>. Title bắt đầu <code>orchestrator:</code> hoặc nạp skill <code>orchestrator</code> thì vai là Orchestrator.</dd>
         <dt>Orca</dt><dd><code>orca orchestration run-list, task-list, gate-list, worker-list, worker-show --json</code>, làm mới mỗi 60 giây ở nền. Orca không chạy thì các tab khác vẫn hoạt động.</dd>
         <dt>Đang chạy</dt><dd><code>GET /api/live</code> gọi riêng <code>orca orchestration run-list, task-list, worker-list, gate-list, inbox --json</code> (trang hỏi mỗi 3 giây khi tab đang mở). Run đang chạy là Run có Task chưa xong, cổng PO đang chờ hoặc terminal của worker chưa được cho nghỉ. Orca không có mốc thời gian cho việc cho nghỉ, nên dashboard ghi lại lần đầu thấy và lưu ở <code>.cache/live-state.json</code>.</dd>
         <dt>RTK</dt><dd><code>~/Library/Application Support/rtk/history.db</code> (SQLite, đọc chỉ). Mỗi lệnh RTK nén là một bản ghi <code>commands</code>: token gốc, token tiết kiệm, thời gian chạy, dự án. Tab Tiết kiệm RTK gộp theo ngày, lệnh và dự án.</dd>
-        <dt>Thẻ hạn mức</dt><dd><code>GET /api/quota</code> chạy <code>scripts/quota.py</code> (kết quả giữ 15 phút, <b>Đo lại</b> chạy <code>--fresh</code>, mất khoảng 30 giây). Claude và Cursor đọc từ <code>/usage</code> trong terminal, Codex từ mẫu <code>rate_limits</code> mới nhất trong log, Copilot từ <code>gh api /copilot_internal/user</code>. Màu: đỏ khi còn dưới 15%, vàng dưới 35%, còn lại xanh. Nhãn "nhiều hạn mức nhất" là agent còn nhiều hơn giữa Claude và Codex, cũng là agent mà bước chọn agent của team ưu tiên.</dd>
         <dt>Tier</dt><dd>Bảng Model tiers trong <code>skills/orchestrator/references/coding-agents.md</code> và dòng Runs on trong <code>roles/*.md</code>.</dd>
         <dt>Bộ nhớ đệm</dt><dd><code>cache.json</code> cạnh server, theo đường dẫn, kích thước và mtime của file; chỉ file thay đổi được đọc lại.</dd>
       </dl>
