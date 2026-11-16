@@ -45,7 +45,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
   await dash.link(specifier => {
     const exports = specifier === "./lib/charts.js" ? C : {
       renderOverall() {}, renderOverview() { if (renderError) throw renderError; },
-      renderRoles() {}, renderRepos() {}, renderLive() {}, renderSessions() {},
+      renderRoles() {}, renderRepos() {}, renderLive() {}, renderSessionCharts() {},
       showSession() {}, renderSkills() {}, renderTokens() {}, renderOverall() {},
     };
     return new SyntheticModule(Object.keys(exports), function () {

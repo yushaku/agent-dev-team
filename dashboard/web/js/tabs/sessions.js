@@ -7,16 +7,10 @@ import {
   arcPath, donut, squarify, spark, mixc, gantt, hideTip
 } from "../lib/charts.js";
 
-const COLS = [
-  ["start", "Bắt đầu", s => dt(s.start) + (s.split ? ` <span class="warn-dot" title="${esc(s.split)}" aria-label="${esc(s.split)}"></span>` : "")], ["agent", "Agent", s => AG[s.agent]], ["repo", "Repo"], ["worktree", "Worktree"], ["role", "Vai"],
-  ["model", "Model", s => `<code>${esc(s.model)}</code>`], ["effort", "Effort"], ["calls", "Lượt", null, 1], ["fin", "Input mới", null, 1], ["cr", "Cache đọc", null, 1],
-  ["cw", "Cache ghi", null, 1], ["out", "Output", null, 1], ["reason", "Reasoning", null, 1], ["ctx_med", "Ctx trung vị", null, 1], ["ctx_max", "Ctx max", null, 1],
-  ["duration", "Thời lượng", s => dur(s.end - s.start), 1], ["prem", "Premium req", s => s.agent === "copilot" ? fmt(s.prem) : "", 1], ["originator", "Nguồn"],
-];
 export function sessionRow(s, cells) {
   return `<tr class="click" tabindex="0" data-sid="${esc(s.id)}">${cells}</tr>`;
 }
-export function renderSessions(S) {
+export function renderSessionCharts(S) {
   S = S || sessionsF();
   const d = C.state.data;
   // scatter: x = first call in range, y = tokens (log), size = calls, colour = agent
@@ -54,15 +48,6 @@ export function renderSessions(S) {
   hm2.push(`<text x="${r1(LW2 + 12 * cw)}" y="${H2 - 4}" text-anchor="middle">Giờ trong ngày (giờ máy)</text>`);
   const steps = [1, 2, 3, 4, 5].map(l => ({ name: "đến " + fmt(max * Math.pow(l / 5, 2)), color: lcol(l) }));
   fig("#c-heat", { title: "Token theo ngày và giờ", body: S.length ? svg(W, H2, "Bản đồ nhiệt token theo ngày và giờ", hm2.join("")) : "", legend: [{ name: "0", color: "var(--surface0)" }].concat(steps), caption: "Mỗi ô là một giờ của một ngày; càng đậm càng nhiều token." });
-  // table
-  const q = C.state.q.toLowerCase();
-  let X2 = S.map(s => Object.assign(s, { duration: (s.end || 0) - (s.start || 0) }));
-  if (C.state.split) X2 = X2.filter(s => s.split);
-  $("#tk-split").setAttribute("aria-pressed", String(C.state.split));
-  if (q) X2 = X2.filter(s => [s.id, s.repo, s.worktree, s.role, s.model, s.effort, s.originator, s.task_title, s.agent].join(" ").toLowerCase().includes(q));
-  const { key, dir } = C.state.sort;
-  X2.sort((a, b) => (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0) * dir);
-  $("#sessions").innerHTML = `<p class="muted small">${sessionCount(X2)} phiên, ${X2.length} phần theo Task/Run. Bấm tiêu đề cột để sắp xếp, bấm một dòng để xem chi tiết.</p><table><thead><tr>${COLS.map(([k, l, , n]) => `<th data-key="${k}" class="${n ? "num" : ""}" aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}">${l}${k === key ? (dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}</tr></thead><tbody>${X2.map(s => sessionRow(s, COLS.map(([k, , f, n]) => `<td class="${n ? "num" : ""}${k === "start" ? " nowrap" : ""}">${f ? f(s) : n ? fmt(s[k]) : esc(s[k])}</td>`).join(""))).join("")}</tbody></table>`;
 }
 export function showSession(id) {
   const d = C.state.data, s = d.sessions.find(x => x.id === id);

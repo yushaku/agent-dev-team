@@ -247,7 +247,6 @@ tr[hidden] { display: none; }
 .dash #auto .dot { width: var(--s-2); height: var(--s-2); border-radius: var(--r-pill); flex: none; }
 .dash #refresh { display: inline-grid; place-items: center; background: none; color: var(--subtext0); padding: var(--s-1); }
 .dash #refresh:hover { color: var(--text); background: var(--surface0); }
-.tk-search { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--fs-2); color: var(--subtext0); }
 #tk-nav { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); }
 #tk-nav [data-view] { border: 0; cursor: pointer; font: 400 var(--fs-2) / 1.4 var(--font-sans); border-radius: var(--r-2); position: relative; background: none; padding: var(--s-2); color: var(--subtext1); text-decoration: none; }
 #tk-nav [data-view]:hover { background: var(--surface0); color: var(--text); }

@@ -6,7 +6,7 @@ import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
 import { renderRepos } from "./tabs/repos.js";
 import { renderLive } from "./tabs/live.js";
-import { renderSessions, showSession } from "./tabs/sessions.js";
+import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderTokens } from "./tabs/tokens.js";
 import { renderOverall } from "./tabs/overall.js";
@@ -46,7 +46,7 @@ function render() {
   renderRunFilter(d);
   renderFilterBar();
   const S = sessionsF();
-  renderOverall(S); renderOverview(S); renderRoles(S); renderRepos(S); renderLive(); renderSessions(S); renderSkills(S); renderTokens();
+  renderOverall(S); renderOverview(S); renderRoles(S); renderRepos(S); renderLive(); renderSessionCharts(S); renderSkills(S); renderTokens();
 }
 
 /* ---------- cross filter ---------- */
@@ -107,8 +107,6 @@ $("#f-agent").addEventListener("change", e => { C.state.agent = e.target.value; 
 $("#f-run").addEventListener("change", e => { C.state.runF = e.target.value; C.state.taskF = ""; persist(); render(); });
 $("#f-task").addEventListener("change", e => { C.state.taskF = e.target.value; persist(); render(); });
 $("#refresh").addEventListener("click", load);
-$("#tk-split").addEventListener("click", () => { C.state.split = !C.state.split; renderSessions(); });
-$("#tk-q").addEventListener("input", e => { C.state.q = e.target.value; renderSessions(); });
 /* Status text doubles as the auto-refresh toggle: "Cập nhật 09:52" or "Tự động · 09:52" with a green dot. */
 function setAuto() {
   const btn = $("#auto"), dot = $("#auto .dot"), at = C.state.data ? hm(C.state.data.generated_at) : "";
@@ -131,8 +129,6 @@ function activate(el) {
   if (el.dataset.sid) return showSession(el.dataset.sid);
 }
 document.addEventListener("click", e => {
-  const th = e.target.closest("th[data-key]");
-  if (th) { const k = th.dataset.key; C.state.sort = { key: k, dir: C.state.sort.key === k ? -C.state.sort.dir : -1 }; renderSessions(); return; }
   const el = e.target.closest("[data-clear], [data-f], [data-sid]");
   if (el) { hideTip(); activate(el); }
 });

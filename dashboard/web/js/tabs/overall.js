@@ -45,7 +45,7 @@ function renderSessions(S, tasks) {
   const cells = s => {
     const title = text(s.task_title || taskNames.get(s.task_id) || "");
     return [
-      `<td class="nowrap">${s.start ? C.dt(s.start) : ""}</td>`,
+      `<td class="nowrap">${s.start ? C.dt(s.start) : ""}${s.split ? ` <span class="warn-dot" title="${esc(s.split)}" aria-label="${esc(s.split)}"></span>` : ""}</td>`,
       `<td>${esc(AG[s.agent] || "")}</td>`,
       `<td>${s.role ? `<button type="button" class="overall-link" data-f="role:${esc(s.role)}">${esc(roleName(s))}</button>` : esc(roleName(s))}</td>`,
       `<td>${title ? s.task_id ? `<button type="button" class="overall-link" data-f="task:${esc((s.run_id || "") + "/" + s.task_id)}">${esc(title)}</button>` : esc(title) : ""}</td>`,

@@ -4,7 +4,7 @@ export const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "
 export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes" };
 export const AGENTS = ["claude", "codex", "copilot", "hermes"];
 export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0 });
-export const state = { split: false, days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", data: null, auto: true, sort: { key: "start", dir: -1 }, q: "", timer: null };
+export const state = { days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", data: null, auto: true, timer: null };
 try { const s = JSON.parse(localStorage.getItem("team-dashboard") || "{}"); Object.assign(state, { days: s.days || 7, repo: s.repo || "", agent: s.agent || "", role: s.role || "", wt: s.wt || "", runF: s.runF || "", taskF: s.taskF || "", auto: s.auto !== false }); } catch (e) {}
 export const persist = () => { try { localStorage.setItem("team-dashboard", JSON.stringify({ days: state.days, repo: state.repo, agent: state.agent, role: state.role, wt: state.wt, runF: state.runF, taskF: state.taskF, auto: state.auto })); } catch (e) {} };
 
