@@ -6,7 +6,7 @@ document.documentElement.classList.add("js");
 
 /* #tk-* opens that view (also a heading inside it); any other hash, such as a removed doc tab, lands on the default view. */
 function fromHash() {
-  const id = ({ "tk-runs": "tk-dang-chay", "tk-phien": "tk-theo-repo" })[decodeURIComponent(location.hash.slice(1))] || decodeURIComponent(location.hash.slice(1));
+  const id = ({ "tk-runs": "tk-theo-repo", "tk-dang-chay": "tk-theo-repo", "tk-phien": "tk-theo-repo" })[decodeURIComponent(location.hash.slice(1))] || decodeURIComponent(location.hash.slice(1));
   const el = id ? document.getElementById(id) : null;
   if (el && el.closest(".dash-view")) {
     showToken(el);

@@ -1,7 +1,7 @@
 import * as C from "../lib/charts.js";
 import { $, esc, agentsF, sum, gantt, tokenTimeline } from "../lib/charts.js";
 
-/* Run timeline helpers shared with the Theo repo / task view (overall.js). The live tab is live.js. */
+/* Run timeline helpers shared with the Theo repo / task view (overall.js). */
 export function runDetail(r) {
   const fixes = r.tasks.filter(t => t.measurement?.kind === "fix").sort((a, b) => (a.started || a.created) - (b.started || b.created));
   const fix = fixes.length, rer = r.tasks.filter(t => t.measurement?.kind === "re-review").length;

@@ -1,16 +1,9 @@
-import * as C from "../lib/charts.js";
-import {
-  $, esc, AG, AGENTS, zeroAg, COL, PARTS, GROUPS, ROLE_SRC, GATE, groupOf, roleCol,
-  buildMixColours, mixCol, mixName, fmt, pct, pad, dt, hm, dm, dur, median, sum,
-  cut, r1, splitWhy, sessionsF, agentsF, buckets, bval, A, svg, fill, widthOf,
-  fig, agentLegend, partLegend, groupLegend, scale, timeTicks, yAxis, vBars, hBars,
-  arcPath, donut, squarify, spark, mixc, gantt, hideTip
-} from "../lib/charts.js";
+import { esc, fmt, pct, dt, sum, cut, r1, A, svg, widthOf, fig, squarify } from "../lib/charts.js";
 
 function repoTree(S) {
   const tree = {};
   S.forEach(s => { const r = tree[s.repo] = tree[s.repo] || {}; (r[s.worktree] = r[s.worktree] || []).push(s); });
-  const agg = X => ({ c: sum(X.filter(s => s.agent === "claude"), s => s.total), x: sum(X.filter(s => s.agent === "codex"), s => s.total), p: sum(X.filter(s => s.agent === "copilot"), s => s.total), h: sum(X.filter(s => s.agent === "hermes"), s => s.total), t: sum(X, s => s.total), n: X.length, calls: sum(X, s => s.calls), first: Math.min(...X.map(s => s.t0 || s.start || Infinity)), last: Math.max(...X.map(s => s.end || 0)) });
+  const agg = X => ({ c: sum(X.filter(s => s.agent === "claude"), s => s.total), x: sum(X.filter(s => s.agent === "codex"), s => s.total), p: sum(X.filter(s => s.agent === "copilot"), s => s.total), h: sum(X.filter(s => s.agent === "hermes"), s => s.total), t: sum(X, s => s.total), n: X.length, calls: sum(X, s => s.calls), last: Math.max(...X.map(s => s.end || 0)) });
   return Object.entries(tree).map(([repo, wts]) => {
     const all = [].concat(...Object.values(wts));
     return { repo, a: agg(all), wts: Object.entries(wts).map(([wt, X]) => ({ wt, a: agg(X) })).sort((p, q) => q.a.t - p.a.t) };
@@ -26,7 +19,7 @@ const shareCol = a => {
 };
 export function renderRepos(S) {
   const R = repoTree(S);
-  let W = widthOf("#c-tree");
+  const W = widthOf("#c-tree");
   const H = Math.round(Math.min(560, Math.max(300, W * 0.55))), g = [];
   squarify(R.map(r => ({ v: r.a.t, r })), 0, 0, W, H).forEach(({ item, x, y, w, h }) => {
     const r = item.r, head = h > 44 && w > 60 ? 22 : 0;
@@ -42,20 +35,4 @@ export function renderRepos(S) {
   fig("#c-tree", { title: "Repo và worktree theo token", body: R.length ? svg(W, H, "Treemap repo rồi worktree, diện tích theo token, màu theo tỷ lệ agent", g.join("")) : "",
     legend: [{ name: "Toàn Claude", color: "var(--claude)", f: "agent:claude" }, { name: "Toàn Codex", color: "var(--codex)", f: "agent:codex" }, { name: "Toàn Copilot", color: "var(--copilot)", f: "agent:copilot" }, { name: "Toàn Hermes", color: "var(--hermes)", f: "agent:hermes" }, { name: "Nửa Claude, nửa Codex", color: "color-mix(in srgb, var(--codex) 50%, var(--claude))" }],
     caption: "Khối lớn là repo, ô bên trong là worktree; diện tích theo tổng token, màu pha theo phần token của từng agent. Bấm ô để lọc worktree, bấm tên repo để lọc repo." });
-  // last activity per repo
-  W = widthOf("#c-active");
-  const d = C.state.data, t0 = d.range_start, t1 = d.generated_at;
-  const LW = Math.min(180, Math.round(W * 0.3)), RW = 96, pw = W - LW - RW - 8, rowH = 26, T = 8, H2 = T + R.length * rowH + 40, a = [];
-  const X = t => r1(LW + pw * (Math.min(Math.max(t, t0), t1) - t0) / (t1 - t0));
-  timeTicks(t0, t1, Math.max(3, Math.floor(pw / 70))).forEach(([t, lab]) => a.push(`<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${T + R.length * rowH}"/><text x="${X(t)}" y="${T + R.length * rowH + 16}" text-anchor="middle">${lab}</text>`));
-  R.forEach((r, i) => {
-    const cy = T + i * rowH + rowH / 2, x0 = X(r.a.first), x1 = X(r.a.last);
-    a.push(`<text x="0" y="${cy + 4}" class="v"${A({ f: "repo:" + r.repo, tip: ["Repo " + r.repo, "Bấm để lọc"] })}>${esc(cut(r.repo, Math.floor(LW / 7)))}</text>`);
-    a.push(`<rect x="${x0}" y="${cy - 4}" width="${r1(Math.max(2, x1 - x0))}" height="8" rx="4" style="fill:${shareCol(r.a)}"${A({ f: "repo:" + r.repo, tip: ["Repo " + r.repo, "Hoạt động đầu trong khoảng: " + dt(r.a.first), "Hoạt động cuối: " + dt(r.a.last), "Bấm để lọc"] })}/><circle cx="${x1}" cy="${cy}" r="5" style="fill:var(--text)"/>`);
-    a.push(`<text x="${LW + pw + 8}" y="${cy + 4}">${dt(r.a.last)}</text>`);
-  });
-  a.push(`<text x="${LW + pw / 2}" y="${H2 - 4}" text-anchor="middle">Thời gian trong khoảng đã chọn</text>`);
-  fig("#c-active", { title: "Hoạt động theo repo", body: R.length ? svg(W, H2, "Thanh từ hoạt động đầu đến hoạt động cuối của mỗi repo", a.join("")) : "", legend: [{ name: "Chấm: hoạt động cuối", color: "var(--text)" }], caption: "Thanh từ lượt gọi đầu tiên đến lượt cuối của repo trong khoảng; màu theo tỷ lệ agent như treemap." });
 }
-
-/* ---------- Runs ---------- */

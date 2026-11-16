@@ -15,14 +15,10 @@ CACHE_FILE = os.path.join(HERE, ".cache", "cache.json")
 PARSER_VERSION = 9
 PORT = 4747
 ORCA_TTL = 60
-LIVE_TTL = 3
-LIVE_WINDOW = 3 * 86400  # Runs untouched for longer are never considered live
-LIVE_STALE = 12 * 3600  # open work with no activity for this long no longer makes a Run live
-LIVE_STATE_FILE = os.path.join(HERE, ".cache", "live-state.json")
 JS = "text/javascript; charset=utf-8"
 STATIC = {"/js/main.js": JS, "/js/sheet.js": JS, "/js/dash.js": JS, "/js/md.js": JS,
           "/js/lib/charts.js": JS, "/js/tabs/overview.js": JS, "/js/tabs/roles.js": JS, "/js/tabs/repos.js": JS,
-          "/js/tabs/runs.js": JS, "/js/tabs/live.js": JS, "/js/tabs/sessions.js": JS, "/js/tabs/skills.js": JS, "/js/tabs/tokens.js": JS,
+          "/js/tabs/runs.js": JS, "/js/tabs/sessions.js": JS, "/js/tabs/skills.js": JS, "/js/tabs/tokens.js": JS,
           "/js/tabs/overall.js": JS,
           "/css/app.css": "text/css; charset=utf-8",
           "/vendor/marked.min.js": JS}

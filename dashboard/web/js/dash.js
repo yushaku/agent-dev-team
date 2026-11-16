@@ -5,7 +5,6 @@ import {
 import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
 import { renderRepos } from "./tabs/repos.js";
-import { renderLive } from "./tabs/live.js";
 import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderTokens } from "./tabs/tokens.js";
@@ -46,7 +45,7 @@ function render() {
   renderRunFilter(d);
   renderFilterBar();
   const S = sessionsF();
-  renderOverall(S); renderOverview(S); renderRoles(S); renderRepos(S); renderLive(); renderSessionCharts(S); renderSkills(S); renderTokens();
+  renderOverall(S); renderOverview(S); renderRoles(S); renderRepos(S); renderSessionCharts(S); renderSkills(S); renderTokens();
 }
 
 /* ---------- cross filter ---------- */
@@ -146,8 +145,8 @@ const views = [...document.querySelectorAll(".dash-view")];
 const viewBtns = [...document.querySelectorAll("#tk-nav [data-view]")];
 const VKEY = "team-app:token-view";
 export function showView(id, { hash = true } = {}) {
-  if (id === "tk-toan-dien") id = "tk-theo-repo";
-  if (id === "tk-runs") id = "tk-dang-chay";
+  if (id === "tk-toan-dien" || id === "tk-theo-vai") id = "tk-theo-repo";
+  if (id === "tk-runs" || id === "tk-dang-chay") id = "tk-theo-repo";
   if (!views.some(v => v.id === id)) id = views[0].id;
   views.forEach(v => { v.hidden = v.id !== id; });
   viewBtns.forEach(b => { const on = b.dataset.view === id; if (b.tagName === "A") { if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); } else b.setAttribute("aria-pressed", String(on)); });
