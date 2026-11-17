@@ -22,6 +22,7 @@ globalThis.location = { hash: "" };
 globalThis.history = { replaceState() {} };
 
 const C = await import("../web/js/lib/charts.js");
+const { repoTree } = await import("../web/js/tabs/repos.js");
 const { renderRoles } = await import("../web/js/tabs/roles.js");
 const { runDetail } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
@@ -156,4 +157,19 @@ test("token timeline chains bars to the run total", () => {
   assert.match(html, /Orchestrator/);
   assert.match(html, /Tổng: 10M token/);
   assert.equal((html.match(/<rect /g) || []).length, 3);
+});
+
+test("repo chart groups main and worker worktrees by Run without merging different Runs", () => {
+  C.state.data = { orca: { runs: [
+    { id: "one", repo: "bisou", objective: "Tab cache" },
+    { id: "two", repo: "bisou", objective: "Other work" },
+  ] } };
+  const row = (run_id, worktree, total) => ({ repo: "bisou", run_id, worktree, total, agent: "codex", calls: 1, end: 1 });
+  const tree = repoTree([row("one", "(main)", 10), row("one", "tab-cache", 20), row("two", "tab-cache", 5), row(null, "(main)", 2)]);
+  assert.equal(tree.length, 1);
+  assert.equal(tree[0].a.t, 37);
+  assert.equal(tree[0].wts.length, 3);
+  const run = tree[0].wts.find(x => x.filter === "runF:one");
+  assert.equal(run.wt, "Tab cache");
+  assert.equal(run.a.t, 30);
 });
