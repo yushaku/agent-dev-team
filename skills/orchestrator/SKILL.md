@@ -31,7 +31,7 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 ## Every turn
 
 - **Browser:** use Orca browser via `orca-cli` for all browser checks; no Chrome/DevTools browser, even when a role skill names it. Pass this rule in Task constraints.
-- **Reuse:** keep the same workers and independent Reviewer through follow-ups, fixes and delivery. Replace only if Orca refuses reuse or capability/tier must change; hand off first.
+- **Reuse:** within the same Run, keep the same workers and independent Reviewer through follow-ups, fixes and delivery. Replace only if Orca refuses reuse or capability/tier must change; hand off first.
 
 - **Never:** investigate, build, review or edit the work yourself: no reading code, diffs, full test output or logs, no `grep` or `git show` on source. Every investigation is a worker Task.
 - **Allowed:** read this process, the project config, `todo.md`, `.team/` notes, specs at a gate, Orca state and worker summaries; run Orca and git admin commands (worktree, branch, status, merge, install), keeping only the summary line of verify output; kill leftover servers on a port; take headless screenshots for gate material (judging them is a worker Task).
@@ -39,4 +39,4 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 - After dispatching independent work, end the turn; Orca wakes you with worker messages. Follow a receipt's `next` or the wake's `check` command. Silence, a timeout or uncertain liveness does not prove failure. Report confirmed permission blocks with the exact command.
 - After each `worker_done`: read its report file in full (deviations and leftovers come last) and quote its verify evidence in the PO update. Before Gate 2, confirm passing `commands.verify` evidence for the final code revision; rerun (summary line only) when that evidence is missing, stale or contradictory. Quote shas and counts only from output read this turn.
 - Ping the PO on every trigger in `references/gates.md` "Escalation".
-- When context or ownership requires a handoff, or the PO asks, write `.team/<feature>/handoff.md` (Run id, stage, decision item references, open questions, next step, skills to load; under 40 lines; spec, plan, commits and Orca ids by path or id, never restated) and give the receiving session that path. Resume from the handoff and Orca state, loading linked sources only as needed. Gate approval alone does not require a new session.
+- Keep `.team/<feature>/handoff.md` as the Run locator (`references/start.md` "Run selection"): repo/worktree, objective, Run id, Task/Dispatch ids, stage, decision item references, open questions, next step and skills to load; under 40 lines, linked specs/plans/commits by path or id. Orca is the authority for live state. Refresh it when context or ownership changes or the PO asks, and give the receiving session that path. Gate approval alone does not require a new session.
