@@ -24,7 +24,9 @@ Output: <report path and raw-log paths under .team/<feature>/>
 
 - Include `ui_rules`, viewports and the selected reference/variant. Store PO inputs in `.team/<feature>/inputs/`. Enable the visual loop only by config or PO request.
 - Put in Task constraints: `Browser: Orca via orca-cli only; overrides role browser skills.` Include the `orca-cli` skill path.
-- Use a Run-owned `DEV` pane and a reused isolated Orca browser profile per test account. Verify the server and take its URL from Orca ports before sharing; report the pane handle. Commands come from `orca-cli`.
+- Include `delivery.md` "Local test before Gate 2" in the Builder's acceptance checks.
+- Run app startup, migrations and seed scripts in Run-owned Orca terminals via `orca-cli`; keep the server in the foreground of the reused `DEV` pane, not an agent-private shell or detached process. Stream stdout/stderr to the pane and `.team/<feature>/logs/`; redact secrets. Report pane handle, cwd, commands (secrets redacted) and log paths.
+- Reuse an isolated Orca browser profile per test account. Verify the server and take its URL from Orca ports before sharing.
 - When screenshots are required, save them under `.team/<feature>/shots/` per viewport and color scheme. List `human_only` checks without performing them.
 
 ## Task files

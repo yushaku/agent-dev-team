@@ -24,6 +24,7 @@
 
 ## Gate 2 material
 
+- Include the ready local URL, test account/access, seeded scenarios, test steps and terminal/log details from `delivery.md` "Local test before Gate 2"; keep the app running until the PO finishes testing.
 - Every criterion has suitable evidence or an explicit pending human check. If neither automated tests nor rendered review cover a component, name the manual checks and recommend testing before approval.
 - A bug found while Gate 2 is open goes to the existing Builder, with reproduction evidence; review the fix and keep the gate pending.
 
