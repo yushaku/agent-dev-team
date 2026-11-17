@@ -8,11 +8,9 @@ export function renderOverall(S) {
   const d = C.state.data;
   if (!d) return;
   const runs = d.orca.runs || [], ids = new Set(S.map(s => s.run_id).filter(Boolean));
-  const run = runs.find(r => r.id === C.state.runF);
-  const timelineRun = run || runs.filter(r => ids.has(r.id)).sort((a, b) => b.created - a.created)[0];
+  const timelineRun = ids.size === 1 ? runs.find(r => r.id === C.state.runF && ids.has(r.id)) : null;
   $("#overall-timeline").hidden = !timelineRun;
-  if (timelineRun) {
-    const r = { ...timelineRun, objective: text(timelineRun.objective), tasks: timelineRun.tasks.map(t => ({ ...t, title: text(t.title) })) };
-    renderRunTimeline([runDetail(r)], r.id, "", "#overall-run-list", "overall-g-");
-  }
+  if (!timelineRun) { $("#overall-run-list").innerHTML = ""; return; }
+  const r = { ...timelineRun, objective: text(timelineRun.objective), tasks: timelineRun.tasks.map(t => ({ ...t, title: text(t.title) })) };
+  renderRunTimeline([runDetail(r)], r.id, "", "#overall-run-list", "overall-g-");
 }

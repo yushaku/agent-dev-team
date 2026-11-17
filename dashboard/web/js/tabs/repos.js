@@ -41,6 +41,5 @@ export function renderRepos(S) {
     });
   });
   fig("#c-tree", { title: "Token theo công việc", body: R.length ? svg(W, H, "Treemap repo rồi Run, diện tích theo token, màu theo tỷ lệ agent", g.join("")) : "",
-    legend: [{ name: "Toàn Claude", color: "var(--claude)", f: "agent:claude" }, { name: "Toàn Codex", color: "var(--codex)", f: "agent:codex" }, { name: "Toàn Copilot", color: "var(--copilot)", f: "agent:copilot" }, { name: "Toàn Hermes", color: "var(--hermes)", f: "agent:hermes" }, { name: "Nửa Claude, nửa Codex", color: "color-mix(in srgb, var(--codex) 50%, var(--claude))" }],
-    caption: "Khối lớn là repo; ô bên trong gộp orchestrator và worker theo Run ID, dù chạy ở main hay nhiều worktree. Phiên chưa gắn Run nhóm theo worktree. Diện tích là tổng token; bấm ô để lọc." });
+    legend: [{ name: "Toàn Claude", color: "var(--claude)", f: "agent:claude" }, { name: "Toàn Codex", color: "var(--codex)", f: "agent:codex" }, { name: "Toàn Copilot", color: "var(--copilot)", f: "agent:copilot" }, { name: "Toàn Hermes", color: "var(--hermes)", f: "agent:hermes" }, { name: "Nửa Claude, nửa Codex", color: "color-mix(in srgb, var(--codex) 50%, var(--claude))" }] });
 }

@@ -77,6 +77,48 @@ def orca(*args):
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
 
+def run_events(rid, tasks, gates, workers, known, messages):
+    titles = {t["id"]: t["title"] for t in tasks}
+    dispatches = {w["dispatchId"]: w for w in workers if w.get("dispatchId")}
+
+    def endpoint(handle, at):
+        if handle == "run:" + rid:
+            return "Orchestrator", False, None, "coordinator"
+        worker = dispatches.get((handle or "").removeprefix("dispatch:"))
+        if not worker:
+            candidates = [w for did, w in dispatches.items() if w.get("agentTerminalHandle") == handle
+                          and 0 < (known.get(did, {}).get("from") or 0) <= at]
+            worker = max(candidates, key=lambda w: known[w["dispatchId"]]["from"], default=None)
+        return (titles.get(worker.get("taskId"), worker["dispatchId"]), True, worker.get("taskId"), worker.get("agentTerminalHandle") or worker["dispatchId"]) if worker else (handle or "Không rõ", False, None, handle or "unknown")
+
+    events = []
+    for did, w in dispatches.items():
+        at = known.get(did, {}).get("from")
+        if at:
+            events.append(dict(id="dispatch:" + did, at=at, kind="dispatch", **{
+                "from": "Orchestrator", "to": titles.get(w.get("taskId"), did), "text": "Giao việc", "body": did,
+                "from_actor": "coordinator", "to_actor": w.get("agentTerminalHandle") or did, "to_task": w.get("taskId")}))
+    for g in gates:
+        for at, kind, sender, target, text in (
+                (g["created"], "gate_question", "Orchestrator", "PO", g["question"]),
+                (g["resolved"], "gate_answer", "PO", "Orchestrator", g["answer"])):
+            if at:
+                events.append(dict(id=g["id"] + ":" + kind, at=at, kind=kind,
+                                   **{"from": sender, "to": target, "from_actor": "coordinator" if sender == "Orchestrator" else "po",
+                                      "to_actor": "po" if target == "PO" else "coordinator", "text": text, "body": g["question"] if kind == "gate_answer" else ""}))
+    for m in messages:
+        at = ts_of(m.get("created_at"))
+        if not at:
+            continue
+        sender, sw, source_task, source_actor = endpoint(m.get("from_handle"), at)
+        target, tw, target_task, target_actor = endpoint(m.get("to_handle"), at)
+        events.append(dict(id=m.get("id"), at=at, kind="peer" if sw and tw else "message",
+                           **{"from": sender, "to": target, "text": m.get("subject") or m.get("type") or "Tin nhắn",
+                              "body": m.get("body") or "", "type": m.get("type"),
+                              "from_task": source_task, "to_task": target_task, "from_actor": source_actor, "to_actor": target_actor}))
+    return sorted(events, key=lambda e: (e["at"], e["id"] or ""))
+
+
 def refresh_orca():
     runs, cursor = [], None
     for _ in range(20):
@@ -95,18 +137,19 @@ def refresh_orca():
         while True:
             page = orca("worker-list", "--run", rid, "--limit", "100", *(["--cursor", cursor] if cursor else []))
             if page is None:
-                return rid, None, None, None
+                return rid, None, None, None, None
             workers.extend(page.get("workers") or [])
             cursor = (page.get("page") or {}).get("nextCursor")
             if not cursor:
                 break
-        return (rid, orca("task-list", "--run", rid), orca("gate-list", "--run", rid), {"workers": workers})
+        return (rid, orca("task-list", "--run", rid), orca("gate-list", "--run", rid), {"workers": workers},
+                orca("inbox", "--run", rid, "--limit", "500"))
 
     with ThreadPoolExecutor(6) as ex:
         details = list(ex.map(per_run, runs))
     known = dict(cache.cache["dispatch"])
     todo = []
-    for _, _, _, wl in details:
+    for _, _, _, wl, _ in details:
         for w in (wl or {}).get("workers") or []:
             did = w.get("dispatchId")
             if did and (did not in known or known[did].get("open")):
@@ -132,7 +175,7 @@ def refresh_orca():
     roles = known_roles()
     out_runs, tasks = [], {}
     errors = []
-    for run, (rid, tl, gl, wl) in zip(runs, details):
+    for run, (rid, tl, gl, wl, inbox) in zip(runs, details):
         if any(v is None for v in (tl, gl, wl)):
             errors.append(rid)
             continue
@@ -153,12 +196,15 @@ def refresh_orca():
                     "changes" if res.lower().startswith("changes") else "other")
             task = tasks.get(g.get("task_id"))
             stage = "delivery" if task and task["measurement"]["kind"] == "close" else "other"
-            gates.append({"id": g.get("id"), "task": g.get("task_id"), "question": (g.get("question") or "")[:120],
-                          "answer": res[:80], "kind": kind, "stage": stage,
+            gates.append({"id": g.get("id"), "task": g.get("task_id"), "question": (g.get("question") or ""),
+                          "answer": res, "kind": kind, "stage": stage,
                           "created": ts_of(g.get("created_at")), "resolved": ts_of(g.get("resolved_at"))})
         out_runs.append({"id": rid, "objective": (run.get("objective") or "")[:160],
                          "created": ts_of(run.get("created_at")), "tasks": rtasks, "gates": gates,
-                         "stage": run_stage(run, rtasks, gates)})
+                         "stage": run_stage(run, rtasks, gates),
+                         "events": run_events(rid, rtasks, gates, wl["workers"], known, (inbox or {}).get("messages") or []),
+                         "messages_available": inbox is not None,
+                         "messages_limited": len((inbox or {}).get("messages") or []) >= 500})
     dispatches = []
     for did, info in known.items():
         t = tasks.get(info.get("task"))

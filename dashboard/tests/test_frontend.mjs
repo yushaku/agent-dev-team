@@ -7,6 +7,7 @@ const elements = new Map();
 function element(id) {
   if (!elements.has(id)) elements.set(id, {
     id, style: {}, innerHTML: "", textContent: "", title: "", listeners: {},
+    showModal() { this.open = true; }, close() { this.open = false; },
     setAttribute() {}, addEventListener(event, fn) { this.listeners[event] = fn; },
   });
   return elements.get(id);
@@ -24,7 +25,7 @@ globalThis.history = { replaceState() {} };
 const C = await import("../web/js/lib/charts.js");
 const { repoTree } = await import("../web/js/tabs/repos.js");
 const { renderRoles } = await import("../web/js/tabs/roles.js");
-const { runDetail } = await import("../web/js/tabs/runs.js");
+const { runDetail, renderRunTimeline, communicationDiagram } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
 
 test("role charts resolve model colours after rebuilding the palette", () => {
@@ -147,7 +148,7 @@ test("run timeline distinguishes blocked and queued tasks from running work", ()
   assert.doesNotMatch(html, /Vai builder, bấm để lọc/);
 });
 
-test("token timeline chains bars to the run total", () => {
+test("token timeline chains consumption in task order to the run total", () => {
   C.state.data = { generated_at: 1000 };
   const tasks = [3, 5].map((v, n) => ({ id: String(n), title: "T" + n, role: "builder", status: "completed", created: 100 + n, started: 100 + n, completed: 200, tokens: { codex: v * 1e6 } }));
   const r = { id: "tk", objective: "Tok", created: 100, repo: "test", tasks, gates: [], tokens: {}, orchestrator_by_agent: { codex: 2e6 } };
@@ -157,6 +158,11 @@ test("token timeline chains bars to the run total", () => {
   assert.match(html, /Orchestrator/);
   assert.match(html, /Tổng: 10M token/);
   assert.equal((html.match(/<rect /g) || []).length, 3);
+  const bars = [...html.matchAll(/<rect x="([\d.]+)"[^>]*width="([\d.]+)"/g)].map(m => [Number(m[1]), Number(m[2])]);
+  assert.ok(bars[1][0] > bars[0][0]);
+  assert.ok(bars[2][0] > bars[1][0]);
+  assert.ok(Math.abs(bars[0][0] + bars[0][1] - bars[1][0]) < 0.2);
+  assert.ok(Math.abs(bars[1][0] + bars[1][1] - bars[2][0]) < 0.2);
 });
 
 test("repo chart groups main and worker worktrees by Run without merging different Runs", () => {
@@ -186,4 +192,125 @@ test("timeline includes observed orchestrator activity and respects role filters
   assert.doesNotMatch(element("#orch-filter").innerHTML, /Orchestrator/);
   C.tokenTimeline(runDetail(r), () => 0, "builder", "#orch-tokens");
   assert.doesNotMatch(element("#orch-tokens").innerHTML, /Orchestrator/);
+});
+
+
+test("one run chart toggles units without changing task order", () => {
+  C.state.agent = "";
+  C.state.runMetric = "time";
+  C.state.data = { generated_at: 1000 };
+  const r = { id: "toggle", objective: "Toggle", created: 100, repo: "test", gates: [],
+    tasks: [
+      { id: "late", title: "Late task", measurement: { kind: "review", source: "metadata" }, created: 300, started: 300, completed: 500, status: "completed", tokens: { codex: 80 } },
+      { id: "early", title: "Early task", measurement: { kind: "build", source: "metadata" }, created: 100, started: 100, completed: 200, status: "completed", tokens: { codex: 20 } },
+    ], orchestrator_by_agent: { codex: 10 },
+    events: [{ id: "peer", at: 400, kind: "peer", from: "Reviewer", to: "Builder", text: "Check <API>", body: "Reproduce & fix" }] };
+  renderRunTimeline([runDetail(r)], r.id, "", "#toggle-host", "toggle-");
+  assert.equal((element("#toggle-host").innerHTML.match(/<figure /g) || []).length, 2);
+  assert.match(element("#toggle-host").innerHTML, /<figure class="chart"><h4[^>]*>Điều phối &amp; trao đổi/);
+  assert.match(element("#toggle-host").innerHTML, /Run:<\/strong> Toggle/);
+  assert.match(element("#toggle-host").innerHTML, /build × 1/);
+  assert.match(element("#toggle-host").innerHTML, /review × 1/);
+  assert.doesNotMatch(element("#toggle-host").innerHTML, /Các sự kiện trong toàn bộ run/);
+  const time = element("#toggle-toggle").innerHTML;
+  assert.ok(time.indexOf("Early task") < time.indexOf("Late task"));
+  assert.match(time, /Thời gian/);
+  assert.match(element("#toggle-host").innerHTML, /Reviewer → Builder/);
+  assert.match(element("#toggle-host").innerHTML, /Check &lt;API&gt;/);
+
+  element("#toggle-toggle-metric").listeners.click();
+  const token = element("#toggle-toggle").innerHTML;
+  assert.match(token, /Token/);
+  assert.ok(token.indexOf("Early task") < token.indexOf("Late task"));
+  assert.match(token, /Tổng: 110 token/);
+  assert.match(token, /run-chart-toolbar"><h4>Toggle<\/h4><button/);
+  assert.doesNotMatch(element("#toggle-host").innerHTML, /Tiến trình task/);
+  element("#toggle-toggle-metric").listeners.click();
+  assert.match(element("#toggle-toggle").innerHTML, /Thời gian/);
+});
+
+test("zero tokens have no filled bar and gates without tasks stay visible", () => {
+  C.state.data = { generated_at: 1000 };
+  const r = { id: "zero", objective: "Zero", created: 100, repo: "test", tasks: [
+    { id: "zero", title: "No tokens", created: 200, status: "pending", tokens: {} },
+  ], gates: [{ id: "g", created: 300, kind: "pending", question: "Approve?" }],
+  events: [{ id: "g", at: 300, kind: "gate_question", from: "Orchestrator", to: "PO", text: "Approve?" }] };
+  C.tokenTimeline(runDetail(r), () => 0, "", "#zero-token");
+  assert.doesNotMatch(element("#zero-token").innerHTML, /<rect /);
+  C.gantt(runDetail(r), () => 0, "", "#zero-time");
+  assert.match(element("#zero-time").innerHTML, /Approve\?/);
+});
+
+
+test("short runs get several minute ticks", () => {
+  const ticks = C.timeTicks(1794900780, 1794901380, 5);
+  assert.ok(ticks.length >= 3);
+  assert.ok(ticks.every(([at]) => at >= 1794900780 && at <= 1794901380));
+});
+
+
+test("peer inbox marks appear on participating tasks instead of the orchestrator lane", () => {
+  C.state.data = { generated_at: 1000 };
+  const r = { id: "peers", objective: "Peer work", created: 100, repo: "test", gates: [],
+    tasks: ["build", "review"].map(id => ({ id, title: id, status: "completed", started: 100, completed: 300, tokens: {} })),
+    events: [{ id: "mail", kind: "peer", at: 200, from: "Builder", to: "Reviewer", from_task: "build", to_task: "review", text: "API contract" }] };
+  C.gantt(runDetail(r), () => 0, "", "#peer-chart");
+  const html = element("#peer-chart").innerHTML;
+  assert.equal((html.match(/aria-label="Worker ↔ worker/g) || []).length, 2);
+  assert.match(html, /API contract/);
+});
+
+
+test("communication diagram orders arrows, keeps worker lanes stable and opens escaped details", () => {
+  const r = { id: "mail", tasks: [
+    { id: "build1", role: "builder" }, { id: "build2", role: "builder" }, { id: "review", role: "reviewer" },
+  ], events: [
+    { id: "later", at: 300, kind: "peer", from: "Build task 2", to: "Reviewer", from_task: "build2", to_task: "review", from_actor: "worker:a", to_actor: "worker:b", text: "Review <API>", body: "Details & evidence" },
+    { id: "first", at: 100, kind: "dispatch", from: "Orchestrator", to: "Build task 1", to_task: "build1", from_actor: "coordinator", to_actor: "worker:a", text: "Giao việc" },
+    { id: "self", at: 400, kind: "message", from: "Reviewer", to: "Reviewer", from_actor: "worker:b", to_actor: "worker:b", text: "Self note" },
+  ] };
+  const html = communicationDiagram(r, "mail-view");
+  assert.match(html, /communication-diagram/);
+  assert.equal((html.match(/class="participant"/g) || []).length, 3);
+  assert.ok(html.indexOf('data-event="0"') < html.indexOf('data-event="1"'));
+  assert.match(html, /marker-end=/);
+  assert.doesNotMatch(html, /<ol>/);
+  C.state.data = { generated_at: 1000 };
+  r.tasks = []; r.gates = []; r.created = 100; r.objective = "Mail";
+  renderRunTimeline([runDetail(r)], r.id, "", "#mail-host", "test-");
+  element("#test-mail-events").listeners.click({ target: { closest() { return { dataset: { event: "1" } }; } } });
+  assert.match(element("#detail-body").innerHTML, /Review &lt;API&gt;/);
+  assert.match(element("#detail-body").innerHTML, /Details &amp; evidence/);
+  assert.equal(element("#detail").open, true);
+  assert.equal(element("#detail-title").textContent, "Chi tiết trao đổi");
+  assert.doesNotMatch(html, /Chọn một mũi tên|event-detail/);
+  let prevented = false;
+  element("#test-mail-events").listeners.keydown({ type: "keydown", key: " ", preventDefault() { prevented = true; }, target: { closest() { return { dataset: { event: "0" } }; } } });
+  assert.equal(prevented, true);
+  assert.match(element("#detail-body").innerHTML, /Giao việc/);
+});
+
+
+test("run detail needs an explicit Run filter matching the filtered sessions", () => {
+  Object.assign(C.state, { repo: "", wt: "", agent: "", role: "", runF: "", taskF: "" });
+  const runs = ["a", "b"].map(id => ({ id, objective: id, created: 100, repo: "test", tasks: [], gates: [] }));
+  C.state.data = { generated_at: 1000, orca: { runs } };
+  const row = run_id => ({ run_id });
+  renderOverall([row("a")]);
+  assert.equal(element("#overall-timeline").hidden, true);
+  C.state.repo = "test";
+  renderOverall([row("a"), row("b")]);
+  assert.equal(element("#overall-timeline").hidden, true);
+  renderOverall([row("a")]);
+  assert.equal(element("#overall-timeline").hidden, true);
+  C.state.runF = "a";
+  renderOverall([row("a")]);
+  assert.equal(element("#overall-timeline").hidden, false);
+  C.state.runF = "b";
+  renderOverall([row("b")]);
+  assert.equal(element("#overall-timeline").hidden, false);
+  assert.match(element("#overall-run-list").innerHTML, /overall-g-b/);
+  renderOverall([row("a")]);
+  assert.equal(element("#overall-timeline").hidden, true);
+  assert.equal(element("#overall-run-list").innerHTML, "");
 });

@@ -13,7 +13,7 @@
 <header class="topbar">
   <div class="wrap">
     <a class="brand" href="#tk-tong-quan" aria-label="Orca team dashboard, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>Orca team dashboard</span></a>
-    <nav id="tk-nav" aria-label="Mục token"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-repo">Tasks</button><button type="button" data-view="tk-skills">Skill đã dùng</button><button type="button" data-view="tk-rtk">Tiết kiệm RTK</button><a href="#tk-cach-tinh" id="tk-help" data-view="tk-cach-tinh" title="Cách tính" aria-label="Cách tính">?</a></nav>
+    <nav id="tk-nav" aria-label="Mục token"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-repo">Tasks</button><button type="button" data-view="tk-skills">Skill đã dùng</button><button type="button" data-view="tk-rtk">RTK</button></nav>
     <a class="doc-link" href="https://yushaku.github.io/agent-dev-team/docs/" target="_blank" rel="noopener">Tài liệu</a>
   </div>
 </header>
@@ -69,21 +69,16 @@
       <p class="lead">Token theo công việc: orchestrator trên main và worker ở các worktree được gộp theo Run ID.</p>
     </div>
     <figure class="chart" id="c-tree"></figure>
-    <figure class="chart" id="c-scatter"></figure>
-    <figure class="chart" id="c-heat"></figure>
     <section id="tk-toan-dien" aria-label="Token theo vai và dòng thời gian run">
-      <section id="tk-theo-vai" aria-labelledby="tk-theo-vai-h">
-        <div class="panel-head">
-          <h4 id="tk-theo-vai-h">Theo vai</h4>
-          <p class="lead">Mỗi vai tốn bao nhiêu token, chạy model nào và có đúng tier mặc định không. Vai lấy từ task Orca; phiên tự giao việc qua Orca là orchestrator; còn lại là chat trực tiếp.</p>
-        </div>
+      <section id="tk-theo-vai" aria-label="Token theo vai">
         <figure class="chart" id="c-roles"></figure>
       </section>
-      <section id="overall-timeline" aria-labelledby="overall-timeline-h" hidden>
-        <h4 id="overall-timeline-h">Dòng thời gian run</h4>
+      <section id="overall-timeline" aria-label="Tiến trình run" hidden>
         <div class="runs" id="overall-run-list"></div>
       </section>
     </section>
+    <figure class="chart" id="c-scatter"></figure>
+    <figure class="chart" id="c-heat"></figure>
   </section>
 
   <section class="dash-view" id="tk-skills" aria-labelledby="tk-skills-h" hidden>
@@ -128,8 +123,8 @@
         <dt>Codex</dt><dd><code>~/.codex/sessions/YYYY/MM/DD/*.jsonl</code>. Mỗi bản ghi <code>token_usage_record</code> là một lượt gọi; model và effort lấy từ <code>turn_context</code> của cùng turn.</dd>
         <dt>GitHub Copilot CLI</dt><dd><code>~/.copilot/session-state/&lt;uuid&gt;/events.jsonl</code> cùng <code>workspace.yaml</code> (cwd, nhánh, <code>client_name</code> làm cột nguồn). Mỗi sự kiện <code>session.usage_record</code> là một lượt gọi, khóa theo <code>accounting.sourceSessionId</code> và <code>sequence</code>; model và effort lấy từ chính bản ghi đó. <code>accountingSnapshot</code> trong <code>session.usage_checkpoint</code> và <code>session.shutdown</code> là số cộng dồn của cả phiên (giữ qua lần resume), chỉ dùng để đối chiếu: tổng từng lượt khớp đúng snapshot cuối. Thư mục phiên không có <code>events.jsonl</code> là phiên rỗng, bỏ qua.</dd>
         <dt>Hermes</dt><dd><code>~/.hermes/state.db</code> (SQLite, đọc chỉ). Mỗi phiên một hàng <code>sessions</code> với token tổng hợp (xếp vào ngày bắt đầu phiên, không phải thời điểm từng lượt gọi); prompt đầu và skill nạp lấy từ bảng <code>messages</code>. Title bắt đầu <code>orchestrator:</code> hoặc nạp skill <code>orchestrator</code> thì vai là Orchestrator.</dd>
-        <dt>Orca</dt><dd><code>orca orchestration run-list, task-list, gate-list, worker-list, worker-show --json</code>, làm mới mỗi 60 giây ở nền. Orca không chạy thì các tab khác vẫn hoạt động.</dd>
-        <dt>RTK</dt><dd><code>~/Library/Application Support/rtk/history.db</code> (SQLite, đọc chỉ). Mỗi lệnh RTK nén là một bản ghi <code>commands</code>: token gốc, token tiết kiệm, thời gian chạy, dự án. Tab Tiết kiệm RTK gộp theo ngày, lệnh và dự án.</dd>
+        <dt>Orca</dt><dd><code>orca orchestration run-list, task-list, gate-list, worker-list, worker-show, inbox --json</code>, làm mới mỗi 60 giây ở nền. Orca không chạy thì các tab khác vẫn hoạt động.</dd>
+        <dt>RTK</dt><dd><code>~/Library/Application Support/rtk/history.db</code> (SQLite, đọc chỉ). Mỗi lệnh RTK nén là một bản ghi <code>commands</code>: token gốc, token tiết kiệm, thời gian chạy, dự án. Tab RTK gộp theo ngày, lệnh và dự án.</dd>
         <dt>Tier</dt><dd>Bảng Model tiers trong <code>skills/orchestrator/references/coding-agents.md</code> và dòng Runs on trong <code>roles/*.md</code>.</dd>
         <dt>Bộ nhớ đệm</dt><dd><code>cache.json</code> cạnh server, theo đường dẫn, kích thước và mtime của file; chỉ file thay đổi được đọc lại.</dd>
       </dl>

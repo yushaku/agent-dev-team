@@ -98,7 +98,8 @@ export function fig(id, o) {
   const el = $(id);
   if (!el) return;
   const legend = (o.legend || []).map(l => `<li${l.f ? A({ f: l.f, tip: [l.name, "Bấm để lọc"] }) : ""}><span class="swatch" style="--c:${l.color}"></span>${esc(l.name)}</li>`).join("");
-  el.innerHTML = `<h4>${esc(o.title)}</h4>${o.body ? `<div class="chart-scroll">${o.body}</div>` : `<p class="empty">${esc(o.empty || "Không có dữ liệu trong khoảng này.")}</p>`}${legend ? `<ul class="legend">${legend}</ul>` : ""}${o.caption ? `<figcaption>${o.caption}</figcaption>` : ""}`;
+  const heading = `<h4>${esc(o.title)}</h4>`;
+  el.innerHTML = `${o.action ? `<div class="run-chart-toolbar">${heading}${o.action}</div>` : heading}${o.subtitle ? `<p class="chart-subtitle">${esc(o.subtitle)}</p>` : ""}${o.body ? `<div class="chart-scroll">${o.body}</div>` : `<p class="empty">${esc(o.empty || "Không có dữ liệu trong khoảng này.")}</p>`}${legend ? `<ul class="legend">${legend}</ul>` : ""}${o.caption ? `<figcaption>${o.caption}</figcaption>` : ""}`;
 }
 export const agentLegend = () => agentsF().map(a => ({ name: AG[a], color: COL[a], f: "agent:" + a }));
 export const partLegend = () => PARTS.map(([k, n]) => ({ name: n, color: COL[k] }));
@@ -113,7 +114,7 @@ export function scale(max, n = 4) {
 }
 /* Local time ticks aligned to round hours or midnight. */
 export function timeTicks(t0, t1, maxN) {
-  const steps = [900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 172800, 604800];
+  const steps = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 172800, 604800];
   const step = steps.find(s => (t1 - t0) / s <= maxN) || 604800;
   const L = -new Date(t0 * 1000).getTimezoneOffset() * 60;
   const out = [];
@@ -220,78 +221,70 @@ export const spark = (vals, color) => {
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,${H} ${pts} ${W},${H}" style="fill:${mixc(color, 25)};stroke:none"/><polyline points="${pts}" style="fill:none;stroke:${color};stroke-width:2" vector-effect="non-scaling-stroke"/></svg>`;
 };
 
-export function gantt(i, ttok, role = state.role, id = "#g-" + i.r.id) {
-  const d = state.data, now = d.generated_at;
-  const orchestrators = (!role || role === "orchestrator") ? (i.r.orchestrator_activity || []).filter(a => agentsF().includes(a.agent)).map(a => ({
-    id: "orchestrator:" + a.agent, title: "Orchestrator · " + (AG[a.agent] || a.agent), role: "orchestrator",
-    agent: a.agent, started: a.start, ended: a.end, status: "observed", tokens: { [a.agent]: a.tokens },
-  })) : [];
-  const tasks = i.r.tasks.concat(orchestrators).filter(t => !role || t.role === role).map(t => {
-    const s = t.started || t.created, done = ["observed", "completed", "failed", "cancelled", "canceled"].includes(t.status);
+export const EVENT_NAMES = { dispatch: "Giao việc", gate_question: "Hỏi PO", gate_answer: "PO trả lời", peer: "Worker ↔ worker", message: "Inbox" };
+export const eventColour = kind => kind.startsWith("gate_") ? GROUPS.po[1] : kind === "peer" ? GROUPS.verify[1] : GROUPS.orch[1];
+
+export function runChart(i, ttok, role = state.role, id = "#g-" + i.r.id, metric = "time", withToggle = false) {
+  const r = i.r, token = metric === "tokens", now = state.data.generated_at;
+  const ags = agentsF(), activity = (r.orchestrator_activity || []).filter(a => ags.includes(a.agent));
+  const events = r.events || [], showOrch = !role || role === "orchestrator";
+  const orchTokens = sum(ags, a => (r.orchestrator_by_agent || {})[a] || 0);
+  const rows = r.tasks.filter(t => !role || t.role === role).map(t => {
+    const s = t.started || t.created, done = ["completed", "failed", "cancelled", "canceled"].includes(t.status);
     const e = t.ended || t.completed || (t.started && !done ? now : null);
-    return { t, s, e, running: !!t.started && !done && !["blocked", "pending", "queued"].includes(t.status) };
-  }).sort((a, b) => (a.s || 0) - (b.s || 0));
-  const fixN = new Map(i.fixes.map(t => [t.id, t.measurement.round || "?"]));
-  const times = [i.r.created].concat(...tasks.map(x => [x.s, x.e]), i.r.gates.map(g => g.resolved)).filter(Boolean);
-  const t0 = Math.min(...times), t1 = Math.max(t0 + 600, ...times);
-  const W = Math.max(760, widthOf(id)), LW = 310, Rm = 20, rowH = 52, T = 56, pw = W - LW - Rm, H = T + tasks.length * rowH + 32, g = [];
-  const statuses = { observed: ["Khoảng quan sát", GROUPS.orch[1]], completed: ["Đã xong", "var(--green)"], in_progress: ["Đang chạy", "var(--yellow)"], running: ["Đang chạy", "var(--yellow)"], blocked: ["Bị chặn", "var(--red)"], failed: ["Lỗi", "var(--red)"], pending: ["Chưa chạy", "var(--overlay2)"], queued: ["Chưa chạy", "var(--overlay2)"], cancelled: ["Đã hủy", "var(--overlay2)"], canceled: ["Đã hủy", "var(--overlay2)"] };
-  g.push(`<text x="0" y="14">Task / trạng thái</text><text x="${LW}" y="14">Thời gian →</text>`);
-  const X = t => r1(LW + pw * (t - t0) / (t1 - t0));
-  timeTicks(t0, t1, Math.max(3, Math.floor(pw / 64))).forEach(([t, lab]) => g.push(`<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${T + tasks.length * rowH}"/><text x="${X(t)}" y="${T - 8}" text-anchor="middle">${lab}</text><text x="${X(t)}" y="${T + tasks.length * rowH + 16}" text-anchor="middle">${lab}</text>`));
-  const gatesBy = {};
-  i.r.gates.forEach(gt => (gatesBy[gt.task] = gatesBy[gt.task] || []).push(gt));
-  const chars = Math.floor((LW - 8) / 6.6);
-  tasks.forEach((x, k) => {
-    const t = x.t, y = T + k * rowH, cy = y + rowH / 2, fx = fixN.get(t.id);
-    const [status, col] = statuses[t.status] || [t.status || "Chưa rõ", "var(--overlay2)"];
-    g.push(`<text class="task-name" x="0" y="${cy - 4}"${A({ tip: [t.title, status] })} tabindex="0">${esc(cut(t.title, chars - 5))}</text><text x="0" y="${cy + 15}" style="fill:${col}">${esc(status)}${fx ? " · Sửa vòng " + fx : ""}</text>`);
-    const tip = [t.title, t.role ? "Vai: " + t.role + " (" + GROUPS[groupOf(t.role)][0] + ")" : null, "Trạng thái: " + status, t.agent ? AG[t.agent] || t.agent : "chưa có worker", t.started ? "Bắt đầu: " + dt(t.started) : x.s ? "Tạo: " + dt(x.s) : null, x.e ? (t.ended || t.completed ? "Kết thúc: " + dt(x.e) + ", " + dur(x.e - x.s) : status + ", tính đến " + dt(x.e)) : "Chưa chạy", "Token: " + fmt(ttok(t)), fx ? "Vòng sửa " + fx : null];
-    if (x.s && x.e) {
-      const w = Math.max(3, X(x.e) - X(x.s));
-      g.push(`<rect x="${X(x.s)}" y="${y + 17}" width="${r1(w)}" height="18" rx="3" style="fill:${x.running ? mixc(col, 35) : col};stroke:${x.running || t.status === "failed" ? (t.status === "failed" ? "var(--red)" : col) : "none"};stroke-width:2${x.running ? ";stroke-dasharray:4 3" : ""}"${A({ tip })}/>`);
-    } else if (x.s) {
-      g.push(`<circle cx="${X(x.s)}" cy="${cy}" r="5" style="fill:none;stroke:${col};stroke-width:2"${A({ tip })}/>`);
-    }
-    (gatesBy[t.id] || []).forEach(gt => {
-      const gx = gt.resolved ? X(gt.resolved) : x.e ? X(x.e) : X(t1), c = GATE[gt.kind][1], gtip = ["Cổng: " + GATE[gt.kind][0], gt.question, gt.answer ? "Trả lời: " + gt.answer : "Chưa trả lời", gt.resolved ? dt(gt.resolved) : null];
-      if (gt.kind === "approve") g.push(`<circle cx="${gx}" cy="${cy}" r="7" style="fill:${c};stroke:var(--mantle);stroke-width:2"${A({ tip: gtip })}/>`);
-      else if (gt.kind === "changes") g.push(`<polygon points="${gx},${cy - 8} ${gx + 8},${cy} ${gx},${cy + 8} ${gx - 8},${cy}" style="fill:${c};stroke:var(--mantle);stroke-width:2"${A({ tip: gtip })}/>`);
-      else g.push(`<rect x="${gx - 6}" y="${cy - 6}" width="12" height="12" rx="2" style="fill:${gt.kind === "pending" ? "var(--mantle)" : c};stroke:${c};stroke-width:2"${A({ tip: gtip })}/>`);
+    return { t, s, e, v: ttok(t), running: !!t.started && !done && !["blocked", "pending", "queued"].includes(t.status) };
+  }).sort((a, b) => (a.s || Infinity) - (b.s || Infinity));
+  if (showOrch && (activity.length || orchTokens || events.length)) rows.unshift({
+    orch: true, t: { title: "Orchestrator", role: "orchestrator", status: "observed" }, v: orchTokens,
+    s: Math.min(...activity.map(a => a.start).filter(Boolean), ...events.map(e => e.at)),
+    e: Math.max(...activity.map(a => a.end).filter(Boolean), ...events.map(e => e.at)),
+  });
+  const times = [r.created, ...rows.flatMap(x => [x.s, x.e]), ...events.map(e => e.at), ...r.gates.flatMap(g => [g.created, g.resolved || now])].filter(t => Number.isFinite(t) && t > 0);
+  const t0 = Math.min(now, ...times), t1 = Math.max(t0 + 60, ...times);
+  let total = 0;
+  rows.forEach(x => { x.tokenStart = total; total += x.v; });
+  const sc = scale(total);
+  const W = Math.max(760, widthOf(id)), LW = 310, pw = W - LW - 64, T = 56, rowH = 56, H = T + rows.length * rowH + 32;
+  const X = v => r1(LW + pw * (token ? v / sc.top : (v - t0) / (t1 - t0)));
+  const ticks = token ? sc.ticks.map(v => [v, fmt(v)]) : timeTicks(t0, t1, Math.max(3, Math.floor(pw / 80)));
+  const statuses = { observed: "Điều phối · inbox · PO", completed: "Đã xong", in_progress: "Đang chạy", dispatched: "Đang chạy", running: "Đang chạy", blocked: "Bị chặn", failed: "Lỗi", pending: "Chưa chạy", ready: "Chưa chạy", queued: "Chưa chạy", cancelled: "Đã hủy", canceled: "Đã hủy" };
+  const g = [`<text x="0" y="14">Task / trạng thái</text><text x="${LW}" y="14">${token ? "Token cộng dồn → · Tổng: " + fmt(total) + " token" : "Thời gian →"}</text>`];
+  ticks.forEach(([v, label]) => g.push(`<line class="gl" x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H - 32}"/><text x="${X(v)}" y="${T - 10}" text-anchor="middle">${esc(label)}</text>`));
+  rows.forEach((x, k) => {
+    const { t } = x, y = T + k * rowH, cy = y + rowH / 2, status = statuses[t.status] || t.status || "Chưa rõ";
+    const col = ["failed", "blocked"].includes(t.status) ? "var(--red)" : roleCol(t.role);
+    const span = x.s && x.e && Number.isFinite(x.s) && Number.isFinite(x.e) ? dur(x.e - x.s) : "Chưa chạy";
+    const tip = [t.title, status, t.agent ? AG[t.agent] || t.agent : null, x.orch ? activity.map(a => AG[a.agent] || a.agent).join(", ") : null,
+      Number.isFinite(x.s) ? "Bắt đầu: " + dt(x.s) : null, Number.isFinite(x.e) ? "Kết thúc: " + dt(x.e) : null,
+      "Token: " + fmt(x.v), x.orch ? "Khoảng quan sát gồm cả thời gian chờ; các mốc bên dưới là sự kiện được ghi nhận." : "Thời lượng: " + span,
+      t.measurement?.round ? "Sửa vòng " + t.measurement.round : null];
+    g.push(`<text class="task-name" x="0" y="${cy - 7}" tabindex="0"${A({ tip })}>${esc(cut(t.title, 42))}</text><text x="0" y="${cy + 13}">${esc(status)} · ${fmt(x.v)} token${!x.orch ? " · " + span : ""}</text>`);
+    const start = token ? x.tokenStart : x.s, end = token ? x.tokenStart + x.v : x.e;
+    if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+      if (x.orch && !token) {
+        g.push(`<line x1="${X(start)}" x2="${X(end)}" y1="${cy}" y2="${cy}" style="stroke:${col};stroke-width:2;stroke-dasharray:3 4"${A({ tip })}/>`);
+        r.gates.forEach(gt => {
+          if (!gt.created) return;
+          const end = gt.resolved || now;
+          g.push(`<line x1="${X(gt.created)}" x2="${X(Math.max(gt.created, end))}" y1="${cy + 8}" y2="${cy + 8}" style="stroke:${GROUPS.po[1]};stroke-width:4"${A({ tip: ["Chờ PO", gt.question, dur(end - gt.created)] })}/>`);
+        });
+      } else g.push(`<rect x="${X(start)}" y="${cy - 9}" width="${r1(X(end) - X(start))}" height="18" rx="3" style="fill:${col}${x.running ? ";fill-opacity:.35;stroke:" + col + ";stroke-dasharray:4 3" : ""}"${A({ tip })}/>`);
+    } else if (!token && Number.isFinite(start)) g.push(`<circle cx="${X(start)}" cy="${cy}" r="4" style="fill:none;stroke:${col};stroke-width:2"${A({ tip })}/>`);
+    if (!token) events.filter(ev => x.orch ? ev.kind !== "peer" : ev.kind === "peer" && [ev.from_task, ev.to_task].includes(t.id)).forEach(ev => {
+      const ex = X(ev.at), c = eventColour(ev.kind), tip = [EVENT_NAMES[ev.kind], dt(ev.at), ev.from + " → " + ev.to, ev.text, ev.body];
+      const attrs = `style="fill:${c};stroke:var(--mantle);stroke-width:2" tabindex="0" aria-label="${esc(tip.filter(Boolean).join(" · "))}"${A({ tip })}`;
+      if (ev.kind === "dispatch") g.push(`<polygon points="${ex},${cy - 6} ${ex + 6},${cy} ${ex},${cy + 6} ${ex - 6},${cy}" ${attrs}/>`);
+      else if (ev.kind.startsWith("gate_")) g.push(`<rect x="${ex - 5}" y="${cy - 5}" width="10" height="10" ${attrs}/>`);
+      else g.push(`<circle cx="${ex}" cy="${cy}" r="5" ${attrs}/>`);
     });
   });
-  if (tasks.some(x => x.running) && now <= t1) g.push(`<line x1="${X(now)}" x2="${X(now)}" y1="${T}" y2="${T + tasks.length * rowH}" style="stroke:var(--overlay2);stroke-dasharray:3 3"/>`);
-  g.push(`<line class="ax" x1="${LW}" x2="${LW}" y1="${T}" y2="${T + tasks.length * rowH}"/>`);
-  const statusesUsed = [...new Set(tasks.map(x => x.t.status))];
-  const gkinds = [...new Set(i.r.gates.map(gt => gt.kind))];
-  fig(id, { title: i.r.objective, body: tasks.length ? svg(W, H, "Dòng thời gian task của run " + i.r.objective, g.join("")).replace("<svg ", '<svg style="min-width:760px" ') : "",
-    legend: statusesUsed.map(s => ({ name: (statuses[s] || [s])[0], color: (statuses[s] || [s, "var(--overlay2)"])[1] })).concat(gkinds.map(k => ({ name: "Cổng " + GATE[k][0].toLowerCase() + (k === "approve" ? " (tròn)" : k === "changes" ? " (thoi)" : " (vuông)"), color: GATE[k][1] }))),
-    caption: `<span class="chip ${i.st[0]}">${i.st[1]}</span> · ${tasks.filter(x => x.t.status === "completed").length}/${tasks.filter(x => x.t.status !== "observed").length} task đã xong · ${esc(i.r.repo)}. Đọc từ trên xuống theo lúc bắt đầu; thanh dài là thời gian làm, thanh nét đứt là đang chạy. ${orchestrators.length ? "Orchestrator là khoảng từ lượt gọi model đầu đến lượt cuối, gồm cả thời gian chờ. " : ""}Rê chuột hoặc chọn tên task để xem chi tiết.` });
+  const legend = token ? groupLegend([...new Set(rows.map(x => groupOf(x.t.role)))]) :
+    [...new Set(events.map(e => e.kind))].map(kind => ({ name: EVENT_NAMES[kind] + (kind === "dispatch" ? " (thoi)" : kind.startsWith("gate_") ? " (vuông)" : " (tròn)"), color: eventColour(kind) }));
+  const action = withToggle ? `<button type="button" id="${esc(id.slice(1))}-metric" aria-pressed="${token}">${token ? "Xem thời gian" : "Xem token"}</button>` : "";
+  fig(id, { title: r.objective, action, body: rows.length ? svg(W, H, (token ? "Token theo thứ tự task" : "Dòng thời gian run") + " · " + r.objective, g.join("")).replace("<svg ", '<svg style="min-width:760px" ') : "", legend });
 }
-export function tokenTimeline(i, ttok, role = state.role, id = "#gt-" + i.r.id) {
-  const rows = i.r.tasks.filter(t => !role || t.role === role).map(t => ({ t, s: t.started || t.created })).sort((a, b) => (a.s || 0) - (b.s || 0));
-  const fixN = new Map(i.fixes.map(t => [t.id, t.measurement.round]));
-  let acc = 0;
-  const bars = rows.map(({ t }) => { const v = ttok(t), b = { t, v, a: acc, fx: fixN.get(t.id) }; acc += v; return b; });
-  const taskTotal = acc, ags = agentsF(), orch = !role || role === "orchestrator" ? sum(ags, a => (i.r.orchestrator_by_agent || {})[a] || 0) : 0;
-  if (orch > 0) bars.push({ orch: true, v: orch, a: acc });
-  const total = taskTotal + (orch > 0 ? orch : 0), pctRun = v => total ? (100 * v / total).toFixed(1) : "0";
-  const W = Math.max(760, widthOf(id)), LW = 310, Rm = 20, rowH = 52, T = 56, pw = W - LW - Rm, H = T + bars.length * rowH + 32, g = [];
-  const sc = scale(total, Math.max(3, Math.floor(pw / 90))), X = v => r1(LW + pw * v / (sc.top || 1)), chars = Math.floor((LW - 8) / 6.6);
-  g.push(`<text x="0" y="14">Task / token</text><text x="${LW}" y="14">Token cộng dồn →</text>`);
-  sc.ticks.forEach(v => g.push(`<line class="gl" x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${T + bars.length * rowH}"/><text x="${X(v)}" y="${T - 8}" text-anchor="middle">${fmt(v)}</text><text x="${X(v)}" y="${T + bars.length * rowH + 16}" text-anchor="middle">${fmt(v)}</text>`));
-  bars.forEach((b, k) => {
-    const y = T + k * rowH, cy = y + rowH / 2, t = b.t, col = b.orch ? GROUPS.orch[1] : roleCol(t.role);
-    const name = b.orch ? "Orchestrator" : t.title, e = t && (t.ended || t.completed), s0 = t && (t.started || t.created);
-    const tip = b.orch ? ["Orchestrator", "Token: " + fmt(b.v), pctRun(b.v) + "% run"] : [t.title, t.role ? "Vai: " + t.role + " (" + GROUPS[groupOf(t.role)][0] + ")" : null, t.agent ? AG[t.agent] || t.agent : null, "Token: " + fmt(b.v), pctRun(b.v) + "% run", s0 && e ? "Thời lượng: " + dur(e - s0) : null, b.fx ? "Vòng sửa " + b.fx : null];
-    g.push(`<text class="task-name" x="0" y="${cy - 4}"${A({ tip })} tabindex="0">${esc(cut(name, chars - 5))}</text><text x="0" y="${cy + 15}" style="fill:var(--overlay2)">${fmt(b.v)} · ${pctRun(b.v)}% run${b.fx ? " · Sửa vòng " + b.fx : ""}</text>`);
-    g.push(`<rect x="${X(b.a)}" y="${y + 17}" width="${Math.max(3, r1(X(b.a + b.v) - X(b.a)))}" height="18" rx="3" style="fill:${col};stroke:${b.fx ? "var(--yellow)" : "none"};stroke-width:2"${A({ tip })}/>`);
-  });
-  g.push(`<line class="ax" x1="${LW}" x2="${LW}" y1="${T}" y2="${T + bars.length * rowH}"/>`);
-  const used = [...new Set(bars.map(b => b.orch ? "orch" : groupOf(b.t.role)))];
-  fig(id, { title: "Token theo thứ tự task", body: bars.length ? svg(W, H, "Token theo thứ tự task của run " + i.r.objective, g.join("")).replace("<svg ", '<svg style="min-width:760px" ') : "", legend: groupLegend(used),
-    caption: `Độ dài thanh là số token, xếp theo thứ tự bắt đầu; thanh nối tiếp nhau nên điểm cuối là tổng token của run. Tổng: ${fmt(total)} token.` });
-}
+export const gantt = (i, ttok, role = state.role, id = "#g-" + i.r.id) => runChart(i, ttok, role, id, "time");
+export const tokenTimeline = (i, ttok, role = state.role, id = "#gt-" + i.r.id) => runChart(i, ttok, role, id, "tokens");
 /* Tooltip: one fixed box, text from data-tip, follows the pointer or the focused element. */
 export const tipEl = $("#tip");
 export function showTip(el, x, y) {

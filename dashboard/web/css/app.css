@@ -250,8 +250,6 @@ tr[hidden] { display: none; }
 #tk-nav [data-view]:hover { background: var(--surface0); color: var(--text); }
 #tk-nav [data-view][aria-pressed="true"], #tk-nav [data-view][aria-current="page"] { background: none; color: var(--text); font-weight: 600; }
 #tk-nav [data-view][aria-pressed="true"]::after, #tk-nav [data-view][aria-current="page"]::after { content: ""; position: absolute; left: var(--s-2); right: var(--s-2); bottom: 0; height: 3px; background: var(--lavender); border-radius: var(--r-pill); }
-#tk-nav #tk-help { margin-left: auto; font: 600 var(--fs-2) / 1.4 var(--font-sans); color: var(--subtext0); }
-#tk-nav #tk-help::after { left: var(--s-1); right: var(--s-1); }
 .dash button, .dash select, .dash input, #detail button { font: 400 var(--fs-2) / 1.4 var(--font-sans); color: var(--text); background: var(--surface0); border: 0; border-radius: var(--r-2); padding: var(--s-1) var(--s-3); }
 .dash button, #detail button { cursor: pointer; }
 .dash button:hover, .dash select:hover, #detail button:hover { color: var(--text); background: var(--surface1); }
@@ -261,7 +259,7 @@ tr[hidden] { display: none; }
 .fbar[hidden] { display: none; }
 .dash button.chip { border-radius: var(--r-pill); font-size: var(--fs-1); padding: var(--s-1) var(--s-3); }
 .dash-view { display: grid; gap: var(--s-7); min-width: 0; }
-.dash-view[hidden] { display: none; }
+.dash-view[hidden], #overall-timeline[hidden] { display: none; }
 #f-run, #f-task { max-width: 14rem; text-overflow: ellipsis; }
 #tk-toan-dien { display: grid; gap: var(--s-7); min-width: 0; }
 .dash section > h4 { margin-bottom: calc(var(--s-3) - var(--s-5)); }
@@ -288,6 +286,7 @@ section[aria-labelledby="h-mix"] .charts { display: flex; flex-direction: column
 .charts > .wide { grid-column: 1 / -1; }
 figure.chart { background: var(--mantle); border: var(--hairline); border-radius: var(--r-3); padding: var(--s-5); display: grid; gap: var(--s-4); align-content: start; min-width: 0; }
 figure.chart h4 { font-size: var(--fs-4); }
+.chart .chart-subtitle { font-size: var(--fs-1); color: var(--subtext0); }
 .chart-scroll { overflow-x: auto; }
 .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .chart svg text { fill: var(--subtext0); font: 400 12px var(--font-sans); }
@@ -328,3 +327,30 @@ details.tbl[open] > summary { margin-bottom: var(--s-3); }
 
 .dash button.linkbtn { background: none; padding: 0; color: var(--lavender); text-decoration: underline; text-underline-offset: 3px; }
 .dash button.linkbtn:disabled { color: var(--subtext0); text-decoration: none; cursor: default; }
+
+.run-chart-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.run-chart-toolbar button { flex-shrink: 0; }
+.run-events { margin-top: var(--s-4); }
+.communication-context { display: grid; gap: var(--s-1); overflow-wrap: anywhere; }
+.communication-scroll { overflow-x: auto; background: var(--mantle); }
+.communication-diagram { min-width: 100%; }
+.participant-header { position: sticky; top: 0; z-index: 1; display: grid; align-items: center; background: var(--mantle); min-height: 72px; }
+.participant-header > span { padding-left: var(--s-2); font-size: var(--fs-1); color: var(--subtext0); }
+.participant { text-align: center; padding: var(--s-2); }
+.participant strong, .participant span { display: block; }
+.participant span { font-size: var(--fs-1); color: var(--subtext0); }
+.communication-diagram svg { display: block; }
+.communication-diagram svg text { fill: var(--text); font: 400 12px var(--font-sans); }
+.communication-diagram .event-time { fill: var(--subtext0); font-variant-numeric: tabular-nums; }
+.communication-diagram .lifeline { stroke: var(--surface1); stroke-dasharray: 4 5; }
+.message-event { cursor: pointer; }
+.message-event > path { fill: none; stroke-width: 2; }
+.message-event .event-hit { fill: transparent; }
+.message-event:hover .event-hit, .message-event[aria-pressed="true"] .event-hit { fill: var(--surface0); }
+.message-event:focus-visible { outline: none; }
+.message-event:focus-visible .event-hit { stroke: var(--lavender); stroke-width: 2; }
+.event-message p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.event-message p + p { margin-top: var(--s-3); }
+@media (max-width: 600px) {
+  .run-chart-toolbar { align-items: start; }
+}
