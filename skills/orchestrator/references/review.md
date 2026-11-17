@@ -8,7 +8,6 @@
 - Fix rounds cover blockers and regressions introduced by the fixes. Optional improvements go to delivery leftovers; start work on them only if the PO requests it. Review must not turn an accepted tradeoff into a new defect.
 - The assigned author finalizes related docs once the solution settles, before final review. A changed business rule goes through Gate 1; wording or implementation alignment does not need another Tech Lead Task.
 - Review-finding fixes go into the commit they fix before Gate 2 (amend or fixup); UI asks follow "UI rounds" below.
-- Reuse the Builder and Reviewer sessions. Replace a worker only when Orca refuses reuse or the work requires another capability/tier; provide a handoff. Keep workers whose Tasks are unfinished.
 - One scoped re-review per fix round covers the prior findings, rejection evidence, named fix commits and finalized docs/delivery text. Add findings only for regressions introduced by the fix; Security checks the affected path, not a second full audit.
 - After 2 failed fix rounds, ask the PO how to proceed, with one tier up as an option. Never start a silent third round or automatically raise the tier.
 - At Gate 2, list nonblocking leftovers with their concrete risks. Zero Must fix and zero high-severity audit findings remain required for delivery.

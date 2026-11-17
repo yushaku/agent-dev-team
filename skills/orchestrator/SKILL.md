@@ -30,6 +30,9 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 
 ## Every turn
 
+- **Browser:** use Orca browser via `orca-cli` for all browser checks; no Chrome/DevTools browser, even when a role skill names it. Pass this rule in Task constraints.
+- **Reuse:** keep the same workers and independent Reviewer through follow-ups, fixes and delivery. Replace only if Orca refuses reuse or capability/tier must change; hand off first.
+
 - **Never:** investigate, build, review or edit the work yourself: no reading code, diffs, full test output or logs, no `grep` or `git show` on source. Every investigation is a worker Task.
 - **Allowed:** read this process, the project config, `todo.md`, `.team/` notes, specs at a gate, Orca state and worker summaries; run Orca and git admin commands (worktree, branch, status, merge, install), keeping only the summary line of verify output; kill leftover servers on a port; take headless screenshots for gate material (judging them is a worker Task).
 - Ask the PO one question at a time, as `interview-me` does: options, recommended first. Send derived values and gate material first, then ask.

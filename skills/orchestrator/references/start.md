@@ -19,7 +19,7 @@
 ## Dispatch and follow-ups
 
 - Use `specs.md` for Task inputs and dashboard metadata. Dispatch through `orchestration`, then end the turn; Orca wakes you. Follow the receipt's `next`. With `serial: true`, only one worker runs verify at a time.
-- Send follow-ups to the existing Dispatch; preserve round metadata and use the receipt's Task identity. Keep sessions open only when the PO will keep using them.
+- Send follow-ups to the existing Dispatch; preserve round metadata and use the receipt's Task identity. Keep worker sessions open until the Run ends for reuse.
 - At handoff, or when HEAD changes unexpectedly, compare the reviewed revision with the current branch. Preserve PO edits; redirect affected workers to the new revision and review only what changed.
 - A missing report gets a follow-up asking the same worker to supply it. A commit hash alone is not completion evidence.
 - Before retry, stop, release or reassignment, load the version-matched recovery/cleanup reference. Preserve Task identity and retry limits. Silence and uncertain liveness do not prove failure.
