@@ -55,7 +55,7 @@ def build(days):
     parsed.sort(key=lambda s: (s["agent"], not s.get("subagent"), s["start"] or 0))
     seen_ids = set()
     sessions, run_tokens, task_tokens, run_sessions = [], {}, {}, {}
-    run_window, orch_tokens = {}, {}
+    run_window, orch_tokens, orch_activity = {}, {}, {}
     attribution = dict(total=0, assigned=0, unassigned=0, inferred=0, aggregate=0, undated=0)
     for s in parsed:
         repo, wt = repo_of(s["cwd"])
@@ -112,6 +112,11 @@ def build(days):
                 if role == "orchestrator":
                     orch = orch_tokens.setdefault(rid, {})
                     orch[s["agent"]] = orch.get(s["agent"], 0) + tot
+                    activity = orch_activity.setdefault(rid, {}).setdefault(s["agent"],
+                        {"agent": s["agent"], "start": ts, "end": ts, "tokens": 0})
+                    activity["start"] = min(activity["start"], ts)
+                    activity["end"] = max(activity["end"], ts)
+                    activity["tokens"] += tot
                 if task:
                     tt = task_tokens.setdefault(task["id"], {})
                     tt[s["agent"]] = tt.get(s["agent"], 0) + tot
@@ -187,6 +192,7 @@ def build(days):
         rr["tokens"] = dict(run_tokens.get(r["id"], {}), sessions=len(run_sessions.get(r["id"], [])))
         rr["window_tokens"] = run_window.get(r["id"], {})
         rr["orchestrator_by_agent"] = orch_tokens.get(r["id"], {})
+        rr["orchestrator_activity"] = list(orch_activity.get(r["id"], {}).values())
         rr["orchestrator_tokens"] = sum(rr["orchestrator_by_agent"].values())
         rr["worker_tokens"] = sum(v for k, v in rr["tokens"].items() if k != "sessions") - rr["orchestrator_tokens"]
         rr["tasks"] = [dict(t, tokens=task_tokens.get(t["id"], {})) for t in r["tasks"]]

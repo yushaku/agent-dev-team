@@ -57,6 +57,10 @@ class UsageTests(unittest.TestCase):
         data = self.build([s], runs=[dict(id=r, tasks=[], gates=[]) for r in ("run_a", "run_b")])
         self.assertEqual(data["attribution"]["unassigned"], 10)
         self.assertEqual([r["orchestrator_tokens"] for r in data["orca"]["runs"]], [20, 30])
+        self.assertEqual([r["orchestrator_activity"] for r in data["orca"]["runs"]], [
+            [dict(agent="codex", start=now + 10, end=now + 10, tokens=20)],
+            [dict(agent="codex", start=now + 20, end=now + 20, tokens=30)],
+        ])
         self.assertEqual({s["role"] for s in data["sessions"]}, {"orchestrator"})
 
     def test_ambiguous_dispatch_and_multi_run_aggregate_stay_unassigned(self):

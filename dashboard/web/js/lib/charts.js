@@ -222,8 +222,12 @@ export const spark = (vals, color) => {
 
 export function gantt(i, ttok, role = state.role, id = "#g-" + i.r.id) {
   const d = state.data, now = d.generated_at;
-  const tasks = i.r.tasks.filter(t => !role || t.role === role).map(t => {
-    const s = t.started || t.created, done = ["completed", "failed", "cancelled", "canceled"].includes(t.status);
+  const orchestrators = (!role || role === "orchestrator") ? (i.r.orchestrator_activity || []).filter(a => agentsF().includes(a.agent)).map(a => ({
+    id: "orchestrator:" + a.agent, title: "Orchestrator · " + (AG[a.agent] || a.agent), role: "orchestrator",
+    agent: a.agent, started: a.start, ended: a.end, status: "observed", tokens: { [a.agent]: a.tokens },
+  })) : [];
+  const tasks = i.r.tasks.concat(orchestrators).filter(t => !role || t.role === role).map(t => {
+    const s = t.started || t.created, done = ["observed", "completed", "failed", "cancelled", "canceled"].includes(t.status);
     const e = t.ended || t.completed || (t.started && !done ? now : null);
     return { t, s, e, running: !!t.started && !done && !["blocked", "pending", "queued"].includes(t.status) };
   }).sort((a, b) => (a.s || 0) - (b.s || 0));
@@ -231,7 +235,7 @@ export function gantt(i, ttok, role = state.role, id = "#g-" + i.r.id) {
   const times = [i.r.created].concat(...tasks.map(x => [x.s, x.e]), i.r.gates.map(g => g.resolved)).filter(Boolean);
   const t0 = Math.min(...times), t1 = Math.max(t0 + 600, ...times);
   const W = Math.max(760, widthOf(id)), LW = 310, Rm = 20, rowH = 52, T = 56, pw = W - LW - Rm, H = T + tasks.length * rowH + 32, g = [];
-  const statuses = { completed: ["Đã xong", "var(--green)"], in_progress: ["Đang chạy", "var(--yellow)"], running: ["Đang chạy", "var(--yellow)"], blocked: ["Bị chặn", "var(--red)"], failed: ["Lỗi", "var(--red)"], pending: ["Chưa chạy", "var(--overlay2)"], queued: ["Chưa chạy", "var(--overlay2)"], cancelled: ["Đã hủy", "var(--overlay2)"], canceled: ["Đã hủy", "var(--overlay2)"] };
+  const statuses = { observed: ["Khoảng quan sát", GROUPS.orch[1]], completed: ["Đã xong", "var(--green)"], in_progress: ["Đang chạy", "var(--yellow)"], running: ["Đang chạy", "var(--yellow)"], blocked: ["Bị chặn", "var(--red)"], failed: ["Lỗi", "var(--red)"], pending: ["Chưa chạy", "var(--overlay2)"], queued: ["Chưa chạy", "var(--overlay2)"], cancelled: ["Đã hủy", "var(--overlay2)"], canceled: ["Đã hủy", "var(--overlay2)"] };
   g.push(`<text x="0" y="14">Task / trạng thái</text><text x="${LW}" y="14">Thời gian →</text>`);
   const X = t => r1(LW + pw * (t - t0) / (t1 - t0));
   timeTicks(t0, t1, Math.max(3, Math.floor(pw / 64))).forEach(([t, lab]) => g.push(`<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${T + tasks.length * rowH}"/><text x="${X(t)}" y="${T - 8}" text-anchor="middle">${lab}</text><text x="${X(t)}" y="${T + tasks.length * rowH + 16}" text-anchor="middle">${lab}</text>`));
@@ -262,14 +266,14 @@ export function gantt(i, ttok, role = state.role, id = "#g-" + i.r.id) {
   const gkinds = [...new Set(i.r.gates.map(gt => gt.kind))];
   fig(id, { title: i.r.objective, body: tasks.length ? svg(W, H, "Dòng thời gian task của run " + i.r.objective, g.join("")).replace("<svg ", '<svg style="min-width:760px" ') : "",
     legend: statusesUsed.map(s => ({ name: (statuses[s] || [s])[0], color: (statuses[s] || [s, "var(--overlay2)"])[1] })).concat(gkinds.map(k => ({ name: "Cổng " + GATE[k][0].toLowerCase() + (k === "approve" ? " (tròn)" : k === "changes" ? " (thoi)" : " (vuông)"), color: GATE[k][1] }))),
-    caption: `<span class="chip ${i.st[0]}">${i.st[1]}</span> · ${tasks.filter(x => x.t.status === "completed").length}/${tasks.length} task đã xong · ${esc(i.r.repo)}. Đọc từ trên xuống theo lúc bắt đầu; thanh dài là thời gian làm, thanh nét đứt là đang chạy. Rê chuột hoặc chọn tên task để xem chi tiết.` });
+    caption: `<span class="chip ${i.st[0]}">${i.st[1]}</span> · ${tasks.filter(x => x.t.status === "completed").length}/${tasks.filter(x => x.t.status !== "observed").length} task đã xong · ${esc(i.r.repo)}. Đọc từ trên xuống theo lúc bắt đầu; thanh dài là thời gian làm, thanh nét đứt là đang chạy. ${orchestrators.length ? "Orchestrator là khoảng từ lượt gọi model đầu đến lượt cuối, gồm cả thời gian chờ. " : ""}Rê chuột hoặc chọn tên task để xem chi tiết.` });
 }
 export function tokenTimeline(i, ttok, role = state.role, id = "#gt-" + i.r.id) {
   const rows = i.r.tasks.filter(t => !role || t.role === role).map(t => ({ t, s: t.started || t.created })).sort((a, b) => (a.s || 0) - (b.s || 0));
   const fixN = new Map(i.fixes.map(t => [t.id, t.measurement.round]));
   let acc = 0;
   const bars = rows.map(({ t }) => { const v = ttok(t), b = { t, v, a: acc, fx: fixN.get(t.id) }; acc += v; return b; });
-  const taskTotal = acc, ags = agentsF(), orch = sum(ags, a => (i.r.orchestrator_by_agent || {})[a] || 0);
+  const taskTotal = acc, ags = agentsF(), orch = !role || role === "orchestrator" ? sum(ags, a => (i.r.orchestrator_by_agent || {})[a] || 0) : 0;
   if (orch > 0) bars.push({ orch: true, v: orch, a: acc });
   const total = taskTotal + (orch > 0 ? orch : 0), pctRun = v => total ? (100 * v / total).toFixed(1) : "0";
   const W = Math.max(760, widthOf(id)), LW = 310, Rm = 20, rowH = 52, T = 56, pw = W - LW - Rm, H = T + bars.length * rowH + 32, g = [];

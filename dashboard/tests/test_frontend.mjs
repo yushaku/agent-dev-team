@@ -173,3 +173,17 @@ test("repo chart groups main and worker worktrees by Run without merging differe
   assert.equal(run.wt, "Tab cache");
   assert.equal(run.a.t, 30);
 });
+
+test("timeline includes observed orchestrator activity and respects role filters", () => {
+  C.state.data = { generated_at: 1000 };
+  const r = { id: "orch", objective: "Work", created: 100, repo: "test", tasks: [], gates: [],
+    orchestrator_activity: [{ agent: "codex", start: 90, end: 300, tokens: 10 }],
+    orchestrator_by_agent: { codex: 10 } };
+  C.gantt(runDetail(r), () => 0, "", "#orch-time");
+  assert.match(element("#orch-time").innerHTML, /Orchestrator/);
+  assert.match(element("#orch-time").innerHTML, /Codex/);
+  C.gantt(runDetail(r), () => 0, "builder", "#orch-filter");
+  assert.doesNotMatch(element("#orch-filter").innerHTML, /Orchestrator/);
+  C.tokenTimeline(runDetail(r), () => 0, "builder", "#orch-tokens");
+  assert.doesNotMatch(element("#orch-tokens").innerHTML, /Orchestrator/);
+});
