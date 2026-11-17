@@ -21,7 +21,7 @@ Paths below are relative to the team root; workers receive their Task and role c
 | Need | Source |
 |---|---|
 | Coordinate, select team, resume | `skills/orchestrator/references/start.md` |
-| Create Task input or write a report | `skills/orchestrator/references/specs.md` |
+| Task input, worker communication and reports | `skills/orchestrator/references/specs.md` |
 | PO gates and scope changes | `skills/orchestrator/references/gates.md` |
 | Review and fix rounds | `skills/orchestrator/references/review.md` |
 | Delivery and completion | `skills/orchestrator/references/delivery.md` |

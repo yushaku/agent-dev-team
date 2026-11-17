@@ -14,7 +14,7 @@
 - Only the PO resolves a gate. A merge request for the delivered branch counts as Gate 2 approval. An absent PO is not approval.
 - Explicit scope answers already supplied by the PO count toward Gate 1; record them and ask only about unresolved decisions. Avoid asking twice.
 - Orchestrator/Builder chooses implementation details within approved requirements. Ask about changed behavior/scope or risks needing PO acceptance; defer optional review suggestions.
-- Answer worker questions through the version-matched ask/reply flow. Present the material before asking; one question at a time, recommended option first.
+- Answer questions escalated to the Orchestrator through the version-matched ask/reply flow; direct peer exchanges follow `specs.md` "Worker communication". Present the material before asking; one question at a time, recommended option first.
 - Relay a PO pick on a worker's options as the option's text and the rule it sets, never only its number.
 
 ## Gate 1 material

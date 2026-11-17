@@ -25,7 +25,7 @@
 
 ## Dispatch and follow-ups
 
-- Use `specs.md` for Task input/metadata and `orchestration` for dispatch/wake handling. With `serial: true`, only one worker runs verify at a time.
+- Use `specs.md` for Task input/metadata and "Worker communication"; supply current peer addresses so Workers can exchange technical details directly. Use `orchestration` for dispatch/wake handling. With `serial: true`, only one worker runs verify at a time.
 - Send follow-ups to the existing Dispatch; preserve round metadata and use the receipt's Task identity. Keep worker sessions open until the Run ends for reuse.
 - At handoff, or when HEAD changes unexpectedly, compare the reviewed revision with the current branch. Preserve PO edits; redirect affected workers to the new revision and review only what changed.
 - Missing report: ask the same worker first; recovery is in `coding-agents.md` "Transcripts". A commit hash alone is insufficient.

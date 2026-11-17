@@ -7,6 +7,7 @@ Role: <role id>
 Measurement: {"kind":"build","round":null,"cause":null}
 Goal: <observable result; relevant rule/AC IDs when available>
 Scope: <entry points, editable paths, source spec/decisions by path>
+Peers: <related same-Run Task IDs, roles and current Dispatch IDs when known>
 Constraints: <project rules, protected user files, branch/delivery rules, human_only>
 Skills: <absolute SKILL.md paths; load conditional skills only when needed>
 Evidence: <acceptance checks and commands.verify; serial if configured>
@@ -16,9 +17,18 @@ Output: <report path and raw-log paths under .team/<feature>/>
 - Title: `<role>: <what>`. `Role` and `Measurement` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
 - `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `spec`, `qa`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
 - Include resolved skills and config values, not the whole config. Select models via `coding-agents.md`. For output, workers read "Report"; for doc changes/review, relevant `docs-policy.md` sections.
+- Include an absolute pointer to "Worker communication" below in each Task's Constraints; supply related peer Dispatch IDs when available and refresh them after reassignment.
 - Give known entry points and link source decisions; the Builder traces connected code. Name approval boundaries; routine reads, scoped edits, tests and authorized delivery proceed.
 - Protect uncommitted/PO-kept files; include related Builder docs in scope. Follow approved business decisions; changes use `gates.md`.
 - Handle observed permission failures via `coding-agents.md` "Known limits"; do not preemptively forbid commits.
+
+## Worker communication
+
+- Workers may exchange technical questions, findings, reproductions and integration details directly within approved Tasks in the same Run. Use `orca orchestration send` to the supplied `dispatch:<id>` per the version-matched guide; include Task IDs and relevant file/report references. Send only the question or change needed, to the peers concerned; avoid routine broadcasts or copying full specs/reports.
+- Direct exchanges use current, active peer Dispatches. Route a missing, finished or reassigned peer through the Orchestrator before sending more work; peer messages do not authorize new Tasks, extra edit scope or new workers.
+- The Orchestrator owns assignment, DAG dependencies and fix-round limits. Escalate blockers, unresolved disagreements and proposed scope, acceptance-criteria or shared-contract changes before dependent work proceeds; PO gates follow `gates.md`.
+- The assigned artifact owner records conclusions that affect implementation in the existing spec/report before others rely on them. Notify the Orchestrator once with the conclusion, affected Task IDs and artifact reference; routine questions and answers need no relay. Keep spec and report files as the durable sources.
+- Send `worker_done` to the Orchestrator with the required Task/Dispatch identity and report. Peer mail does not complete Tasks, release dependencies or resolve gates. Use `ask/reply` for questions requiring the Orchestrator.
 
 ## When UI or a running app is involved
 
