@@ -11,6 +11,7 @@ Run the frontend regression tests with `node --experimental-vm-modules --test te
 | --- | --- |
 | `server.py` | HTTP entry point |
 | `backend/` | Configuration, cache, parsers, usage and the skill panel endpoint |
+| `backend/snapshots.py` | Background JSON snapshots by requested date range; HTTP serves the last complete response |
 | `backend/parsers/` | Agent session parsers |
 | `web/index.html` | Dashboard markup |
 | `web/js/` | No-build ES modules (`main.js` shell, `dash.js` metrics, `sheet.js` skill side panel, `md.js` markdown) |
@@ -26,6 +27,8 @@ Edit `backend/roles.py` to change a role rule.
 Edit `web/js/tabs/<tab>.js` to change a dashboard tab.
 Edit `web/js/sheet.js` to change the skill side panel.
 Edit `web/css/app.css` to change styles.
+
+Requested date ranges refresh in the background about every 30 seconds. A range's first request waits for its initial build; subsequent requests use its last complete snapshot, including while a refresh is running or fails. `generated_at` records the snapshot time and `build_ms` its build duration, not HTTP latency. Orca refreshes separately every 60 seconds. The browser renders only the selected tab.
 
 ## Token measurements
 
