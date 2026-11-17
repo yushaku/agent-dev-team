@@ -24,6 +24,9 @@
 - Missing report: ask the same worker first; recovery is in `coding-agents.md` "Transcripts". A commit hash alone is insufficient.
 - Before retry, stop, release or reassignment, load the version-matched recovery/cleanup guide; preserve Task identity and retry limits.
 - Permission failures: `coding-agents.md` "Permission prompts".
+- Use the worker's Dispatch identity for steering and stopping, following the version-matched guide. After `worker_done`, check `git status --short` in its worktree and reconcile changed paths with its report; report uncommitted delivery work and have an authorized committer finish it before calling delivery complete.
+- On pause, stop workers still under Orchestrator control through the guide, preserve uncommitted work and write the handoff (`../SKILL.md`). Resume from the existing Task and Dispatch state using the recovery guide; carry forward completed work and retry history.
+- When the PO takes over a worker, give its Task id, Dispatch id, terminal, spec path and dev URL when applicable; record the transfer in the handoff. Leave that worker under PO control until the PO returns it.
 
 ## Board mapping
 
