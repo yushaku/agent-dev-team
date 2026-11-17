@@ -1,10 +1,10 @@
 # Ticket mode
 
-Use the default Builder/Reviewer flow (`start.md`). Add an Analyst or Investigator only for a named requirements or investigation gap; their responsibilities can stay with the existing workers.
+Use `start.md` for team selection; add Analyst/Investigator only for a named gap existing workers cannot cover.
 
 ## Intake
 
-- Read the full ticket thread through configured access; use the latest confirmed requirement, flag contradictions, and summarize in `languages.po`. Manual access: the PO supplies the ticket.
+- Read the full thread via configured access (manual: PO supplies it). Summarize latest confirmed requirements and contradictions in `languages.po`.
 - Link related tickets and deduplicate before investigating. The ticket remains the external record; keep internal evidence in the Run reports.
 - Poll only on an authorized schedule using the configured query. Waiting for the client is a waiting status; resume when an answer arrives.
 - Prioritize incidents, overdue tickets, client-blocked work, then tracker priority and due date.
@@ -26,7 +26,7 @@ Use the default Builder/Reviewer flow (`start.md`). Add an Analyst or Investigat
 ## Client communication
 
 - Agents prepare drafts; the PO edits and posts them, regardless of tracker write capability. Include `languages.client` plus a `languages.po` translation.
-- The existing independent review includes Anti-AI and factual checks. Preserve the client's register. Internal claims cite `path:line`; external drafts may omit code paths.
+- Include Anti-AI and factual checks in the existing review. Preserve client register; cite internal claims with `path:line` (optional in external drafts).
 - State what changed, how to verify, environment, and who is waiting for whom. A fix report is ready after review; do not claim the fix is live before deployment evidence.
 
 ## Escalation

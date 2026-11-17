@@ -1,6 +1,6 @@
 # Coding agents
 
-Owner of everything agent-specific: registry, model ids, routing, free-tier rules, per-agent limits. Role cards and other references state requirements only.
+Source of truth for agents, models, routing and limits. Role cards state requirements only.
 
 ## Registry
 
@@ -36,29 +36,29 @@ Defaults; a project overrides them in `config.md` `models`.
 Choose agents without probing account usage or remaining quota:
 
 1. Honor explicit PO choices and project `models` settings.
-2. Eligible agents must support the role's tier/capabilities and be enabled in config. Builder and Reviewer remain independent; free-tier agents take only `simple` Tasks and never review.
+2. Require the role's tier/capabilities and config eligibility. Keep Builder and Reviewer independent; free-tier restrictions are below.
 3. Use the role's preferred eligible agent; otherwise choose an available eligible agent. No eligible agent: report the blocker; never silently lower the tier or drop a required check.
 4. Handle authentication, unavailable models or rate-limit errors only when observed, using `start.md` recovery and the fallback below.
 5. Orchestrator, Researcher and Solution Architect sessions use their session model; the Solution Architect worker (`arch-review`) uses tier top.
 
 ## Free-tier agents
 
-- `copilot` and `cursor` run fast-tier `simple` Tasks only and never review. `simple` is marked by the Orchestrator or Tech Lead (`roles/tech-lead.md` "Simple Tasks"); a Task not marked `simple` never goes to them.
+- `copilot`/`cursor`: fast-tier Tasks explicitly marked `simple` by Orchestrator or Tech Lead (`roles/tech-lead.md` "Simple Tasks"); never review.
 - For a `simple` Task, use the configured/preferred eligible free-tier agent; no usage probe.
-- Fallback: both exhausted or unavailable, or the Task fails once there (allowance exhausted, CLI not signed in, verify fails once, or `worker-start` returns `start_failed`): rerun it on `codex` or `claude` at tier fast (Routing) and tell the PO one line. Never a second attempt on the same free-tier agent; preserve the current fix round and Orca retry history.
+- Fallback: if both are unavailable/exhausted, or the Task fails once (quota, sign-in, verify or `worker-start: start_failed`), rerun on `codex`/`claude` fast via Routing; notify PO in one line. No second attempt on the same free-tier agent; preserve fix round and retry history.
 - A role whose tier `models.roles` or a task-specific override lifts above fast leaves free-tier agents.
 
 ## Known limits
 
-Treat permissions and runtime capabilities as session-specific. Attempt authorized work within the active permissions; use the actual error to choose recovery rather than assuming an agent cannot commit or write through a link.
+Permissions/capabilities are session-specific. Attempt authorized work; recover from actual errors, not assumed commit or symlink restrictions.
 
-- If git writes are denied, report exact changed paths, verification evidence and proposed commit text. Use the environment's approval mechanism or an authorized worker to commit; preserve user changes and do not repeat checks solely because the committer changed.
-- If a `.team` link is denied, identify its resolved destination and required access. Request the narrow permission through the environment; do not edit global permissions automatically.
+- Git write denied: report changed paths, verify evidence and commit text. Use environment approval or an authorized committer; preserve user changes; do not rerun checks solely because the committer changed.
+- `.team` link denied: report its resolved destination/access and request narrow permission through the environment.
 - Supply absolute skill paths and explicit action boundaries in Task specs (`specs.md`), regardless of agent.
 
 ## Permission prompts
 
-- On a permission failure, report the exact command, error and worker. Simplify a compound command only if it still performs the authorized action; never bypass a denial.
+- Report exact command, error and worker. Simplify compound commands only within the authorized action; never bypass a denial or change global permissions automatically.
 - A missing CLI, sign-in failure or unavailable model follows `start.md` recovery and the routing constraints above.
 
 ## Transcripts

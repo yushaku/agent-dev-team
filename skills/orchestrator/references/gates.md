@@ -10,16 +10,16 @@
 | G-Reply | Client-facing reply | Draft in client language and PO translation |
 | G-Scope | Ticket scope or estimate commitment | Scope, exclusions and estimate |
 
-- Record gates using the version-matched Orca guide on the work they block. Gate 2 uses a close Task after final review; its metadata follows `specs.md`. A gate needs its decision material, not a separate placeholder document.
+- Record each gate on the work it blocks via the Orca guide. After final review, Gate 2 uses a close Task (`specs.md`). Attach decision material; skip placeholder documents.
 - Only the PO resolves a gate. A merge request for the delivered branch counts as Gate 2 approval. An absent PO is not approval.
 - Explicit scope answers already supplied by the PO count toward Gate 1; record them and ask only about unresolved decisions. Avoid asking twice.
-- Within approved requirements, the Orchestrator/Builder chooses implementation details. Ask when user-visible behavior or scope would differ from what was approved, or a risk requires PO acceptance. Optional review suggestions stay deferred.
+- Orchestrator/Builder chooses implementation details within approved requirements. Ask about changed behavior/scope or risks needing PO acceptance; defer optional review suggestions.
 - Answer worker questions through the version-matched ask/reply flow. Present the material before asking; one question at a time, recommended option first.
 
 ## Gate 1 material
 
-- The assigned author sends the spec and open questions. The Orchestrator presents the business change in `languages.po`, checks derived numbers/dates, records PO answers in `decisions.md`, and returns them to the same author.
-- Show only changed rules for a follow-up. New business behavior returns to Gate 1; correcting code to meet an already approved rule is a bug fix, not another spec approval.
+- Author supplies spec/open questions. Orchestrator checks derived numbers/dates, presents in `languages.po`, records answers in `decisions.md` and returns them to the author.
+- Follow-ups show only changed rules. New business behavior reopens Gate 1; fixes to match approved rules do not.
 - Technical clarifications update the existing Task. A new capability needs its own scope decision.
 
 ## Gate 2 material
