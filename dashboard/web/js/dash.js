@@ -45,7 +45,12 @@ function render() {
   renderRunFilter(d);
   renderFilterBar();
   const S = sessionsF();
-  renderOverall(S); renderOverview(S); renderRoles(S); renderRepos(S); renderSessionCharts(S); renderSkills(S); renderTokens();
+  const view = views.find(v => !v.hidden)?.id || "tk-tong-quan";
+  if (view === "tk-tong-quan") renderOverview(S);
+  else if (view === "tk-theo-repo") {
+    renderOverall(S); renderRoles(S); renderRepos(S); renderSessionCharts(S);
+  } else if (view === "tk-skills") renderSkills(S);
+  else if (view === "tk-rtk") renderTokens();
 }
 
 /* ---------- cross filter ---------- */

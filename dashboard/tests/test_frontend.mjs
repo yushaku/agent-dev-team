@@ -13,7 +13,7 @@ function element(id) {
 }
 globalThis.document = {
   querySelector: element,
-  querySelectorAll: s => s === ".dash-view" ? [element("tk-tong-quan")] : [],
+  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-theo-repo", "tk-skills", "tk-rtk", "tk-cach-tinh"].map(element) : [],
   addEventListener() {},
 };
 globalThis.window = { innerWidth: 1000, addEventListener() {} };
@@ -40,12 +40,13 @@ test("role charts resolve model colours after rebuilding the palette", () => {
 
 test("load distinguishes fetch failures from render failures and recovers", async () => {
   let renderError;
+  const rendered = [];
   const dash = new SourceTextModule(await readFile(new URL("../web/js/dash.js", import.meta.url), "utf8"));
   await dash.link(specifier => {
     const exports = specifier === "./lib/charts.js" ? C : {
-      renderOverall() {}, renderOverview() { if (renderError) throw renderError; },
-      renderRoles() {}, renderRepos() {}, renderSessionCharts() {},
-      showSession() {}, renderSkills() {}, renderTokens() {}, renderOverall() {},
+      renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
+      renderRoles() { rendered.push("roles"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
+      showSession() {}, renderSkills() { rendered.push("skills"); }, renderTokens() { rendered.push("tokens"); },
     };
     return new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
@@ -73,11 +74,25 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     assert.equal(C.state.loading, false);
 
     renderError = null;
+    rendered.length = 0;
     await load();
+    assert.deepEqual(rendered, ["overview"]);
     assert.doesNotMatch(element("#updated").textContent, /Lỗi/);
     assert.equal(element("#updated").title, "");
     assert.equal(C.state.err, "");
     assert.equal(element("#refresh").disabled, false);
+    rendered.length = 0;
+    dash.namespace.showView("tk-theo-repo", { hash: false });
+    assert.deepEqual(rendered.sort(), ["repos", "roles", "sessions", "timeline"]);
+    rendered.length = 0;
+    dash.namespace.showView("tk-skills", { hash: false });
+    assert.deepEqual(rendered, ["skills"]);
+    rendered.length = 0;
+    dash.namespace.showView("tk-rtk", { hash: false });
+    assert.deepEqual(rendered, ["tokens"]);
+    rendered.length = 0;
+    dash.namespace.showView("tk-cach-tinh", { hash: false });
+    assert.deepEqual(rendered, []);
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalError;
