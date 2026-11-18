@@ -54,6 +54,8 @@ def repo_of(cwd):
         return parts[0], (parts[1] if len(parts) > 1 else "(main)")
     if p.startswith(pj):
         return p[len(pj):].split(os.sep)[0], "(main)"
+    if os.path.dirname(p) == os.path.normpath(HOME) or os.path.isdir(os.path.join(p, ".git")):  # ~/<dir> or a git main checkout: the dir itself is the repo
+        return os.path.basename(p), "(main)"
     parts = [x for x in p.split(os.sep) if x]
     if len(parts) >= 2:
         return parts[-2], parts[-1]

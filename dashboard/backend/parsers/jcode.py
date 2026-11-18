@@ -12,7 +12,9 @@ def parse_jcode(path):
         d = json.load(f)
     s = {"agent": "jcode", "cwd": d.get("working_dir"), "branch": None, "start": None, "end": None,
          "first": None, "id": d.get("id") or os.path.basename(path)[:-5], "originator": d.get("provider_key"),
-         "skills": [], "hooks": {}, "subagent": bool(d.get("parent_id")), "tasks": [], "dispatcher": False}
+         "skills": [], "hooks": {}, "subagent": bool(d.get("parent_id")), "tasks": [], "dispatcher": False,
+         "title": d.get("title") or "", "branch": git_branch(d.get("working_dir"))}
+    ambient = (d.get("system_prompt") or "").startswith("You are the ambient agent")
     model = d.get("model") or "?"
     calls = []
     for m in d.get("messages") or []:
@@ -42,4 +44,24 @@ def parse_jcode(path):
     s["start"] = s["start"] or ts_of(d.get("created_at"))
     s["end"] = s["end"] or ts_of(d.get("updated_at"))
     s["calls"] = calls
-    return finish_first(s)
+    s = finish_first(s)
+    if ambient:  # jcode ambient cycles talk to the user directly, never as a team role
+        s["role_line"] = s["discussion"] = None
+        s["tasks"] = []
+    return s
+
+
+def git_branch(cwd):
+    """Current branch from <cwd>/.git/HEAD (worktrees: .git file -> gitdir)."""
+    if not cwd:
+        return None
+    try:
+        g = os.path.join(cwd, ".git")
+        if os.path.isfile(g):
+            with open(g) as f:
+                g = f.read().split("gitdir:", 1)[1].strip()
+        with open(os.path.join(g, "HEAD")) as f:
+            head = f.read().strip()
+        return head[16:] if head.startswith("ref: refs/heads/") else head[:8]
+    except (OSError, IndexError):
+        return None
