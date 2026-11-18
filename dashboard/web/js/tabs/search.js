@@ -46,29 +46,12 @@ function bars(id, rows, title, caption) {
   });
 }
 
-function byTask(S) {
-  const by = new Map();
-  S.forEach(s => {
-    if (!s.search) return;
-    const id = s.task_id || "unassigned";
-    const r = by.get(id) || { label: s.task_title || (s.task_id ? s.task_id : "Chưa gán task"), search: {}, sessions: 0, cg: 0 };
-    r.sessions++;
-    if (cnt(s.search, "codegraph")) r.cg++;
-    KINDS.forEach(([k]) => { r.search[k] = cnt(r.search, k) + cnt(s.search, k); });
-    by.set(id, r);
-  });
-  return [...by.entries()]
-    .filter(([, r]) => total(r.search))
-    .sort(([, a], [, b]) => total(b.search) - total(a.search))
-    .map(([id, r]) => [id === "unassigned" || r.label === id ? r.label : `${r.label} · ${id.slice(-6)}`, r]);
-}
-
-export function renderTaskSearch(S0) {
+export function renderTaskRoleSearch(S0) {
   const section = $("#task-search");
   if (!section) return;
   section.hidden = !state.repo;
   if (!state.repo) return;
-  bars("#c-task-search", byTask(S0 || sessionsF()), "Theo task", "Các phiên chưa suy được task Orca được gộp vào “Chưa gán task”, nên không mất dữ liệu tìm code trong project đang lọc.");
+  bars("#c-task-search", group(S0 || sessionsF(), s => s.role), "Theo vai", "Mỗi màu là một cách tìm hoặc đọc code. Dùng chart để thấy vai nào dựa nhiều vào đọc file, rg/grep hoặc codegraph trong project đang lọc.");
 }
 
 export function renderSearch(S0) {
