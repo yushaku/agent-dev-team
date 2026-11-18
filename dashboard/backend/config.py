@@ -13,7 +13,7 @@ SKILLS_DIR = os.environ.get("AGENT_SKILLS_DIR") or os.path.join(HOME, ".agents",
 SKILL_LOCK = os.environ.get("AGENT_SKILL_LOCK") or os.path.join(os.path.dirname(SKILLS_DIR), ".skill-lock.json")
 CLAUDE_SKILLS = os.path.join(HOME, ".claude", "skills")
 CACHE_FILE = os.path.join(HERE, ".cache", "cache.json")
-PARSER_VERSION = 11
+PARSER_VERSION = 12
 PORT = 4747
 ORCA_TTL = 60
 JS = "text/javascript; charset=utf-8"

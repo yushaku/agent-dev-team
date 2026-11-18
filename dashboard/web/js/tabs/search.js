@@ -5,7 +5,8 @@ export const KINDS = [
   ["rg", "rg", "var(--blue)"],
   ["grep", "grep", "var(--peach)"],
   ["find", "find/glob", "var(--yellow)"],
-  ["read", "Đọc file", "var(--overlay1)"],
+  ["read_full", "Đọc cả file", "var(--red)"],
+  ["read_part", "Đọc một đoạn", "var(--overlay1)"],
 ];
 const legend = KINDS.map(([, name, color]) => ({ name, color }));
 const cnt = (o, k) => (o && o[k]) || 0;
@@ -58,7 +59,8 @@ export function renderSearch(S0) {
   const tiles = [
     ["Codegraph", fmt(cg), Math.round(100 * cg / t) + "% lượt tìm code", "var(--green)"],
     ["rg + grep", fmt(text), Math.round(100 * text / t) + "% lượt tìm code", "var(--blue)"],
-    ["Đọc file", fmt(cnt(all, "read")), Math.round(100 * cnt(all, "read") / t) + "% lượt tìm code", "var(--overlay1)"],
+    ["Đọc cả file", fmt(cnt(all, "read_full")), Math.round(100 * cnt(all, "read_full") / t) + "% lượt, cả file vào context", "var(--red)"],
+    ["Đọc một đoạn", fmt(cnt(all, "read_part")), Math.round(100 * cnt(all, "read_part") / t) + "% lượt, chỉ vài dòng", "var(--overlay1)"],
     ["Phiên có codegraph", withCg.length + "/" + searched.length, "phiên có tìm code", "var(--sky)"],
     ["Token trung vị / phiên", (withCg.length ? fmt(mw) : "-") + " vs " + (without.length ? fmt(mo) : "-"), "có codegraph vs không", "var(--lavender)"],
   ];

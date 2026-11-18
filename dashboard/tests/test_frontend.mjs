@@ -338,7 +338,7 @@ test("search tab renders codegraph vs rg counts", async () => {
   C.state.data = { sessions: [] };
   renderSearch([
     { agent: "claude", role: "builder", repo: "r", worktree: "w1", total: 100, search: { codegraph: 3, rg: 1 } },
-    { agent: "codex", role: "builder", repo: "r", worktree: "w2", total: 300, search: { rg: 4, read: 2 } },
+    { agent: "codex", role: "builder", repo: "r", worktree: "w2", total: 300, search: { rg: 4, read_full: 2 } },
   ]);
   assert.match(element("#c-search-kpi").innerHTML, /Codegraph/);
   assert.match(element("#c-search-kpi").innerHTML, /1\/2/);

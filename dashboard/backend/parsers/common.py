@@ -62,17 +62,20 @@ def repo_of(cwd):
     return (parts[0] if parts else "?"), "?"
 
 # Code search kinds counted per tool call (see note_search).
-SEARCH_KINDS = ("codegraph", "rg", "grep", "find", "read")
+# read_full = whole file into context (Read without range, cat); read_part = a line range (head/tail/sed -n, Read limit).
+SEARCH_KINDS = ("codegraph", "rg", "grep", "find", "read_full", "read_part")
 CG_TOOL_RE = re.compile(r"codegraph", re.I)
 SEARCH_CMD_RE = {
     "codegraph": re.compile(r"(?:^|[;&|(\s'\"`])codegraph\s+(?:explore|query|node|callers|callees|impact|affected|files|context|search)\b"),
     "rg": re.compile(r"(?:^|[;&|(\s'\"`])(?:rtk\s+(?:proxy\s+)?)?rg\s"),
     "grep": re.compile(r"(?:^|[;&|(\s'\"`])(?:rtk\s+(?:proxy\s+)?)?(?:git\s+)?grep\s"),
     "find": re.compile(r"(?:^|[;&|(\s'\"`])(?:find|fd)\s"),
-    "read": re.compile(r"(?:^|[;&|(\s'\"`])(?:cat|head|tail|sed\s+-n)\s"),
+    "read_full": re.compile(r"(?:^|[;&(\s'\"`])cat\s+[^|<>]*[\w/.]"),
+    "read_part": re.compile(r"(?:^|[;&(\s'\"`])(?:head|tail|sed\s+-n)\s+[^|]*[\w/.]+\.\w+"),
 }
-TOOL_KIND = {"grep": "grep", "glob": "find", "read": "read", "view": "read", "read_file": "read",
-             "search_files": "grep", "agentgrep": "grep", "find_files": "find"}
+READ_TOOLS = {"read", "view", "read_file"}
+RANGE_KEYS = ("limit", "offset", "start_line", "end_line", "view_range", "line_range")
+TOOL_KIND = {"grep": "grep", "glob": "find", "search_files": "grep", "agentgrep": "grep", "find_files": "find"}
 
 
 def search_kinds(name, args):
@@ -80,6 +83,15 @@ def search_kinds(name, args):
     name = str(name or "")
     if CG_TOOL_RE.search(name):
         return ["codegraph"]
+    if name.lower() in READ_TOOLS:
+        a = args
+        if isinstance(a, str):
+            try:
+                a = json.loads(a)
+            except ValueError:
+                a = {}
+        ranged = isinstance(a, dict) and any(a.get(k) not in (None, "", 0) for k in RANGE_KEYS)
+        return ["read_part" if ranged else "read_full"]
     kind = TOOL_KIND.get(name.lower())
     if kind:
         return [kind]
