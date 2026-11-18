@@ -4,9 +4,9 @@ export const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "
 export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes", jcode: "jcode" };
 export const AGENTS = ["claude", "codex", "copilot", "hermes", "jcode"];
 export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0, jcode: 0 });
-export const state = { days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", data: null, auto: true, timer: null };
-try { const s = JSON.parse(localStorage.getItem("team-dashboard") || "{}"); Object.assign(state, { days: s.days || 7, repo: s.repo || "", agent: s.agent || "", role: s.role || "", wt: s.wt || "", runF: s.runF || "", taskF: s.taskF || "", auto: s.auto !== false }); } catch (e) {}
-export const persist = () => { try { localStorage.setItem("team-dashboard", JSON.stringify({ days: state.days, repo: state.repo, agent: state.agent, role: state.role, wt: state.wt, runF: state.runF, taskF: state.taskF, auto: state.auto })); } catch (e) {} };
+export const state = { days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", searchHidden: [], data: null, auto: true, timer: null };
+try { const s = JSON.parse(localStorage.getItem("team-dashboard") || "{}"); Object.assign(state, { days: s.days || 7, repo: s.repo || "", agent: s.agent || "", role: s.role || "", wt: s.wt || "", runF: s.runF || "", taskF: s.taskF || "", searchHidden: Array.isArray(s.searchHidden) ? s.searchHidden : [], auto: s.auto !== false }); } catch (e) {}
+export const persist = () => { try { localStorage.setItem("team-dashboard", JSON.stringify({ days: state.days, repo: state.repo, agent: state.agent, role: state.role, wt: state.wt, runF: state.runF, taskF: state.taskF, searchHidden: state.searchHidden, auto: state.auto })); } catch (e) {} };
 
 /* ---------- colours: one meaning each ---------- */
 export const COL = { claude: "var(--claude)", codex: "var(--codex)", copilot: "var(--copilot)", hermes: "var(--hermes)", jcode: "var(--jcode)", fin: "var(--p-fin)", cr: "var(--p-cr)", cw: "var(--p-cw)", out: "var(--p-out)" };
@@ -79,10 +79,11 @@ export function A(o) {
   let s = "";
   if (o.tip) s += ` data-tip="${esc(o.tip.filter(x => x != null && x !== "").join("\n"))}"`;
   if (o.f) s += ` data-f="${esc(o.f)}"`;
+  if (o.toggle) s += ` data-toggle="${esc(o.toggle)}"`;
   if (o.sid) s += ` data-sid="${esc(o.sid)}"`;
   if (o.skill) s += ` data-skill="${esc(o.skill)}"`;
   if (o.pressed != null) s += ` aria-pressed="${o.pressed}"`;
-  if (o.f || o.sid || o.skill) s += ` tabindex="0" role="button" aria-label="${esc((o.tip || [o.f || o.sid || o.skill]).join(", "))}"`;
+  if (o.f || o.toggle || o.sid || o.skill) s += ` tabindex="0" role="button" aria-label="${esc((o.tip || [o.f || o.toggle || o.sid || o.skill]).join(", "))}"`;
   return s;
 }
 export const svg = (W, H, label, inner) => `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(label)}">${inner}</svg>`;
@@ -97,7 +98,7 @@ export function widthOf(id) {
 export function fig(id, o) {
   const el = $(id);
   if (!el) return;
-  const legend = (o.legend || []).map(l => `<li${l.f ? A({ f: l.f, tip: [l.name, "Bấm để lọc"] }) : ""}><span class="swatch" style="--c:${l.color}"></span>${esc(l.name)}</li>`).join("");
+  const legend = (o.legend || []).map(l => `<li${l.f || l.toggle ? A({ f: l.f, toggle: l.toggle, pressed: l.pressed, tip: [l.name, l.tip || (l.f ? "Bấm để lọc" : "Bấm để ẩn hoặc hiện")] }) : ""}><span class="swatch" style="--c:${l.color}"></span>${esc(l.name)}</li>`).join("");
   const heading = `<h4>${esc(o.title)}</h4>`;
   el.innerHTML = `${o.action ? `<div class="run-chart-toolbar">${heading}${o.action}</div>` : heading}${o.subtitle ? `<p class="chart-subtitle">${esc(o.subtitle)}</p>` : ""}${o.body ? `<div class="chart-scroll">${o.body}</div>` : `<p class="empty">${esc(o.empty || "Không có dữ liệu trong khoảng này.")}</p>`}${legend ? `<ul class="legend">${legend}</ul>` : ""}${o.caption ? `<figcaption>${o.caption}</figcaption>` : ""}`;
 }

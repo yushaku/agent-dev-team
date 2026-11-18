@@ -8,9 +8,21 @@ export const KINDS = [
   ["read_full", "Đọc cả file", "var(--red)"],
   ["read_part", "Đọc một đoạn", "var(--overlay1)"],
 ];
-const legend = KINDS.map(([, name, color]) => ({ name, color }));
+const hiddenKinds = () => state.searchHidden || [];
+const visibleKinds = () => KINDS.filter(([kind]) => !hiddenKinds().includes(kind));
+const legend = () => KINDS.map(([kind, name, color]) => ({
+  name, color, toggle: "search:" + kind, pressed: !hiddenKinds().includes(kind),
+}));
 const cnt = (o, k) => (o && o[k]) || 0;
 const total = o => KINDS.reduce((a, [k]) => a + cnt(o, k), 0);
+
+export function toggleSearchKind(kind) {
+  if (!KINDS.some(([k]) => k === kind)) return false;
+  const hidden = new Set(hiddenKinds());
+  if (hidden.has(kind)) hidden.delete(kind); else hidden.add(kind);
+  state.searchHidden = [...hidden];
+  return true;
+}
 
 function group(S, key) {
   const by = {};
@@ -27,22 +39,26 @@ function group(S, key) {
 
 function bars(id, rows, title, caption) {
   const W = widthOf(id);
+  const kinds = visibleKinds();
+  const totalVisible = search => kinds.reduce((n, [kind]) => n + cnt(search, kind), 0);
+  const shownCodegraph = kinds.some(([kind]) => kind === "codegraph");
+  const visibleRows = rows.filter(([, r]) => totalVisible(r.search));
   fig(id, {
-    title, legend, caption,
-    body: rows.length ? hBars({
+    title, legend: legend(), caption,
+    body: visibleRows.length ? hBars({
       W, LW: 240, rowH: 24,
-      rows: rows.slice(0, 20).map(([label, r]) => {
-        const t = total(r.search), cg = cnt(r.search, "codegraph");
+      rows: visibleRows.slice(0, 20).map(([label, r]) => {
+        const t = totalVisible(r.search), cg = cnt(r.search, "codegraph");
         return {
           label, full: label,
-          segs: KINDS.map(([k, name, color]) => ({ v: cnt(r.search, k), color, name })),
-          right: [{ t: fmt(t) }, { t: Math.round(100 * cg / t) + "% cg", color: "var(--subtext0)" }],
-          tip: [label, r.sessions + " phiên, " + r.cg + " phiên có codegraph"].concat(KINDS.map(([k, n]) => n + ": " + cnt(r.search, k))),
+          segs: kinds.map(([k, name, color]) => ({ v: cnt(r.search, k), color, name })),
+          right: [{ t: fmt(t) }].concat(shownCodegraph ? [{ t: Math.round(100 * cg / t) + "% cg", color: "var(--subtext0)" }] : []),
+          tip: [label, r.sessions + " phiên, " + r.cg + " phiên có codegraph"].concat(kinds.map(([k, n]) => n + ": " + cnt(r.search, k))),
         };
       }),
       fv: v => v + " lần", xTitle: "Số lần gọi", aria: title,
     }) : "",
-    empty: "Không có lượt tìm code nào.",
+    empty: kinds.length ? "Không có lượt tìm code nào với các công cụ đang hiện." : "Đã ẩn toàn bộ công cụ. Bấm legend để hiện lại.",
   });
 }
 

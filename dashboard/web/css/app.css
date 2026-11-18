@@ -297,9 +297,10 @@ figure.chart h4 { font-size: var(--fs-4); }
 .chart svg .ax { stroke: var(--overlay2); stroke-width: 1; }
 .chart figcaption { font-size: var(--fs-1); color: var(--subtext0); }
 .chart .swatch, #detail .swatch { display: inline-block; flex: none; border: 0; background: var(--c); }
-svg [data-f], svg [data-sid], .legend [data-f] { cursor: pointer; }
+svg [data-f], svg [data-sid], .legend :is([data-f], [data-toggle]) { cursor: pointer; }
 svg :is(rect, circle, path, polygon)[data-f]:hover, svg :is(rect, circle, path, polygon)[data-sid]:hover { stroke: var(--text); stroke-width: 2; }
-svg text[data-f]:hover, .legend [data-f]:hover { fill: var(--text); color: var(--text); text-decoration: underline; }
+svg text[data-f]:hover, .legend :is([data-f], [data-toggle]):hover { fill: var(--text); color: var(--text); text-decoration: underline; }
+.legend [data-toggle][aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
 svg [tabindex]:focus-visible { outline: 2px solid var(--lavender); }
 .empty { color: var(--subtext0); font-size: var(--fs-2); }
 #tip { position: fixed; z-index: 30; pointer-events: none; background: var(--crust); border: var(--hairline); border-radius: var(--r-2); padding: var(--s-2) var(--s-3); font-size: var(--fs-1); line-height: 1.5; color: var(--text); white-space: pre-line; max-width: 320px; font-variant-numeric: tabular-nums; }

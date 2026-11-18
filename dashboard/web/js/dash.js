@@ -8,7 +8,7 @@ import { renderRepos } from "./tabs/repos.js";
 import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderRtkCommands } from "./tabs/tokens.js";
-import { renderSearch, renderTaskRoleSearch } from "./tabs/search.js";
+import { renderSearch, renderTaskRoleSearch, toggleSearchKind } from "./tabs/search.js";
 import { renderOverall } from "./tabs/overall.js";
 
 async function load() {
@@ -131,14 +131,15 @@ $("#auto").addEventListener("click", () => { C.state.auto = !C.state.auto; persi
 function activate(el) {
   if (el.dataset.clear) return clearFilter(el.dataset.clear);
   if (el.dataset.f) return applyFilter(el.dataset.f);
+  if (el.dataset.toggle && el.dataset.toggle.startsWith("search:") && toggleSearchKind(el.dataset.toggle.slice(7))) { persist(); return render(); }
   if (el.dataset.sid) return showSession(el.dataset.sid);
 }
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-clear], [data-f], [data-sid]");
+  const el = e.target.closest("[data-clear], [data-f], [data-toggle], [data-sid]");
   if (el) { hideTip(); activate(el); }
 });
 document.addEventListener("keydown", e => {
-  const el = e.target.closest && e.target.closest("[data-f], [data-sid]");
+  const el = e.target.closest && e.target.closest("[data-f], [data-toggle], [data-sid]");
   if (el && (e.key === "Enter" || (e.key === " " && el.tagName !== "BUTTON"))) { e.preventDefault(); activate(el); }
 });
 let resizeTimer = null, lastW = window.innerWidth;

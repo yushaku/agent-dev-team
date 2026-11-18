@@ -27,7 +27,7 @@ const { repoTree } = await import("../web/js/tabs/repos.js");
 const { renderRoles, roleStats } = await import("../web/js/tabs/roles.js");
 const { runDetail, renderRunTimeline, communicationDiagram } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
-const { renderTaskRoleSearch } = await import("../web/js/tabs/search.js");
+const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../web/js/tabs/search.js");
 
 test("role charts resolve model colours after rebuilding the palette", () => {
   const sessions = ["a", "b"].map(model => ({
@@ -67,7 +67,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     const exports = specifier === "./lib/charts.js" ? C : {
       renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
       renderRoles() { rendered.push("roles"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
-      showSession() {}, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); },
+      showSession() {}, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); }, toggleSearchKind() { return true; },
     };
     return new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
@@ -349,14 +349,25 @@ test("role tier checks use Task routing rather than model-name guesses", () => {
   assert.equal(roleStats([row("gpt-looks-expensive", "high", null)])[0].mismatch, 0);
 });
 
-test("Tools renders code-search charts without summary tiles", async () => {
-  const { renderSearch } = await import("../web/js/tabs/search.js");
+test("Tools legend toggles code-search chart categories", () => {
+  C.state.searchHidden = [];
   C.state.data = { sessions: [] };
-  renderSearch([
+  const sessions = [
     { agent: "claude", role: "builder", repo: "r", worktree: "w1", total: 100, search: { codegraph: 3, rg: 1 } },
     { agent: "codex", role: "builder", repo: "r", worktree: "w2", total: 300, search: { rg: 4, read_full: 2 } },
-  ]);
+  ];
+  renderSearch(sessions);
   assert.match(element("#c-search-agent").innerHTML, /Codegraph/);
   assert.match(element("#c-search-agent").innerHTML, /Claude/);
   assert.match(element("#c-search-wt").innerHTML, /r\/w2/);
+  assert.match(element("#c-search-agent").innerHTML, /data-toggle="search:rg"/);
+  assert.match(element("#c-search-agent").innerHTML, /aria-pressed="true"/);
+
+  assert.equal(toggleSearchKind("rg"), true);
+  renderSearch(sessions);
+  const html = element("#c-search-agent").innerHTML;
+  assert.match(html, /data-toggle="search:rg"[^>]*aria-pressed="false"/);
+  assert.doesNotMatch(html, /style="fill:var\(--blue\)"/);
+  assert.equal(toggleSearchKind("not-a-kind"), false);
+  C.state.searchHidden = [];
 });
