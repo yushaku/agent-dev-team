@@ -47,12 +47,14 @@ test("Tasks shows code-search usage by task only after filtering a project", () 
     { task_id: "task_abcdef", task_title: "builder: search chart", search: { codegraph: 2, rg: 1 } },
     { task_id: "task_abcdef", task_title: "builder: search chart", search: { grep: 3 } },
     { task_id: "task_other", task_title: "review", search: { find: 1 } },
+    { search: { rg: 2 } },
   ];
   renderTaskSearch(sessions);
   assert.equal(element("#task-search").hidden, false);
   assert.match(element("#c-task-search").innerHTML, /Theo task/);
   assert.match(element("#c-task-search").innerHTML, /builder: search chart/);
   assert.match(element("#c-task-search").innerHTML, /review/);
+  assert.match(element("#c-task-search").innerHTML, /Chưa gán task/);
 
   C.state.repo = "";
   renderTaskSearch(sessions);
