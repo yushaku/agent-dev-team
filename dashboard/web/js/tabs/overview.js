@@ -15,13 +15,14 @@ export function renderOverview(S) {
   const B = buckets(), ags = agentsF();
   const per = B.map(b => { const seen = new Set(); const o = Object.assign(zeroAg(), { parts: [0, 0, 0, 0], n: 0, prem: 0 }); S.forEach(s => { const v = bval(s, b); if (!v) return; const t = v[0] + v[1] + v[2] + v[3]; o[s.agent] += t; o.prem += v[4] || 0; for (let i = 0; i < 4; i++) o.parts[i] += v[i]; const sid = s.agent + ":" + (s.session_id || s.id); if (!seen.has(sid)) { o.n++; seen.add(sid); } }); return o; });
   const T = (X, k) => sum(X, s => s[k]);
-  const Cl = S.filter(s => s.agent === "claude"), Cx = S.filter(s => s.agent === "codex"), Cp = S.filter(s => s.agent === "copilot"), Hm = S.filter(s => s.agent === "hermes");
+  const Cl = S.filter(s => s.agent === "claude"), Cx = S.filter(s => s.agent === "codex"), Cp = S.filter(s => s.agent === "copilot"), Hm = S.filter(s => s.agent === "hermes"), Jc = S.filter(s => s.agent === "jcode");
   const tiles = [
     ["Tổng token", fmt(T(S, "total")), `${fmt(T(S, "calls"))} lượt gọi đã biết`, per.map(p => sum(AGENTS, a => p[a])), "var(--text)"],
     ["Claude", fmt(T(Cl, "total")), `${Cl.length} phần phiên`, per.map(p => p.claude), COL.claude, "claude"],
     ["Codex", fmt(T(Cx, "total")), `${Cx.length} phần phiên`, per.map(p => p.codex), COL.codex, "codex"],
     ["Copilot", fmt(T(Cp, "total")), `${Cp.length} phiên, ${fmt(T(Cp, "prem"))} premium request`, per.map(p => p.copilot), COL.copilot, "copilot"],
     ["Hermes", fmt(T(Hm, "total")), `${sessionCount(Hm)} phiên, chỉ có tổng phiên`, per.map(p => p.hermes), COL.hermes, "hermes"],
+    ["jcode", fmt(T(Jc, "total")), `${sessionCount(Jc)} phiên`, per.map(p => p.jcode), COL.jcode, "jcode"],
     ["Chưa phân bổ vào Run", fmt(T(S.filter(s => !s.run_id), "total")), `${pct(T(S.filter(s => s.run_id), "total"), T(S, "total"))} đã phân bổ`, per.map(() => 0), "var(--yellow)"],
     ["Output", fmt(T(S, "out")), `reasoning ${fmt(T(S, "reason"))}`, per.map(p => p.parts[3]), COL.out],
     ["Phiên hoạt động", String(sessionCount(S)), `trung vị ${fmt(median(S.map(s => s.total)))} token mỗi phần phiên`, per.map(p => p.n), "var(--sky)"],

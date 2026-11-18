@@ -11,7 +11,7 @@ export function repoTree(S) {
       filter: s.run_id ? "runF:" + s.run_id : "wt:" + repo + "/" + s.worktree, sessions: [] };
     group.sessions.push(s);
   });
-  const agg = X => ({ c: sum(X.filter(s => s.agent === "claude"), s => s.total), x: sum(X.filter(s => s.agent === "codex"), s => s.total), p: sum(X.filter(s => s.agent === "copilot"), s => s.total), h: sum(X.filter(s => s.agent === "hermes"), s => s.total), t: sum(X, s => s.total), n: X.length, calls: sum(X, s => s.calls), last: Math.max(...X.map(s => s.end || 0)) });
+  const agg = X => ({ c: sum(X.filter(s => s.agent === "claude"), s => s.total), x: sum(X.filter(s => s.agent === "codex"), s => s.total), p: sum(X.filter(s => s.agent === "copilot"), s => s.total), h: sum(X.filter(s => s.agent === "hermes"), s => s.total), j: sum(X.filter(s => s.agent === "jcode"), s => s.total), t: sum(X, s => s.total), n: X.length, calls: sum(X, s => s.calls), last: Math.max(...X.map(s => s.end || 0)) });
   return Object.entries(tree).map(([repo, wts]) => {
     const all = Object.values(wts).flatMap(w => w.sessions);
     return { repo, a: agg(all), wts: Object.values(wts).map(w => ({ wt: w.wt, filter: w.filter, a: agg(w.sessions) })).sort((p, q) => q.a.t - p.a.t) };
@@ -19,7 +19,7 @@ export function repoTree(S) {
 }
 /* Colour by agent share: nested color-mix of the three agent colours, weighted by tokens. */
 const shareCol = a => {
-  const w = [[a.c, "var(--claude)"], [a.x, "var(--codex)"], [a.p || 0, "var(--copilot)"], [a.h || 0, "var(--hermes)"]].filter(z => z[0] > 0).sort((p, q) => q[0] - p[0]);
+  const w = [[a.c, "var(--claude)"], [a.x, "var(--codex)"], [a.p || 0, "var(--copilot)"], [a.h || 0, "var(--hermes)"], [a.j || 0, "var(--jcode)"]].filter(z => z[0] > 0).sort((p, q) => q[0] - p[0]);
   if (!w.length) return "var(--overlay0)";
   let col = w[w.length - 1][1], acc = w[w.length - 1][0];
   for (let i = w.length - 2; i >= 0; i--) { const p = Math.round(100 * w[i][0] / (w[i][0] + acc)); col = p >= 100 ? w[i][1] : `color-mix(in srgb, ${w[i][1]} ${p}%, ${col})`; acc += w[i][0]; }
@@ -41,5 +41,5 @@ export function renderRepos(S) {
     });
   });
   fig("#c-tree", { title: "Token theo công việc", body: R.length ? svg(W, H, "Treemap repo rồi Run, diện tích theo token, màu theo tỷ lệ agent", g.join("")) : "",
-    legend: [{ name: "Toàn Claude", color: "var(--claude)", f: "agent:claude" }, { name: "Toàn Codex", color: "var(--codex)", f: "agent:codex" }, { name: "Toàn Copilot", color: "var(--copilot)", f: "agent:copilot" }, { name: "Toàn Hermes", color: "var(--hermes)", f: "agent:hermes" }, { name: "Nửa Claude, nửa Codex", color: "color-mix(in srgb, var(--codex) 50%, var(--claude))" }] });
+    legend: [{ name: "Toàn Claude", color: "var(--claude)", f: "agent:claude" }, { name: "Toàn Codex", color: "var(--codex)", f: "agent:codex" }, { name: "Toàn Copilot", color: "var(--copilot)", f: "agent:copilot" }, { name: "Toàn Hermes", color: "var(--hermes)", f: "agent:hermes" }, { name: "Toàn jcode", color: "var(--jcode)", f: "agent:jcode" }, { name: "Nửa Claude, nửa Codex", color: "color-mix(in srgb, var(--codex) 50%, var(--claude))" }] });
 }

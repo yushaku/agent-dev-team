@@ -232,7 +232,7 @@ tr[hidden] { display: none; }
    ========================================================== */
 :root {
   /* Chart series: one meaning per colour, charts and their legends only */
-  --claude: var(--mauve); --codex: var(--green); --copilot: var(--teal); --cursor: var(--sky); --hermes: var(--lavender);
+  --claude: var(--mauve); --codex: var(--green); --copilot: var(--teal); --cursor: var(--sky); --hermes: var(--lavender); --jcode: var(--peach);
   --p-fin: var(--blue); --p-cr: var(--overlay0); --p-cw: var(--peach); --p-out: var(--pink);
 }
 .dash { display: grid; gap: var(--s-7); min-width: 0; }

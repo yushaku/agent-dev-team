@@ -1,15 +1,15 @@
 /* Token dashboard tab: Claude, Codex, GitHub Copilot CLI and Orca usage from GET /api/data (ported from the old dashboard page). */
 export const $ = s => document.querySelector(s);
 export const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes" };
-export const AGENTS = ["claude", "codex", "copilot", "hermes"];
-export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0 });
+export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes", jcode: "jcode" };
+export const AGENTS = ["claude", "codex", "copilot", "hermes", "jcode"];
+export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0, jcode: 0 });
 export const state = { days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", data: null, auto: true, timer: null };
 try { const s = JSON.parse(localStorage.getItem("team-dashboard") || "{}"); Object.assign(state, { days: s.days || 7, repo: s.repo || "", agent: s.agent || "", role: s.role || "", wt: s.wt || "", runF: s.runF || "", taskF: s.taskF || "", auto: s.auto !== false }); } catch (e) {}
 export const persist = () => { try { localStorage.setItem("team-dashboard", JSON.stringify({ days: state.days, repo: state.repo, agent: state.agent, role: state.role, wt: state.wt, runF: state.runF, taskF: state.taskF, auto: state.auto })); } catch (e) {} };
 
 /* ---------- colours: one meaning each ---------- */
-export const COL = { claude: "var(--claude)", codex: "var(--codex)", copilot: "var(--copilot)", hermes: "var(--hermes)", fin: "var(--p-fin)", cr: "var(--p-cr)", cw: "var(--p-cw)", out: "var(--p-out)" };
+export const COL = { claude: "var(--claude)", codex: "var(--codex)", copilot: "var(--copilot)", hermes: "var(--hermes)", jcode: "var(--jcode)", fin: "var(--p-fin)", cr: "var(--p-cr)", cw: "var(--p-cw)", out: "var(--p-out)" };
 export const PARTS = [["fin", "Input mới"], ["cr", "Cache đọc"], ["cw", "Cache ghi"], ["out", "Output"]];
 export const GROUPS = { po: ["PO", "var(--sky)"], orch: ["Orchestrator", "var(--blue)"], plan: ["Plan", "var(--mauve)"], build: ["Build", "var(--green)"], verify: ["Verify", "var(--peach)"], delivery: ["Delivery", "var(--pink)"], direct: ["Chat trực tiếp", "var(--overlay0)"], other: ["Khác", "var(--overlay2)"] };
 export const ROLE_GROUP = { po: "po", orchestrator: "orch", designer: "plan", architect: "plan", "solution-architect": "plan", "tech-lead": "plan", researcher: "plan", builder: "build", "anti-ai": "verify", qa: "verify", reviewer: "verify", security: "verify", "perf-a11y": "verify", "doc-keeper": "delivery", delivery: "delivery", "chat trực tiếp": "direct" };

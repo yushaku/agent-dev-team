@@ -4,10 +4,11 @@ import os
 import threading
 
 from . import config
-from .config import CACHE_FILE, CLAUDE_GLOB, CODEX_GLOB, COPILOT_GLOB, PARSER_VERSION
+from .config import CACHE_FILE, CLAUDE_GLOB, CODEX_GLOB, COPILOT_GLOB, JCODE_GLOB, PARSER_VERSION
 from .parsers.claude import parse_claude
 from .parsers.codex import parse_codex
 from .parsers.copilot import parse_copilot
+from .parsers.jcode import parse_jcode
 
 lock = threading.Lock()
 cache = {"version": config.PARSER_VERSION, "files": {}, "dispatch": {}}
@@ -19,7 +20,7 @@ def load_files():
     files = cache["files"]
     seen = set()
     out = []
-    for pattern, parser in ((CLAUDE_GLOB, parse_claude), (CODEX_GLOB, parse_codex), (COPILOT_GLOB, parse_copilot)):
+    for pattern, parser in ((CLAUDE_GLOB, parse_claude), (CODEX_GLOB, parse_codex), (COPILOT_GLOB, parse_copilot), (JCODE_GLOB, parse_jcode)):
         for path in glob.glob(pattern, recursive=True):
             try:
                 st = os.stat(path)
@@ -30,7 +31,7 @@ def load_files():
             if not ent or ent["size"] != st.st_size or ent["mtime"] != st.st_mtime:
                 try:
                     ent = {"size": st.st_size, "mtime": st.st_mtime, "v": parser(path)}
-                except OSError:
+                except (OSError, ValueError):
                     continue
                 files[path] = ent
                 cache_dirty = True
