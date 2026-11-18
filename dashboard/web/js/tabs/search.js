@@ -1,4 +1,4 @@
-import { $, esc, AG, COL, fmt, sessionsF, widthOf, fig, hBars, median } from "../lib/charts.js";
+import { $, esc, AG, COL, fmt, sessionsF, state, widthOf, fig, hBars, median } from "../lib/charts.js";
 
 export const KINDS = [
   ["codegraph", "Codegraph", "var(--green)"],
@@ -44,6 +44,30 @@ function bars(id, rows, title, caption) {
     }) : "",
     empty: "Không có lượt tìm code nào.",
   });
+}
+
+function byTask(S) {
+  const by = new Map();
+  S.forEach(s => {
+    if (!s.task_id || !s.search) return;
+    const r = by.get(s.task_id) || { label: s.task_title || s.task_id, search: {}, sessions: 0, cg: 0 };
+    r.sessions++;
+    if (cnt(s.search, "codegraph")) r.cg++;
+    KINDS.forEach(([k]) => { r.search[k] = cnt(r.search, k) + cnt(s.search, k); });
+    by.set(s.task_id, r);
+  });
+  return [...by.entries()]
+    .filter(([, r]) => total(r.search))
+    .sort(([, a], [, b]) => total(b.search) - total(a.search))
+    .map(([id, r]) => [r.label === id ? id : `${r.label} · ${id.slice(-6)}`, r]);
+}
+
+export function renderTaskSearch(S0) {
+  const section = $("#task-search");
+  if (!section) return;
+  section.hidden = !state.repo;
+  if (!state.repo) return;
+  bars("#c-task-search", byTask(S0 || sessionsF()), "Theo task", "Lượt tìm code của các phiên đã được gán vào task Orca trong project đang lọc.");
 }
 
 export function renderSearch(S0) {

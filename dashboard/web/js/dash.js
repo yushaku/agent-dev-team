@@ -8,7 +8,7 @@ import { renderRepos } from "./tabs/repos.js";
 import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderTokens } from "./tabs/tokens.js";
-import { renderSearch } from "./tabs/search.js";
+import { renderSearch, renderTaskSearch } from "./tabs/search.js";
 import { renderOverall } from "./tabs/overall.js";
 
 async function load() {
@@ -49,7 +49,7 @@ function render() {
   const view = views.find(v => !v.hidden)?.id || "tk-tong-quan";
   if (view === "tk-tong-quan") renderOverview(S);
   else if (view === "tk-theo-repo") {
-    renderOverall(S); renderRoles(S); renderRepos(S); renderSessionCharts(S);
+    renderOverall(S); renderRoles(S); renderRepos(S); renderTaskSearch(S); renderSessionCharts(S);
   } else if (view === "tk-skills") renderSkills(S);
   else if (view === "tk-search") renderSearch(S);
   else if (view === "tk-rtk") renderTokens();
