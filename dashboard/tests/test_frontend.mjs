@@ -67,7 +67,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     const exports = specifier === "./lib/charts.js" ? C : {
       renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
       renderRoles() { rendered.push("roles"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
-      showSession() {}, renderSkills() { rendered.push("skills"); }, renderTokens() { rendered.push("tokens"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); },
+      showSession() {}, renderSkills() { rendered.push("skills"); }, renderTokens() { rendered.push("tokens"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); },
     };
     return new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
@@ -110,7 +110,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     assert.deepEqual(rendered, ["skills"]);
     rendered.length = 0;
     dash.namespace.showView("tk-search", { hash: false });
-    assert.deepEqual(rendered, ["search"]);
+    assert.deepEqual(rendered.sort(), ["rtk-commands", "search"]);
     rendered.length = 0;
     dash.namespace.showView("tk-rtk", { hash: false });
     assert.deepEqual(rendered, ["tokens"]);
