@@ -50,7 +50,7 @@ test("Tasks shows code-search usage by role only after filtering a project", () 
   ];
   renderTaskRoleSearch(sessions);
   assert.equal(element("#task-search").hidden, false);
-  assert.match(element("#c-task-search").innerHTML, /Theo vai/);
+  assert.match(element("#c-task-search").innerHTML, /Tool search code/);
   assert.match(element("#c-task-search").innerHTML, /builder/);
   assert.match(element("#c-task-search").innerHTML, /reviewer/);
 

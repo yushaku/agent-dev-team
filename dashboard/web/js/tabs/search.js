@@ -51,7 +51,7 @@ export function renderTaskRoleSearch(S0) {
   if (!section) return;
   section.hidden = !state.repo;
   if (!state.repo) return;
-  bars("#c-task-search", group(S0 || sessionsF(), s => s.role), "Theo vai", "Mỗi màu là một cách tìm hoặc đọc code. Dùng chart để thấy vai nào dựa nhiều vào đọc file, rg/grep hoặc codegraph trong project đang lọc.");
+  bars("#c-task-search", group(S0 || sessionsF(), s => s.role), "Tool search code", "Mỗi màu là một cách tìm hoặc đọc code. Dùng chart để thấy vai nào dựa nhiều vào đọc file, rg/grep hoặc codegraph trong project đang lọc.");
 }
 
 export function renderSearch(S0) {
