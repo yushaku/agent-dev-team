@@ -14,7 +14,7 @@ function element(id) {
 }
 globalThis.document = {
   querySelector: element,
-  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-theo-repo", "tk-skills", "tk-rtk", "tk-cach-tinh"].map(element) : [],
+  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-theo-repo", "tk-skills", "tk-search", "tk-rtk", "tk-cach-tinh"].map(element) : [],
   addEventListener() {},
 };
 globalThis.window = { innerWidth: 1000, addEventListener() {} };
@@ -48,7 +48,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     const exports = specifier === "./lib/charts.js" ? C : {
       renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
       renderRoles() { rendered.push("roles"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
-      showSession() {}, renderSkills() { rendered.push("skills"); }, renderTokens() { rendered.push("tokens"); },
+      showSession() {}, renderSkills() { rendered.push("skills"); }, renderTokens() { rendered.push("tokens"); }, renderSearch() { rendered.push("search"); },
     };
     return new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
@@ -89,6 +89,9 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     rendered.length = 0;
     dash.namespace.showView("tk-skills", { hash: false });
     assert.deepEqual(rendered, ["skills"]);
+    rendered.length = 0;
+    dash.namespace.showView("tk-search", { hash: false });
+    assert.deepEqual(rendered, ["search"]);
     rendered.length = 0;
     dash.namespace.showView("tk-rtk", { hash: false });
     assert.deepEqual(rendered, ["tokens"]);
@@ -328,4 +331,16 @@ test("role tier checks use Task routing rather than model-name guesses", () => {
   assert.equal(stats.mismatch, 1);
   assert.equal(stats.effHi, 1);
   assert.equal(roleStats([row("gpt-looks-expensive", "high", null)])[0].mismatch, 0);
+});
+
+test("search tab renders codegraph vs rg counts", async () => {
+  const { renderSearch } = await import("../web/js/tabs/search.js");
+  C.state.data = { sessions: [] };
+  renderSearch([
+    { agent: "claude", role: "builder", repo: "r", worktree: "w1", total: 100, search: { codegraph: 3, rg: 1 } },
+    { agent: "codex", role: "builder", repo: "r", worktree: "w2", total: 300, search: { rg: 4, read: 2 } },
+  ]);
+  assert.match(element("#c-search-kpi").innerHTML, /Codegraph/);
+  assert.match(element("#c-search-kpi").innerHTML, /1\/2/);
+  assert.match(element("#c-search-wt").innerHTML, /r\/w2/);
 });

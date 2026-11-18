@@ -61,6 +61,41 @@ def repo_of(cwd):
         return parts[-2], parts[-1]
     return (parts[0] if parts else "?"), "?"
 
+# Code search kinds counted per tool call (see note_search).
+SEARCH_KINDS = ("codegraph", "rg", "grep", "find", "read")
+CG_TOOL_RE = re.compile(r"codegraph", re.I)
+SEARCH_CMD_RE = {
+    "codegraph": re.compile(r"(?:^|[;&|(\s'\"`])codegraph\s+(?:explore|query|node|callers|callees|impact|affected|files|context|search)\b"),
+    "rg": re.compile(r"(?:^|[;&|(\s'\"`])(?:rtk\s+(?:proxy\s+)?)?rg\s"),
+    "grep": re.compile(r"(?:^|[;&|(\s'\"`])(?:rtk\s+(?:proxy\s+)?)?(?:git\s+)?grep\s"),
+    "find": re.compile(r"(?:^|[;&|(\s'\"`])(?:find|fd)\s"),
+    "read": re.compile(r"(?:^|[;&|(\s'\"`])(?:cat|head|tail|sed\s+-n)\s"),
+}
+TOOL_KIND = {"grep": "grep", "glob": "find", "read": "read", "view": "read", "read_file": "read",
+             "search_files": "grep", "agentgrep": "grep", "find_files": "find"}
+
+
+def search_kinds(name, args):
+    """Search kinds used by one tool call. Codegraph wins: MCP tool name or a `codegraph <query>` command."""
+    name = str(name or "")
+    if CG_TOOL_RE.search(name):
+        return ["codegraph"]
+    kind = TOOL_KIND.get(name.lower())
+    if kind:
+        return [kind]
+    cmd = cmd_text(args)
+    if not cmd:
+        return []
+    if SEARCH_CMD_RE["codegraph"].search(cmd) or "codegraph_" in cmd:
+        return ["codegraph"]
+    return [k for k in SEARCH_KINDS[1:] if SEARCH_CMD_RE[k].search(cmd)]
+
+
+def note_search(s, name, args, ts=None):
+    for k in search_kinds(name, args):
+        s.setdefault("search", []).append([k, ts])
+
+
 def cmd_text(v):
     """Shell command(s) of a tool call: JSON {command|cmd}, an argv list, or Codex exec JS source."""
     if isinstance(v, str):

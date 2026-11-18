@@ -2,7 +2,7 @@ import json
 import os
 
 from ..config import CLAUDE_SKILLS, SKILLS_DIR
-from .common import (CLAUDE_CMD_RE, TASK_RE, cmd_text, finish_first, hook_skill, note_orca,
+from .common import (note_search, CLAUDE_CMD_RE, TASK_RE, cmd_text, finish_first, hook_skill, note_orca,
                             skills_in, ts_of)
 from ..roles import note_discussion_tool
 
@@ -66,6 +66,7 @@ def parse_claude(path):
                         continue
                     inp = c.get("input") or {}
                     note_discussion_tool(s, c.get("name"), inp)
+                    note_search(s, c.get("name"), inp, ts)
                     if c.get("name") == "Skill":
                         name = str(inp.get("skill") or inp.get("name") or inp.get("command") or "").split(":")[-1].strip("/ ")
                         if name:

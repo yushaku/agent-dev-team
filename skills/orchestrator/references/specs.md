@@ -21,6 +21,7 @@ Output: <report path and raw-log paths under .team/<feature>/>
 - `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `spec`, `qa`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
 - Include resolved skills and config values, not the whole config. Resolve models from `.team/config.yaml` via `config.md` "Model routing" and record each Dispatch under "Routing history" below. For output, workers read "Report"; for doc changes/review, relevant `docs-policy.md` sections.
 - Include an absolute pointer to "Worker communication" below in each Task's Constraints; supply related peer Dispatch IDs when available and refresh them after reassignment.
+- With `codegraph: on`, add to Constraints: "Code search: codegraph first (`codegraph_explore` MCP or `codegraph explore|callers|impact` CLI) for symbols, callers and impact; `rg` only for literal text. Do not `cat` whole files to find a symbol." (`config.md` "Code search").
 - Give known entry points and link source decisions; the Builder traces connected code. Name approval boundaries; routine reads, scoped edits, tests and authorized delivery proceed.
 - Protect uncommitted/PO-kept files; include related Builder docs in scope. Follow approved business decisions; changes use `gates.md`.
 - Handle observed permission failures via `start.md` "Worker permissions"; do not preemptively forbid commits.

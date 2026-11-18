@@ -1,7 +1,7 @@
 import json
 import os
 
-from .common import (TASK_RE, cmd_text, finish_first, hook_skill, note_orca, skills_in, ts_of)
+from .common import (note_search, TASK_RE, cmd_text, finish_first, hook_skill, note_orca, skills_in, ts_of)
 from ..roles import note_discussion_tool
 
 def codex_call(ts, model, eff, u):
@@ -71,6 +71,7 @@ def parse_codex(path):
                 elif pt in ("custom_tool_call", "function_call", "local_shell_call") and p.get("name") != "apply_patch":
                     arg = p.get("input") or p.get("arguments") or p.get("action") or ""
                     note_discussion_tool(s, p.get("name"), arg)
+                    note_search(s, p.get("name"), arg, ts)
                     for name in skills_in(str(arg)):
                         s["skills"].append([name, ts])
                     note_orca(s, cmd_text(arg), ts)

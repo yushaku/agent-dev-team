@@ -19,6 +19,17 @@ class ParserTests(unittest.TestCase):
         note_orca(s, 'orca orchestration worker-start --run run_a', 5)
         self.assertEqual(s["runs"], [["run_a", 3], ["run_b", 4], ["run_a", 5]])
 
+    def test_search_kinds_classify_codegraph_and_text_search(self):
+        from backend.parsers.common import search_kinds
+        self.assertEqual(search_kinds("mcp__codegraph__codegraph_explore", {}), ["codegraph"])
+        self.assertEqual(search_kinds("Bash", {"command": "codegraph callers build"}), ["codegraph"])
+        self.assertEqual(search_kinds("Bash", {"command": "rtk rg -n foo src | head -5"}), ["rg", "read"])
+        self.assertEqual(search_kinds("Bash", {"command": "git grep foo"}), ["grep"])
+        self.assertEqual(search_kinds("Read", {"file_path": "/x"}), ["read"])
+        self.assertEqual(search_kinds("exec", 'await tools.exec_command({cmd: "rg foo"})'), ["rg"])
+        self.assertEqual(search_kinds("Bash", {"command": "codegraph init"}), [])
+        self.assertEqual(search_kinds("Bash", {"command": "npm test"}), [])
+
     def parse(self, parser, events):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "session.jsonl")

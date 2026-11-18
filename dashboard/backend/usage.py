@@ -140,7 +140,7 @@ def build(days):
                     "run_id": rid, "attribution": source, "aggregate": aggregate, "routing": routing,
                     "calls": 0, "fin": 0, "cr": 0, "cw": 0, "out": 0, "reason": 0, "prem": 0,
                     "snapshot": s.get("snapshot"), "ctx": [], "days": {}, "hours": {}, "t0": None,
-                    "mix": {}, "models": {}, "skills": {}}
+                    "mix": {}, "models": {}, "skills": {}, "search": {}}
             row = rows[key]
             row["calls"] += 1
             prem = c[9] if len(c) > 9 else 0
@@ -170,6 +170,16 @@ def build(days):
                 value = target["skills"].setdefault(name, [0, 0])
                 value[0] += 1
                 value[1] = max(value[1], ts)
+        for kind, ts in s.get("search") or []:
+            ts = ts or s["start"]
+            if not ts or ts < start:
+                continue
+            tids = [tid for t0, tid in task_events if t0 <= ts]
+            rids = [rid for t0, rid in run_events if t0 <= ts]
+            target = next((r for r in rows.values() if (tids and r["task_id"] == tids[-1]) or
+                           (not tids and rids and r["run_id"] == rids[-1])), None) or next(iter(rows.values()), None)
+            if target:
+                target["search"][kind] = target["search"].get(kind, 0) + 1
         for i, row in enumerate(rows.values()):
             if len(rows) > 1:
                 row["id"] += ":part:" + str(i)

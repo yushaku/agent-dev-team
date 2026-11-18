@@ -3,7 +3,7 @@ import os
 import time
 
 from ..config import HERMES_DB
-from .common import HERMES_ARGS_MARK, HERMES_SKILL_RE, cmd_text, finish_first, note_orca
+from .common import note_search, HERMES_ARGS_MARK, HERMES_SKILL_RE, cmd_text, finish_first, note_orca
 from ..roles import note_discussion_tool
 
 _HERMES_CACHE = {"start": None, "ts": 0.0, "data": []}
@@ -60,6 +60,7 @@ def parse_hermes(start):
                             fn = c.get("function") or {}
                             args = fn.get("arguments") or ""
                             note_discussion_tool(tool_state, fn.get("name"), args)
+                            note_search(tool_state, fn.get("name"), args, m["timestamp"])
                             note_orca(tool_state, cmd_text(args), m["timestamp"])
                     except (ValueError, AttributeError, TypeError):
                         pass
@@ -76,7 +77,7 @@ def parse_hermes(start):
                 "start": r["started_at"], "end": r["ended_at"] or r["started_at"], "first": first,
                 "sid": r["id"], "originator": "hermes:" + (r["source"] or "?"),
                 "skills": skills, "subagent": False, "id": r["id"], "title": r["title"] or "", "dispatcher": tool_state["dispatcher"],
-                "runs": tool_state["runs"], "aggregate": True,
+                "runs": tool_state["runs"], "aggregate": True, "search": tool_state.get("search", []),
                 "discussion_read": tool_state.get("discussion_read"),
                 "calls": [[r["started_at"], r["model"] or "unknown", None, r["input_tokens"] or 0,
                            r["cache_read_tokens"] or 0, r["cache_write_tokens"] or 0, r["output_tokens"] or 0,

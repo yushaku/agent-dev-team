@@ -35,6 +35,7 @@ commands:
   serial: false              # true = run one at a time (shared cache or device)
 e2e: []                      # optional; heavy E2E commands, run only on request
 worktree_links: [.env]       # untracked local files linked from the main checkout
+codegraph: on                # on = index each code worktree and expose the codegraph MCP per project ("Code search")
 skills:                      # slot values (`Skill slots`); empty = role core skills only
   build.ui: [extra-skill]    # e.g.
   project: [.claude/skills/<name>]   # skills shipped in the repo
@@ -116,3 +117,14 @@ models:
 - Slots: `design`, `architecture`, `build.ui`, `build.core`, `qa`, `review`, `security`, `perf`.
 - Resolution: project `skills.<slot>` > empty (role core skills only). A slot skill not installed: tell the PO once, never skip silently.
 - A config with a `profile:` key: ignore the key.
+
+## Code search
+
+`codegraph: on` (default) gives each code worktree its own index and a project-scoped codegraph MCP; nothing is configured globally.
+
+- Setup: `${AGENT_TEAM_HOME:-~/.agents/teams}/bin/cg-project <worktree>` runs `codegraph init` and writes `.mcp.json` (Claude, jcode), `.claude/settings.local.json` (pre-approval) and `.codex/config.toml`, all listed in `.git/info/exclude`. Set it as the Orca repo Setup script (`${AGENT_TEAM_HOME:-~/.agents/teams}/bin/cg-project .`) or run it after creating the worktree.
+- Teardown: Orca repo Archive script `${AGENT_TEAM_HOME:-~/.agents/teams}/bin/cg-wt-rm --stop-only` stops the worktree's codegraph daemon and MCP processes; outside Orca, `cg-wt-rm <worktree>` also removes the worktree.
+- Agents search structure first: `codegraph_explore` (MCP) or `codegraph explore|callers|callees|impact <symbol>` (CLI) for "where is X, who calls X, what breaks if X changes"; `rg` for literal strings, config keys and files codegraph does not index. After large edits run `codegraph sync`.
+- Hermes has no per-project MCP: give it the CLI commands above.
+- `codegraph: off` (unsupported language, huge monorepo): skip setup and the search rule.
+- The dashboard "Tìm code" tab shows codegraph vs rg/grep calls per agent, role and worktree.

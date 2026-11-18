@@ -8,6 +8,7 @@ import { renderRepos } from "./tabs/repos.js";
 import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderTokens } from "./tabs/tokens.js";
+import { renderSearch } from "./tabs/search.js";
 import { renderOverall } from "./tabs/overall.js";
 
 async function load() {
@@ -50,6 +51,7 @@ function render() {
   else if (view === "tk-theo-repo") {
     renderOverall(S); renderRoles(S); renderRepos(S); renderSessionCharts(S);
   } else if (view === "tk-skills") renderSkills(S);
+  else if (view === "tk-search") renderSearch(S);
   else if (view === "tk-rtk") renderTokens();
 }
 

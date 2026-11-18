@@ -9,6 +9,7 @@
 - **Test seam:** use the agreed seam from the plan or Task spec; if neither specifies one, choose the highest existing seam that proves the requested behavior and record it in the report.
 - **Evidence:** when a test drives the change, keep its failing output before the fix and passing output after; both go in the report's `## Evidence`.
 - **One Builder, all slices:** use the plan when present; otherwise choose the smallest implementation steps in the existing Task. Work the slices in order in one session; commit each as `feat`; `/compact` only when context is close to full. Read the spec and code once, then only each slice's rule and AC IDs and listed relevant code; read outside it only when needed and state why in the report.
+- **Code search:** with codegraph available, trace code with `codegraph_explore` / `codegraph callers|impact` before `rg` or whole-file reads (`config.md` "Code search").
 - **Migrations in a fix round:** schema changes go in a NEW migration; never edit one already applied to the PO's database.
 - **Findings:** reproduce the failure or establish the failing code path before editing. Reject a finding with test output or a code trace when its premise is false; let the Reviewer confirm the evidence. A passing baseline is not a reason to add the requested code.
 - **Documentation:** record decisions during implementation; finalize related docs once the solution settles, before the final review. Accepted ADRs remain immutable except their Status; business-rule changes require Gate 1.
