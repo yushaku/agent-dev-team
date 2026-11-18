@@ -7,7 +7,7 @@ import { renderRoles } from "./tabs/roles.js";
 import { renderRepos } from "./tabs/repos.js";
 import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
-import { renderRtkCommands, renderTokens } from "./tabs/tokens.js";
+import { renderRtkCommands } from "./tabs/tokens.js";
 import { renderSearch, renderTaskRoleSearch } from "./tabs/search.js";
 import { renderOverall } from "./tabs/overall.js";
 
@@ -52,7 +52,6 @@ function render() {
     renderOverall(S); renderRoles(S); renderRepos(S); renderTaskRoleSearch(S); renderSessionCharts(S);
   } else if (view === "tk-skills") renderSkills(S);
   else if (view === "tk-search") { renderSearch(S); renderRtkCommands(); }
-  else if (view === "tk-rtk") renderTokens();
 }
 
 /* ---------- cross filter ---------- */

@@ -13,7 +13,7 @@
 <header class="topbar">
   <div class="wrap">
     <a class="brand" href="#tk-tong-quan" aria-label="Orca team dashboard, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>Orca team dashboard</span></a>
-    <nav id="tk-nav" aria-label="Mục token"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-repo">Tasks</button><button type="button" data-view="tk-skills">Skill đã dùng</button><button type="button" data-view="tk-search">Tools</button><button type="button" data-view="tk-rtk">RTK</button></nav>
+    <nav id="tk-nav" aria-label="Mục token"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-repo">Tasks</button><button type="button" data-view="tk-skills">Skill đã dùng</button><button type="button" data-view="tk-search">Tools</button></nav>
     <a class="doc-link" href="https://yushaku.github.io/agent-dev-team/docs/" target="_blank" rel="noopener">Tài liệu</a>
   </div>
 </header>
@@ -96,33 +96,10 @@
       <h3 id="tk-search-h">Tools</h3>
       <p class="lead">Số lần agent gọi codegraph (MCP hoặc CLI) so với rg, grep, find và đọc file. Tỉ lệ codegraph thấp ở một vai hay worktree là dấu hiệu agent chưa dùng index.</p>
     </div>
-    <section aria-labelledby="h-search-kpi">
-      <h4 id="h-search-kpi">Tổng kết</h4>
-      <div class="charts" id="c-search-kpi"></div>
-    </section>
     <section aria-label="Theo agent"><figure class="chart" id="c-search-agent"></figure></section>
     <section aria-label="Theo vai"><figure class="chart" id="c-search-role"></figure></section>
     <section aria-label="Theo repo / worktree"><figure class="chart" id="c-search-wt"></figure></section>
     <section aria-label="RTK theo lệnh"><figure class="chart" id="c-rtk-cmd"></figure></section>
-  </section>
-
-  <section class="dash-view" id="tk-rtk" aria-labelledby="tk-rtk-h" hidden>
-    <div class="panel-head">
-      <h3 id="tk-rtk-h">Token đã tiết kiệm nhờ RTK</h3>
-      <p class="lead">RTK (Rust Token Killer) nén output lệnh trước khi đưa vào context, giảm 60-90% token trên thao tác dev.</p>
-    </div>
-    <section aria-labelledby="h-rtk-kpi">
-      <h4 id="h-rtk-kpi">Tổng kết</h4>
-      <div class="charts" id="c-rtk-kpi"></div>
-    </section>
-    <section aria-labelledby="h-rtk-daily">
-      <h4 id="h-rtk-daily">Theo ngày</h4>
-      <figure class="chart" id="c-rtk-daily"></figure>
-    </section>
-    <section aria-labelledby="h-rtk-project">
-      <h4 id="h-rtk-project">Theo dự án</h4>
-      <figure class="chart" id="c-rtk-project"></figure>
-    </section>
   </section>
 
   <section class="dash-view" id="tk-cach-tinh" aria-labelledby="tk-cach-tinh-h" hidden>
