@@ -49,7 +49,7 @@
       "id": "t_top",
       "type": "cloud",
       "label": "top tier",
-      "sublabel": "opus, gpt-6-astra",
+      "sublabel": "project model catalog",
       "pos": [
         1000,
         170
@@ -133,7 +133,7 @@
       "id": "t_work",
       "type": "cloud",
       "label": "work tier",
-      "sublabel": "sonnet, gpt-6.1-sol",
+      "sublabel": "project model catalog",
       "pos": [
         1000,
         330
@@ -217,7 +217,7 @@
       "id": "t_fast",
       "type": "cloud",
       "label": "fast tier",
-      "sublabel": "haiku, gpt-6-luna",
+      "sublabel": "project model catalog",
       "pos": [
         1000,
         490
@@ -273,7 +273,7 @@
   "boundaries": [
     {
       "kind": "region",
-      "label": "top tier, effort high",
+      "label": "top tier",
       "wraps": [
         "t_top",
         "top_0",
@@ -285,7 +285,7 @@
     },
     {
       "kind": "region",
-      "label": "work tier, effort medium",
+      "label": "work tier",
       "wraps": [
         "t_work",
         "work_0",
@@ -297,7 +297,7 @@
     },
     {
       "kind": "region",
-      "label": "fast tier, effort low",
+      "label": "fast tier",
       "wraps": [
         "t_fast",
         "fast_0",

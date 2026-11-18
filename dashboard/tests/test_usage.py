@@ -27,10 +27,39 @@ class UsageTests(unittest.TestCase):
              patch.object(usage, "parse_rtk", return_value={"available": False}):
             return usage.build(7)
 
-    def test_tiers_follow_current_registry(self):
-        tiers = usage.read_tiers()["tiers"]
-        self.assertEqual(tiers["top"]["claude"], "opus")
-        self.assertEqual(tiers["top"]["effort"], "high")
+    def test_role_defaults_do_not_depend_on_a_model_registry(self):
+        config = usage.read_tiers()
+        self.assertEqual(config["tiers"], {})
+        self.assertEqual(config["roles"]["reviewer"]["tier"], "top")
+        self.assertIsNone(config["roles"]["builder"]["agent"])
+
+    def test_session_carries_resolved_task_routing(self):
+        now = time.time() - 100
+        routing = dict(tier="work", catalog="my-code", agent="codex", model="test-model", effort="medium", dispatch="d1")
+        task = dict(id="a", run="run_a", role="builder", title="build", routing=[routing])
+        s = session([call(now)])
+        s["tasks"] = [["a", now]]
+        data = self.build([s], {"a": task}, runs=[dict(id="run_a", tasks=[task], gates=[])], dispatches=[dict(id="d1", agent="codex", task="a", wt="/repo/worktree", **{"from": now - 1, "to": now + 1})])
+        self.assertEqual(data["sessions"][0]["routing"], routing)
+        s["aggregate"] = True
+        data = self.build([s], {"a": task}, runs=[dict(id="run_a", tasks=[task], gates=[])], dispatches=[dict(id="d1", agent="codex", task="a", wt="/repo/worktree", **{"from": now - 1, "to": now + 1})])
+        self.assertIsNone(data["sessions"][0]["routing"])
+
+    def test_rerouting_the_same_task_keeps_each_dispatch_selection(self):
+        now = time.time() - 100
+        records = [dict(tier=tier, catalog=alias, agent="codex", model="test-model", effort="medium", dispatch=did)
+                   for tier, alias, did in (("fast", "quick", "d1"), ("work", "code", "d2"))]
+        task = dict(id="a", run="run_a", role="builder", title="build", routing=records)
+        dispatches = [dict(id=did, agent="codex", task="a", wt="/repo/worktree", **{"from": start, "to": end})
+                      for did, start, end in (("d1", now - 50, now - 20), ("d2", now - 10, now + 5))]
+        s = session([call(now - 40, 10), call(now - 5, 20)])
+        s["tasks"] = [["a", now - 50]]
+        data = self.build([s], {"a": task}, [dict(id="run_a", tasks=[task], gates=[])], dispatches)
+        self.assertEqual({row["routing"]["catalog"]: row["total"] for row in data["sessions"]}, {"quick": 10, "code": 20})
+        self.assertIsNone(usage.routing_at(task, dispatches, "codex", now - 15))
+        self.assertIsNone(usage.routing_at(task, dispatches, "claude", now - 5))
+        dispatches[0]["to"] = now + 5
+        self.assertIsNone(usage.routing_at(task, dispatches, "codex", now - 5))
 
     def test_reused_session_splits_tasks_and_preserves_unassigned_tokens(self):
         now = time.time() - 100

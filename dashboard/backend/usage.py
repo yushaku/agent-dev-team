@@ -13,16 +13,7 @@ from .roles import assign_role, known_roles
 
 
 def read_tiers():
-    tiers, roles = {}, {}
-    try:
-        with open(os.path.join(TEAMS, "skills", "orchestrator", "references", "coding-agents.md"), encoding="utf-8") as f:
-            sec = f.read().split("## Model tiers", 1)[1].split("## Routing", 1)[0]
-        for line in sec.splitlines():
-            cells = [v.strip().strip("`") for v in line.strip("|").split("|")]
-            if len(cells) == 6 and cells[0] in ("top", "work", "fast"):
-                tiers[cells[0]] = dict(zip(("claude", "codex", "cursor", "copilot", "effort"), cells[1:]))
-    except (OSError, IndexError):
-        pass
+    roles = {}
     for f in glob.glob(os.path.join(TEAMS, "roles", "*.md")):
         try:
             with open(f, encoding="utf-8") as source:
@@ -33,11 +24,20 @@ def read_tiers():
         if not m:
             continue
         line = m.group(1)
-        pref = re.search(r"prefers (\w+)", line)
         tm = re.search(r"tier (top|work|fast)", line)
-        roles[os.path.basename(f)[:-3]] = {"agent": pref.group(1) if pref else None,
+        roles[os.path.basename(f)[:-3]] = {"agent": None,
                                            "tier": tm.group(1) if tm else None, "text": line.strip()[:200]}
-    return {"tiers": tiers, "order": ["fast", "work", "top"], "roles": roles}
+    return {"tiers": {}, "order": ["fast", "work", "top"], "roles": roles}
+
+
+def routing_at(task, dispatches, agent, ts):
+    if not task:
+        return None
+    active = {d.get("id") for d in dispatches if d.get("task") == task["id"]
+              and d.get("agent") == agent and d.get("from") and d["from"] <= ts <= (d.get("to") or float("inf"))}
+    matches = [r for r in task.get("routing") or [] if r.get("dispatch") in active
+               and r.get("dispatch") and r.get("agent") == agent]
+    return matches[0] if len(matches) == 1 else None
 
 
 def build(days):
@@ -129,14 +129,15 @@ def build(days):
             if rid:
                 rw = run_window.setdefault(rid, {})
                 rw[s["agent"]] = rw.get(s["agent"], 0) + tot
-            key = (rid, task["id"] if task else None, role, source)
+            routing = None if aggregate else routing_at(task, s_disp, s["agent"], ts)
+            key = (rid, task["id"] if task else None, role, source, routing["dispatch"] if routing else None)
             if key not in rows:
                 rows[key] = {"id": s["id"], "session_id": s["id"], "agent": s["agent"], "repo": repo,
                     "worktree": wt, "branch": s.get("branch"), "role": role, "role_src": role_src,
                     "originator": (s.get("originator") or "?") + (" (subagent)" if s.get("subagent") else ""),
                     "start": s["start"], "end": s["end"], "preview": s["preview"], "title": s.get("title") or "",
                     "task_id": task["id"] if task else None, "task_title": task["title"] if task else None,
-                    "run_id": rid, "attribution": source, "aggregate": aggregate,
+                    "run_id": rid, "attribution": source, "aggregate": aggregate, "routing": routing,
                     "calls": 0, "fin": 0, "cr": 0, "cw": 0, "out": 0, "reason": 0, "prem": 0,
                     "snapshot": s.get("snapshot"), "ctx": [], "days": {}, "hours": {}, "t0": None,
                     "mix": {}, "models": {}, "skills": {}}

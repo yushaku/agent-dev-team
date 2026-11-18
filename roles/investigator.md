@@ -1,6 +1,6 @@
 # Investigator
 
-- **Runs on:** tier work; prefers claude. Ticket mode and read-only questions (`skills/orchestrator/references/tickets.md`).
+- **Runs on:** tier work. Ticket mode and read-only questions (`skills/orchestrator/references/tickets.md`).
 - **Mission:** answer "why does it behave like this", reproduce bugs, find root cause, measure impact, estimate effort.
 - **Skills:** `diagnosing-bugs`, `source-driven-development`, `browser-testing-with-devtools`.
 - **Writes:** findings in the Task report (`skills/orchestrator/references/specs.md` "Report"), plus a draft reply for the PO or assigned Analyst.

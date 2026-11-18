@@ -24,7 +24,7 @@ globalThis.history = { replaceState() {} };
 
 const C = await import("../web/js/lib/charts.js");
 const { repoTree } = await import("../web/js/tabs/repos.js");
-const { renderRoles } = await import("../web/js/tabs/roles.js");
+const { renderRoles, roleStats } = await import("../web/js/tabs/roles.js");
 const { runDetail, renderRunTimeline, communicationDiagram } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
 
@@ -313,4 +313,19 @@ test("run detail needs an explicit Run filter matching the filtered sessions", (
   renderOverall([row("a")]);
   assert.equal(element("#overall-timeline").hidden, true);
   assert.equal(element("#overall-run-list").innerHTML, "");
+});
+
+
+test("role tier checks use Task routing rather than model-name guesses", () => {
+  C.state.data = { roles_cfg: { tiers: {}, order: ["fast", "work", "top"], roles: { builder: { tier: "work" } } } };
+  const row = (model, effort, routing) => ({ role: "builder", agent: "custom-agent", model, effort, routing, mix: {}, total: 10 });
+  const routing = { agent: "custom-agent", model: "my-model", tier: "fast", effort: "medium" };
+  const stats = roleStats([
+    row("my-model", "high", routing), row("other-model", "high", routing),
+    row("gpt-looks-expensive", "high", null),
+  ])[0];
+  assert.equal(stats.def.tier, "fast");
+  assert.equal(stats.mismatch, 1);
+  assert.equal(stats.effHi, 1);
+  assert.equal(roleStats([row("gpt-looks-expensive", "high", null)])[0].mismatch, 0);
 });

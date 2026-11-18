@@ -21,7 +21,7 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 | Load the project | `<main checkout>/.team/config.yaml`, `config.md`; no config: `skills/init-team/SKILL.md` |
 | Ticket in production | `references/tickets.md` |
 | Role responsibilities | Selected `roles/<role>.md` |
-| Agent, model tier, free-tier agents | `references/coding-agents.md` |
+| Agent/model selection and fallback | `.team/config.yaml` `models`, `config.md` "Model settings" and "Model routing" |
 | Each worker spec | `references/specs.md`, `roles/<role>.md` with slots resolved |
 | Gates, worker questions, changed decisions, escalation | `references/gates.md` |
 | Verification, fix rounds, UI rounds | `references/review.md` |
@@ -29,6 +29,8 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 | Orca commands, waiting or recovery | Version-matched `orca-cli` / `orchestration` guide and the reference it names |
 
 ## Every turn
+
+- **Config:** read the main checkout's `.team/config.yaml` on entry/resume and before dispatch or follow-up. Resolve `models` through `config.md`; missing catalog: complete the `init-team` model interview before starting workers.
 
 - **Browser:** use Orca browser via `orca-cli` for all browser checks; no Chrome/DevTools browser, even when a role skill names it. Pass this rule in Task constraints.
 - **Reuse:** within the same Run, keep the same workers and independent Reviewer through follow-ups, fixes and delivery. Replace only if Orca refuses reuse or capability/tier must change; hand off first.
@@ -39,4 +41,4 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 - After dispatching independent work, end the turn; Orca wakes you with worker messages. Follow a receipt's `next` or the wake's `check` command. Silence, a timeout or uncertain liveness does not prove failure. Report confirmed permission blocks with the exact command.
 - After each `worker_done`: read its report file in full (deviations and leftovers come last) and quote its verify evidence in the PO update. Before Gate 2, confirm passing `commands.verify` evidence for the final code revision; rerun (summary line only) when that evidence is missing, stale or contradictory. Quote shas and counts only from output read this turn.
 - Ping the PO on every trigger in `references/gates.md` "Escalation".
-- Keep `.team/<feature>/handoff.md` as the Run locator (`references/start.md` "Run selection"): repo/worktree, objective, Run id, Task/Dispatch ids, stage, decision item references, open questions, next step and skills to load; under 40 lines, linked specs/plans/commits by path or id. Orca is the authority for live state. Refresh it when context or ownership changes or the PO asks, and give the receiving session that path. Gate approval alone does not require a new session.
+- Keep `.team/<feature>/handoff.md` as the Run locator (`references/start.md` "Run selection"): repo/worktree, objective, Run id, Task/Dispatch ids, routing log path, stage, decision item references, open questions, next step and skills to load; under 40 lines, linked specs/plans/commits by path or id. Orca is the authority for live state. Refresh it when context or ownership changes or the PO asks, and give the receiving session that path. Gate approval alone does not require a new session.

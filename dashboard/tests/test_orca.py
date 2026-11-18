@@ -1,4 +1,7 @@
 import unittest
+import json
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from backend import orca
@@ -6,6 +9,41 @@ from backend.orca import task_measurement, run_stage
 
 
 class OrcaMetricsTests(unittest.TestCase):
+    def test_task_routing_preserves_dynamic_agents_and_omitted_flags(self):
+        task = {"spec": 'Routing: {"tier":"work","catalog":"local-code","agent":"custom-agent","model":"custom-model","effort":null}'}
+        self.assertEqual(orca.task_routing(task), [dict(tier="work", catalog="local-code", agent="custom-agent", model="custom-model", effort=None, dispatch=None)])
+        self.assertEqual([], orca.task_routing({}))
+        self.assertEqual([], orca.task_routing({"spec": 'Routing: {"tier":"cheap","catalog":"x","agent":"codex"}'}))
+        self.assertEqual([], orca.task_routing({"spec": 'Routing: {"tier":"work","catalog":"x","agent":"codex","model":123}'}))
+        self.assertEqual([], orca.task_routing({"spec": 'Routing: []'}))
+        second = 'Routing: {"tier":"top","catalog":"review","agent":"another-agent","dispatch":"ctx_2"}'
+        records = orca.task_routing({"spec": task["spec"] + "\n" + second})
+        self.assertEqual([r["catalog"] for r in records], ["local-code", "review"])
+        self.assertEqual(records[1]["dispatch"], "ctx_2")
+
+    def test_routing_history_is_task_scoped_and_cannot_follow_a_log_outside_team(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            team = root / ".team"
+            team.mkdir()
+            log = team / "routing.jsonl"
+            record = dict(task="a", dispatch="d1", tier="work", catalog="code", agent="custom", model="model", effort=None)
+            log.write_text(json.dumps(record) + "\n" + json.dumps(dict(record, task="other")) + "\nnot json\n")
+            task = dict(id="a", spec="Routing-log: " + str(log))
+            self.assertEqual(len(orca.task_routing(task)), 1)
+            outside = root / "outside.jsonl"
+            outside.write_text(json.dumps(record))
+            log.unlink()
+            log.symlink_to(outside)
+            self.assertEqual(orca.task_routing(task), [])
+            # A shared .team symlink is the supported worktree layout.
+            log.unlink()
+            log.write_text(json.dumps(record))
+            worker = root / "worker"
+            worker.mkdir()
+            (worker / ".team").symlink_to(team, target_is_directory=True)
+            self.assertEqual(len(orca.task_routing(dict(id="a", spec="Routing-log: " + str(worker / ".team" / "routing.jsonl")))), 1)
+
     def test_metadata_wins_and_historical_titles_are_estimates(self):
         self.assertEqual(task_measurement({"task_title": "builder: fix header"})["kind"], "fix")
         self.assertEqual(task_measurement({"task_title": "builder: fix header"})["source"], "title")

@@ -1,6 +1,6 @@
 # Anti-AI Editor
 
-- **Runs on:** fresh context, never the agent that wrote the change; prefers claude; tier fast when run alone (delivery text, drafts), otherwise the tier of the Task it runs in.
+- **Runs on:** fresh context, a different worker session from the author; tier fast when run alone (delivery text, drafts), otherwise the tier of the Task it runs in.
 - **Mission:** code, comments, docs, commits and delivery text read as written by the team; behavior unchanged.
 - **Skills:** `anti-ai`, `humanizer`.
 - **Assignment:** normally performed by the independent Reviewer inside review or scoped re-review, including final docs and delivery text. A prose pass does not need its own worker or Task.

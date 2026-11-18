@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 import threading
@@ -44,6 +45,43 @@ def task_measurement(task):
     if kind != "unknown":
         result.update(kind=kind, source="title")
     return result
+
+
+def task_routing(task):
+    records = []
+    raw_records = re.findall(r"^Routing:\s*(.+)$", task.get("spec") or "", re.M)
+    log = re.search(r"^Routing-log:\s*(.+)$", task.get("spec") or "", re.M)
+    if log:
+        path = log.group(1).strip()
+        marker = os.sep + ".team" + os.sep
+        if os.path.isabs(path) and marker in path and os.path.basename(path) == "routing.jsonl":
+            team = os.path.realpath(path.split(marker, 1)[0] + os.sep + ".team")
+            resolved = os.path.realpath(path)
+            if os.path.commonpath((team, resolved)) == team:
+                try:
+                    with open(resolved, encoding="utf-8") as source:
+                        for raw in source:
+                            try:
+                                entry = json.loads(raw)
+                            except ValueError:
+                                continue
+                            if isinstance(entry, dict) and task.get("id") and entry.get("task") == task["id"]:
+                                raw_records.append(raw)
+                except (OSError, UnicodeError):
+                    pass
+    for raw in raw_records:
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            continue
+        if not isinstance(data, dict) or data.get("tier") not in ("fast", "work", "top"):
+            continue
+        if any(not isinstance(data.get(k), str) or not data[k].strip() for k in ("catalog", "agent")):
+            continue
+        if any(data.get(k) is not None and not isinstance(data[k], str) for k in ("model", "effort", "dispatch")):
+            continue
+        records.append({k: data.get(k) for k in ("tier", "catalog", "agent", "model", "effort", "dispatch")})
+    return records
 
 
 def run_stage(run, tasks, gates):
@@ -185,7 +223,7 @@ def refresh_orca():
             rec = {"id": t["id"], "run": rid, "title": title[:120], "role": role_from_title(title, roles),
                    "status": t.get("status"), "created": ts_of(t.get("created_at")),
                    "completed": ts_of(t.get("completed_at")), "agent": None, "model": None, "effort": None,
-                   "repo": None, "worktree": None, "measurement": task_measurement(t)}
+                   "repo": None, "worktree": None, "measurement": task_measurement(t), "routing": task_routing(t)}
             rtasks.append(rec)
             tasks[t["id"]] = rec
         gates = []
@@ -215,7 +253,7 @@ def refresh_orca():
             if info.get("to"):
                 t["ended"] = max(t.get("ended") or info["to"], info["to"])
             t["repo"], t["worktree"] = repo_of(info["wt"]) if info["wt"] else (None, None)
-        dispatches.append(info)
+        dispatches.append(dict(info, id=did))
     for r in out_runs:
         repos = [t["repo"] for t in r["tasks"] if t["repo"]]
         r["repo"] = max(set(repos), key=repos.count) if repos else (r["objective"].split() or ["?"])[0]

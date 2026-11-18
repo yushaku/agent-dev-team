@@ -60,18 +60,56 @@ docs:
   site: off                  # pages = GitHub Pages workflow (docs-policy.md "Published site")
   html_lang: null            # null = languages.po
 models:
-  agents: {}                 # per-agent on/off, e.g. {copilot: off, cursor: off}; missing = on; off = never routed to
-  tiers: {}                  # remap a tier per agent column, e.g. {work: {codex: <model-id>}}
-  roles: {}                  # role tier override, e.g. {builder: top, qa: fast}
+  catalog: {}                # required before dispatch; named agent/model/effort entries
+  tiers: {}                  # fast | work | top -> ordered catalog aliases
+  roles: {}                  # optional role -> {tier: work, prefer: [alias]}
 ```
 
 ## Model settings
 
-- Model ids, tiers and efforts live in `skills/orchestrator/references/coding-agents.md` "Model tiers"; agent choice per Task in the same file "Routing".
-- `models.agents.<agent>: off` removes the agent from routing; its Tasks go to the next eligible agent (same file "Free-tier agents" for `simple` Tasks).
-- Per Task the Orchestrator may move effort one step within the tier (up for money, concurrency, migrations, security; down for mechanical work) and records why in the spec.
-- `models.tiers.<tier>` remaps the agent columns of the same "Model tiers" table (`claude`, `codex`, `cursor`) and `effort` per project (missing keys keep the table); `models.roles` keys are the role ids of `roles/`.
-- Precedence: escalation (`skills/orchestrator/references/review.md`) > `models.roles` > role default.
+`.team/config.yaml` owns the allowed agents, model ids, effort values and fallback order. There is no shared model registry or provider preference. An empty or legacy `models` section requires the model interview in `skills/init-team/SKILL.md` before dispatch; preserve the rest of the config.
+
+Example structure only; replace model placeholders with PO-approved ids supported by the selected agent:
+
+```yaml
+models:
+  catalog:
+    quick:
+      agent: codex            # Orca --agent id, not necessarily the AI provider
+      model: "<model-id>"
+      effort: low
+    implementation:
+      agent: codex
+      provider: openai         # optional descriptive metadata; not a launch flag
+      model: "<model-id>"
+      effort: medium
+    deep-review:
+      agent: claude
+      model: "<model-id>"
+      effort: high
+  tiers:
+    fast: [quick]
+    work: [implementation]
+    top: [deep-review]
+  roles:
+    builder: {tier: work, prefer: [implementation]}
+    reviewer: {tier: top}
+    delivery: {tier: fast}
+```
+
+- `catalog.<alias>`: required `agent`; `model` and `effort` are strings or null. Null/omitted means omit that launch flag and use the agent's setting, not a guessed model. Optional `enabled: false` removes the entry from routing. Provider/account configuration and secrets stay in the agent; `provider` describes the intended backend without switching it.
+- `tiers`: ordered alias lists, cheapest/preferred first as chosen by the PO. Every alias must exist in `catalog`; supported tier names are `fast`, `work`, `top`. Use separate aliases for different effort settings. Model names and provider names do not establish quality, price or availability.
+- `roles`: optional role-id mappings. `tier` overrides the role's default; `prefer` reorders eligible entries within that tier. Missing keys retain the role default and tier order. A referenced alias must belong to the selected tier.
+- Validate types, alias references, role ids and required tier coverage before dispatch. Require a matching model when an effort flag needs one; use the selected agent's supported effort values rather than a universal effort ladder. Reject placeholder model ids. A missing/disabled eligible entry blocks the affected Task; ask for a config decision rather than inventing a model.
+- Existing `models.agents` and per-agent tier maps are legacy inputs to the interview, not dispatch settings. Show their proposed translation for PO agreement; preserve explicit disabled-agent choices. Missing old model/effort values remain unanswered rather than being filled from a deleted registry.
+
+## Model routing
+
+1. Read the main checkout's `.team/config.yaml` before planning a Run, on resume and before dispatch/follow-up; refresh it when changed. Workers receive resolved settings, not the full catalog. Keep existing workers only while their settings remain eligible; a newly disabled entry is not eligible for further work.
+2. Choose the Task tier from its role and risk. `fast`: a bounded mechanical/simple edit; `work`: implementation, investigation and multi-behaviour fixes; `top`: architecture decisions, difficult reasoning or security-sensitive work. Role cards supply defaults, including the Builder's simple-Task fast option; an explicit project role tier overrides that default. Task risk may require a higher tier at initial planning; failed fix rounds still follow the PO escalation gate. Preserve required checks and keep the Reviewer's tier at least the Builder's. A config override cannot remove a risk-triggered check.
+3. Honor an explicit PO model override for the stated Task and record the exception; ask only for missing routing values, not repeat approval. Otherwise use the configured eligibility rules. Use the role's `prefer` order, then remaining enabled aliases in the tier. Agent availability and supported flags come from the installed Orca/agent guides and observed launch results. Check authentication only through a supported read-only command; no quota probes, account switching or sign-in automation.
+4. Pass only the entry's resolved flags that the selected agent supports. Verify the launch receipt. Missing CLI, authentication failure, unsupported flags/model or rate limit: record the evidence, then try the next eligible entry in the same tier and notify the PO. A repeated ambiguous launch uses the receipt's recovery path, not a fresh launch. An actual code/verify failure follows fix-round policy, not automatic provider retries. If no entry works, ask the PO; never silently lower the tier or start an unapproved higher-tier fix round.
+5. Builder and Reviewer use independent sessions/Dispatches; they may use the same provider/model. Orchestrator and direct Researcher/Solution Architect sessions retain their session model; dispatched workers follow the catalog. Record the chosen alias, tier, agent, model, effort and selection reason in each Task (`skills/orchestrator/references/specs.md`).
 
 ## Skill slots
 

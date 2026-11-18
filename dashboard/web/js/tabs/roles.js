@@ -4,27 +4,23 @@ import {
   sum, sessionCount, widthOf, fig, groupLegend, hBars
 } from "../lib/charts.js";
 
-function tierOf(model) {
-  const t = C.state.data.roles_cfg.tiers;
-  for (const k of Object.keys(t)) if (model && (model === t[k].codex || model.includes(t[k].claude))) return k;
-  return null;
-}
 const EFF = ["minimal", "low", "medium", "high", "xhigh"];
-function roleStats(S) {
-  const cfg = C.state.data.roles_cfg, order = cfg.order, by = {};
+export function roleStats(S) {
+  const cfg = C.state.data.roles_cfg, by = {};
   S.forEach(s => (by[s.role] = by[s.role] || []).push(s));
   return Object.entries(by).map(([role, X]) => {
-    const def = cfg.roles[role];
-    let hi = 0, effHi = 0;
-    if (def && def.tier) X.forEach(s => {
-      const t = tierOf(s.model);
-      if (!t) return;
-      if (order.indexOf(t) > order.indexOf(def.tier)) hi++;
-      else if (t === def.tier && EFF.indexOf(s.effort) > EFF.indexOf(cfg.tiers[t].effort)) effHi++;
+    const selectedTiers = [...new Set(X.map(s => s.routing?.tier).filter(Boolean))];
+    const def = selectedTiers.length ? { tier: selectedTiers.join(" / "), selected: true } : cfg.roles[role];
+    let mismatch = 0, effHi = 0;
+    X.forEach(s => {
+      const r = s.routing;
+      if (!r) return;
+      if (r.agent !== s.agent || (r.model && r.model !== s.model)) { mismatch++; return; }
+      if (r.model && EFF.includes(r.effort) && EFF.includes(s.effort) && EFF.indexOf(s.effort) > EFF.indexOf(r.effort)) effHi++;
     });
     const mix = {};
     X.forEach(s => Object.entries(s.mix).forEach(([k, v]) => { const key = s.agent + "|" + k; mix[key] = (mix[key] || 0) + v; }));
-    return { role, X, def, hi, effHi, mix, total: sum(X, s => s.total) };
+    return { role, X, def, mismatch, effHi, unverified: X.filter(s => !s.routing?.model).length, mix, total: sum(X, s => s.total) };
   }).sort((a, b) => b.total - a.total);
 }
 export function renderRoles(S) {
@@ -34,8 +30,8 @@ export function renderRoles(S) {
   fig("#c-roles", { title: "Token theo vai", subtitle: "Mỗi vai tốn bao nhiêu token, chạy model nào và có đúng tier mặc định không", body: R.length ? hBars({ W, LW: 150, RW: 210, rows: R.map(r => ({
       label: r.role, f: "role:" + r.role, dot: roleCol(r.role), full: `${r.role} (${GROUPS[groupOf(r.role)][0]}), ${sessionCount(r.X)} phiên, ${pct(r.total, total)} tổng`,
       segs: Object.entries(r.mix).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ v, color: mixCol(k), name: mixName(k), f: "agent:" + k.split("|")[0] })),
-      tip: [r.def && r.def.tier ? "Tier mặc định: " + r.def.tier + (r.def.agent ? ", " + (AG[r.def.agent] || r.def.agent) : "") : "Không có tier mặc định", r.hi ? "▲ " + r.hi + " phiên vượt tier" : r.effHi ? "▲ " + r.effHi + " phiên effort cao hơn tier" : null],
-      right: [{ t: fmt(r.total) }].concat(r.def && r.def.tier ? [{ t: r.def.tier, color: "var(--subtext0)" }] : [], r.hi ? [{ t: "▲ " + r.hi + (W < 520 ? "" : " vượt tier"), color: "var(--red)" }] : r.effHi ? [{ t: "▲ " + r.effHi + (W < 520 ? "" : " effort cao"), color: "var(--yellow)" }] : []),
+      tip: [r.def && r.def.tier ? (r.def.selected ? "Tier đã chọn: " : "Tier mặc định: ") + r.def.tier + (r.def.agent ? ", " + (AG[r.def.agent] || r.def.agent) : "") : "Không có tier mặc định", r.unverified ? r.unverified + " phiên chưa đối chiếu model" : null, r.mismatch ? "▲ " + r.mismatch + " phiên khác model/agent đã chọn" : r.effHi ? "▲ " + r.effHi + " phiên effort cao hơn cấu hình" : null],
+      right: [{ t: fmt(r.total) }].concat(r.def && r.def.tier ? [{ t: r.def.tier, color: "var(--subtext0)" }] : [], r.mismatch ? [{ t: "▲ " + r.mismatch + (W < 520 ? "" : " khác model"), color: "var(--red)" }] : r.effHi ? [{ t: "▲ " + r.effHi + (W < 520 ? "" : " effort cao"), color: "var(--yellow)" }] : []),
     })), xTitle: "Token", aria: "Thanh ngang token theo vai" }) : "",
     legend: keys.map(k => ({ name: mixName(k), color: mixCol(k) })).concat(groupLegend([...new Set(R.map(r => groupOf(r.role)))]).map(l => ({ name: "Nhóm " + l.name, color: l.color }))) });
 }

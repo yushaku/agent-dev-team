@@ -1,6 +1,6 @@
 # Code Reviewer
 
-- **Runs on:** tier top (never below the Builder's); prefers claude; never the agent that built the task.
+- **Runs on:** tier top (never below the Builder's); a different worker session from the Builder (the provider/model may be the same).
 - **Skills:** `ponytail-review` (primary, wins on conflicts), `{review}` for platform checks.
 - Extra checks only when they apply: dependency/lockfile changes, change too large to review, architecture fit when affected (against accepted ADRs and their load and quality targets).
 - Read the tests before the implementation.

@@ -5,6 +5,9 @@ New Task: use this template and pass the spec's absolute path per the Orca guide
 ```text
 Role: <role id>
 Measurement: {"kind":"build","round":null,"cause":null}
+Routing: {"tier":"work","catalog":"<alias>","agent":"<agent-id>","model":null,"effort":null}
+Routing-log: <absolute .team/<feature>/routing.jsonl path>
+Selection: <why this tier and catalog entry fit the Task>
 Goal: <observable result; relevant rule/AC IDs when available>
 Scope: <entry points, editable paths, source spec/decisions by path>
 Peers: <related same-Run Task IDs, roles and current Dispatch IDs when known>
@@ -14,13 +17,20 @@ Evidence: <acceptance checks and commands.verify; serial if configured>
 Output: <report path and raw-log paths under .team/<feature>/>
 ```
 
-- Title: `<role>: <what>`. `Role` and `Measurement` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
+- Title: `<role>: <what>`. `Role`, `Measurement`, `Routing` and `Routing-log` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
 - `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `spec`, `qa`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
-- Include resolved skills and config values, not the whole config. Select models via `coding-agents.md`. For output, workers read "Report"; for doc changes/review, relevant `docs-policy.md` sections.
+- Include resolved skills and config values, not the whole config. Resolve models from `.team/config.yaml` via `config.md` "Model routing" and record each Dispatch under "Routing history" below. For output, workers read "Report"; for doc changes/review, relevant `docs-policy.md` sections.
 - Include an absolute pointer to "Worker communication" below in each Task's Constraints; supply related peer Dispatch IDs when available and refresh them after reassignment.
 - Give known entry points and link source decisions; the Builder traces connected code. Name approval boundaries; routine reads, scoped edits, tests and authorized delivery proceed.
 - Protect uncommitted/PO-kept files; include related Builder docs in scope. Follow approved business decisions; changes use `gates.md`.
-- Handle observed permission failures via `coding-agents.md` "Known limits"; do not preemptively forbid commits.
+- Handle observed permission failures via `start.md` "Worker permissions"; do not preemptively forbid commits.
+
+## Routing history
+
+- At Task creation, fill `Routing:` with the initial selection, keeping null for omitted flags, and `Routing-log:` with the absolute `.team/<feature>/routing.jsonl` path. Orca Task specs are create-only in this CLI; later selections belong in that log.
+- After a successful dispatch receipt, append `{"task":"<task-id>","dispatch":"<dispatch-id>","tier":"work","catalog":"<alias>","agent":"<agent-id>","model":null,"effort":null}` with resolved values. Check the Dispatch id first: receipt replay retains its existing record rather than appending a duplicate.
+- A retry/replacement gets its own record before follow-up work. Preserve previous attempts and pass the log path in the Run handoff.
+- The dashboard reads only matching Task records contained in `.team/` and binds settings to the exact Dispatch window; missing/ambiguous records stay unverified.
 
 ## Worker communication
 

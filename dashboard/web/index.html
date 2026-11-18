@@ -125,7 +125,7 @@
         <dt>Hermes</dt><dd><code>~/.hermes/state.db</code> (SQLite, đọc chỉ). Mỗi phiên một hàng <code>sessions</code> với token tổng hợp (xếp vào ngày bắt đầu phiên, không phải thời điểm từng lượt gọi); prompt đầu và skill nạp lấy từ bảng <code>messages</code>. Title bắt đầu <code>orchestrator:</code> hoặc nạp skill <code>orchestrator</code> thì vai là Orchestrator.</dd>
         <dt>Orca</dt><dd><code>orca orchestration run-list, task-list, gate-list, worker-list, worker-show, inbox --json</code>, làm mới mỗi 60 giây ở nền. Orca không chạy thì các tab khác vẫn hoạt động.</dd>
         <dt>RTK</dt><dd><code>~/Library/Application Support/rtk/history.db</code> (SQLite, đọc chỉ). Mỗi lệnh RTK nén là một bản ghi <code>commands</code>: token gốc, token tiết kiệm, thời gian chạy, dự án. Tab RTK gộp theo ngày, lệnh và dự án.</dd>
-        <dt>Tier</dt><dd>Bảng Model tiers trong <code>skills/orchestrator/references/coding-agents.md</code> và dòng Runs on trong <code>roles/*.md</code>.</dd>
+        <dt>Tier</dt><dd>Task Orca ghi lựa chọn ban đầu trong <code>Routing:</code>; <code>Routing-log:</code> trỏ tới log trong <code>.team/</code> lưu lựa chọn theo từng Dispatch; tier mặc định của role nằm trong <code>roles/*.md</code>. Catalog do <code>.team/config.yaml</code> của dự án quyết định. Thiếu metadata thì không suy tier từ tên model.</dd>
         <dt>Bộ nhớ đệm</dt><dd><code>cache.json</code> cạnh server, theo đường dẫn, kích thước và mtime của file; chỉ file thay đổi được đọc lại.</dd>
       </dl>
     </section>

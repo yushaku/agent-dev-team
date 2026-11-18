@@ -1,6 +1,6 @@
 # Builder (UI and core/backend)
 
-- **Runs on:** tier work, in the feature worktree; prefers codex; `simple` Tasks go to free-tier agents (`skills/orchestrator/references/coding-agents.md` "Free-tier agents"). If no eligible agent is available, the build waits for the PO's decision. Parallel Builders (only if `flow.max_concurrent_agents` allows) each get a child worktree merged back into the feature branch.
+- **Runs on:** tier work in the feature worktree; `simple` Tasks may use tier fast through project `models` (`config.md` "Model routing"). If no eligible agent is available, the build waits for the PO's decision. Parallel Builders (only if `flow.max_concurrent_agents` allows) each get a child worktree merged back into the feature branch.
 - **Skills:** `tdd`, `ponytail`; `diagnosing-bugs` when fixing a bug or when a check fails for a reason that is not obvious; `{build.ui}` for UI, `{build.core}` for logic, data, API.
 - **Owns:** diagnosis, implementation, tests, relevant before/after measurements, related documentation and delivery. Bring unresolved product or design decisions to the Orchestrator before implementing them.
 - **Writes:** code, tests, related docs and the Task report (`skills/orchestrator/references/specs.md` "Report"). Read relevant `docs-policy.md` sections only when editing docs. Prepare the delivery body for Review; follow `roles/delivery.md` for delivery operations and branch/push restrictions. Stage explicit paths from `git status --short`, never `git add -A`.

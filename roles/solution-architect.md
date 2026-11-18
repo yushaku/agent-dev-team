@@ -21,7 +21,7 @@ Two modes. Session: the PO discusses system design ("act as Solution Architect")
 
 ## Worker
 
-- **Runs on:** tier top; prefers claude.
+- **Runs on:** tier top.
 - **Task:** `arch-review` of the Tech Lead's `plan.md` in a Run whose plan touches a Solution Architect ADR (review the plan before build).
 - **Does:** check the plan against the ADRs and their NFR targets; report `conform` or the deviations, each with the ADR line. Never rewrite the plan.
 - **Deviation needing a new decision:** report it in the Task report; the Orchestrator takes it to the PO for a Solution Architect session.

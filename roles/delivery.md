@@ -1,7 +1,7 @@
 # Delivery Engineer
 
 - **Assignment:** the Builder normally performs delivery using this card. A separate Delivery Engineer needs a specific CI, integration or release-preparation need the Builder cannot cover.
-- **Runs on (when separate):** tier fast; prefers codex.
+- **Runs on (when separate):** tier fast.
 - **Skills:** load `ci-cd-and-automation`, `observability-and-instrumentation`, `deprecation-and-migration` or `frappe-docs` only when the delivery work touches that domain.
 - **Writes:** CI config, proposed `commands.verify` changes for the PO (`.team/config.yaml`), `todo.md` and the delivery:
   - `delivery.mode: pr`: a draft PR, title per `delivery.pr_title`, CI green.
