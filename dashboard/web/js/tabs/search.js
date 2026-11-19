@@ -1,4 +1,4 @@
-import { $, AG, fmt, sessionsF, state, widthOf, fig, hBars } from "../lib/charts.js";
+import { $, AG, fmt, sessionsF, state, widthOf, fig, hBars, roleCol } from "../lib/charts.js";
 
 export const KINDS = [
   ["codegraph", "Codegraph", "var(--green)"],
@@ -37,23 +37,23 @@ function group(S, key) {
   return Object.entries(by).filter(([, r]) => total(r.search)).sort((a, b) => total(b[1].search) - total(a[1].search));
 }
 
-function bars(id, rows, title, caption) {
+function bars(id, rows, title, caption, o = {}) {
   const W = widthOf(id);
   const kinds = visibleKinds();
   const totalVisible = search => kinds.reduce((n, [kind]) => n + cnt(search, kind), 0);
   const shownCodegraph = kinds.some(([kind]) => kind === "codegraph");
   const visibleRows = rows.filter(([, r]) => totalVisible(r.search));
   fig(id, {
-    title, legend: legend(), caption,
+    title, subtitle: o.subtitle, legend: legend(), caption,
     body: visibleRows.length ? hBars({
-      W, LW: 240, rowH: 24,
+      W, LW: o.LW || 240, RW: 150, rowH: 24,
       rows: visibleRows.slice(0, 20).map(([label, r]) => {
         const t = totalVisible(r.search), cg = cnt(r.search, "codegraph");
         const searches = ["codegraph", "rg", "grep", "find"].reduce((n, k) => n + cnt(r.search, k), 0);
         return {
-          label, full: label,
+          label, full: label, ...(o.roles ? { dot: roleCol(label), f: "role:" + label } : {}),
           segs: kinds.map(([k, name, color]) => ({ v: cnt(r.search, k), color, name })),
-          right: [{ t: fmt(t) }].concat(shownCodegraph ? [{ t: Math.round(searches ? 100 * cg / searches : 0) + "% cg", color: "var(--subtext0)" }] : []),
+          right: [{ t: fmt(t) }].concat(shownCodegraph ? [{ t: "codegraph " + Math.round(searches ? 100 * cg / searches : 0) + "%", color: "var(--subtext0)" }] : []),
           tip: [label, r.sessions + " phiên, " + r.cg + " phiên có codegraph"].concat(kinds.map(([k, n]) => n + ": " + cnt(r.search, k))),
         };
       }),
@@ -68,7 +68,8 @@ export function renderTaskRoleSearch(S0) {
   if (!section) return;
   section.hidden = !state.repo;
   if (!state.repo) return;
-  bars("#c-task-search", group(S0 || sessionsF(), s => s.role), "Tool search code", "Mỗi màu là một cách tìm hoặc đọc code. Dùng chart để thấy vai nào dựa nhiều vào đọc file, rg/grep hoặc codegraph trong project đang lọc.");
+  bars("#c-task-search", group(S0 || sessionsF(), s => s.role), "Tool search code", "Phần trăm bên phải là tỉ lệ codegraph trên các lượt tìm (không tính đọc file). Bấm một màu để ẩn hoặc hiện công cụ đó.",
+    { roles: true, LW: 150, subtitle: "Mỗi vai tìm và đọc code bằng cách nào trong project đang lọc" });
 }
 
 export function renderSearch(S0) {

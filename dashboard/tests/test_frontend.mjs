@@ -398,8 +398,8 @@ test("Codegraph percentage ignores file reads", () => {
     { agent: "codex", role: "builder", repo: "r", worktree: "w2", total: 100, search: { read_part: 5 } },
   ]);
   const html = element("#c-search-agent").innerHTML;
-  assert.match(html, /50% cg/);
-  assert.doesNotMatch(html, /10% cg/);
+  assert.match(html, /codegraph 50%/);
+  assert.doesNotMatch(html, /codegraph 10%/);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
 
