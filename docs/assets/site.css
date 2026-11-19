@@ -201,6 +201,43 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
   font-size: 0.9rem;
 }
 
+/* Roles page */
+.flow { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 6px; counter-reset: gate; }
+.flow li { display: grid; grid-template-columns: 7.5rem 1fr; gap: 12px; align-items: baseline; background: var(--surface); border-radius: var(--radius); padding: 8px 12px; margin: 0; }
+.matrix th, .matrix td { padding: 6px 8px; text-align: center; font-size: 0.85rem; }
+.matrix th:first-child, .matrix td:first-child { text-align: left; white-space: nowrap; }
+.matrix tbody th { font-weight: 600; color: var(--text); }
+.matrix .dot { color: var(--gate); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.roles { display: grid; gap: 12px; margin: 0 0 16px; }
+.role { background: var(--surface); border-radius: var(--radius); padding: 12px 16px; scroll-margin-top: 64px; }
+.role header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.role h3 { margin: 0; font-size: 1.1rem; }
+.chips { margin: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.chips .tag { margin: 0; }
+.tag.tier { color: var(--ctp-sapphire); }
+.tag.esc { color: var(--ctp-red); }
+.role .mission { margin: 6px 0 2px; }
+.role .skills, .role .card-link { margin: 0 0 6px; font-size: 0.9rem; color: var(--muted); }
+.nogate { margin: 8px 0; padding: 6px 12px; border-left: 3px solid var(--surface-strong); color: var(--muted); }
+.role details { margin: 8px 0 0; }
+.role summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.verify > summary { color: var(--gate); }
+.verify .count { display: inline-block; min-width: 1.4em; text-align: center; font-size: 0.8rem; background: var(--surface-strong); border-radius: 999px; color: var(--text); margin-left: 4px; }
+.full > summary { font-weight: 400; color: var(--muted); font-size: 0.9rem; }
+.vrows { margin-top: 6px; }
+.vh, .vr { display: grid; grid-template-columns: 7.5rem 1fr 1fr; gap: 8px 16px; padding: 8px 0; border-bottom: 1px solid var(--surface-strong); }
+.vh { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+.vr:last-child { border-bottom: 0; }
+.vg .tag { margin: 0; }
+.lbl { display: none; color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+@media (max-width: 640px) {
+  .flow li { grid-template-columns: 1fr; gap: 2px; }
+  .vh { display: none; }
+  .vr { grid-template-columns: 1fr; }
+  .lbl { display: block; }
+}
+
 @media (max-width: 640px) {
   .topbar-inner, main, .site-footer { padding-left: 12px; padding-right: 12px; }
   h1 { font-size: 1.6rem; }
