@@ -66,10 +66,11 @@ function bars(id, rows, title, caption, o = {}) {
 export function renderTaskRoleSearch(S0) {
   const section = $("#task-search");
   if (!section) return;
-  section.hidden = !state.repo;
-  if (!state.repo) return;
+  const scoped = state.repo || state.runF || state.wt;  // whole-team totals mix every project, so wait for a scope
+  section.hidden = !scoped;
+  if (!scoped) return;
   bars("#c-task-search", group(S0 || sessionsF(), s => s.role), "Tool search code", "Phần trăm bên phải là tỉ lệ codegraph trên các lượt tìm (không tính đọc file). Bấm một màu để ẩn hoặc hiện công cụ đó.",
-    { roles: true, LW: 150, subtitle: "Mỗi vai tìm và đọc code bằng cách nào trong project đang lọc" });
+    { roles: true, LW: 150, subtitle: "Mỗi vai tìm và đọc code bằng cách nào trong project, Run hoặc worktree đang lọc" });
 }
 
 export function renderSearch(S0) {

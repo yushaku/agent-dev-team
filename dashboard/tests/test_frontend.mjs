@@ -75,6 +75,10 @@ test("Tasks shows code-search usage by role only after filtering a project", () 
   C.state.repo = "";
   renderTaskRoleSearch(sessions);
   assert.equal(element("#task-search").hidden, true);
+  C.state.runF = "run_1";
+  renderTaskRoleSearch(sessions);
+  assert.equal(element("#task-search").hidden, false);
+  C.state.runF = "";
 });
 
 test("load distinguishes fetch failures from render failures and recovers", async () => {
