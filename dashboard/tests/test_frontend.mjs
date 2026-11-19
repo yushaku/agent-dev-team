@@ -371,3 +371,16 @@ test("Tools legend toggles code-search chart categories", () => {
   assert.equal(toggleSearchKind("not-a-kind"), false);
   C.state.searchHidden = [];
 });
+
+test("Codegraph percentage ignores file reads", () => {
+  C.state.searchHidden = [];
+  C.state.data = { sessions: [] };
+  renderSearch([
+    { agent: "claude", role: "builder", repo: "r", worktree: "w1", total: 100, search: { codegraph: 1, rg: 1, read_full: 8 } },
+    { agent: "codex", role: "builder", repo: "r", worktree: "w2", total: 100, search: { read_part: 5 } },
+  ]);
+  const html = element("#c-search-agent").innerHTML;
+  assert.match(html, /50% cg/);
+  assert.doesNotMatch(html, /10% cg/);
+  assert.doesNotMatch(html, /NaN|Infinity/);
+});

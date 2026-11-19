@@ -49,10 +49,11 @@ function bars(id, rows, title, caption) {
       W, LW: 240, rowH: 24,
       rows: visibleRows.slice(0, 20).map(([label, r]) => {
         const t = totalVisible(r.search), cg = cnt(r.search, "codegraph");
+        const searches = ["codegraph", "rg", "grep", "find"].reduce((n, k) => n + cnt(r.search, k), 0);
         return {
           label, full: label,
           segs: kinds.map(([k, name, color]) => ({ v: cnt(r.search, k), color, name })),
-          right: [{ t: fmt(t) }].concat(shownCodegraph ? [{ t: Math.round(100 * cg / t) + "% cg", color: "var(--subtext0)" }] : []),
+          right: [{ t: fmt(t) }].concat(shownCodegraph ? [{ t: Math.round(searches ? 100 * cg / searches : 0) + "% cg", color: "var(--subtext0)" }] : []),
           tip: [label, r.sessions + " phiên, " + r.cg + " phiên có codegraph"].concat(kinds.map(([k, n]) => n + ": " + cnt(r.search, k))),
         };
       }),
