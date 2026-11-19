@@ -15,7 +15,7 @@ export function roleStats(S) {
     X.forEach(s => {
       const r = s.routing;
       if (!r) return;
-      if (r.agent !== s.agent || (r.model && r.model !== s.model)) { mismatch++; return; }
+      if (r.agent !== s.agent || (r.model && !(s.model || "").toLowerCase().includes(r.model.toLowerCase()))) { mismatch++; return; }
       if (r.model && EFF.includes(r.effort) && EFF.includes(s.effort) && EFF.indexOf(s.effort) > EFF.indexOf(r.effort)) effHi++;
     });
     const mix = {};
