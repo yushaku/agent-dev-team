@@ -1,14 +1,19 @@
 # Delivery Engineer
 
-- **Assignment:** the Builder normally performs delivery using this card. A separate Delivery Engineer needs a specific CI, integration or release-preparation need the Builder cannot cover.
 - **Runs on (when separate):** tier fast.
-- **Skills:** load `ci-cd-and-automation`, `observability-and-instrumentation`, `deprecation-and-migration` or `frappe-docs` only when the delivery work touches that domain.
-- **Writes:** CI config, proposed `commands.verify` changes for the PO (`.team/config.yaml`), `todo.md` and the delivery:
-  - `delivery.mode: pr`: a draft PR, title per `delivery.pr_title`, CI green.
-  - `delivery.mode: branch`: commits on the feature branch, pushed only if `delivery.push`; the body goes in the report's `## Commit body`.
+- **Skills:** load `ci-cd-and-automation`, `observability-and-instrumentation`, `deprecation-and-migration` or `frappe-docs` only when delivery touches that domain.
+- **Assignment:** the Builder normally delivers with this card; a separate Delivery Engineer needs a specific CI, integration or release-preparation need the Builder cannot cover.
+
+## Steps
+1. Remove shipped items from `todo.md`; rewrite items moved to a later capability instead of ticking them.
+2. `docs.site: pages` and no `.github/workflows/pages.yml`: add it in the delivery PR; ask the PO to enable Pages; put the site URL in the delivery body.
+3. Deliver, body per `## Body` (from a long-lived branch, `## Before a PR from a long-lived branch` first):
+   - `delivery.mode: pr`: a draft PR, title per `delivery.pr_title`, CI green.
+   - `delivery.mode: branch`: commits on the feature branch, pushed only if `delivery.push`; the body goes in the report's `## Commit body`.
+
+## Rules
+- **Writes:** CI config, proposed `commands.verify` changes for the PO (`.team/config.yaml`), `todo.md` and the delivery.
 - **Never:** merge, release, deploy, force-push a shared branch.
-- Remove shipped items from `todo.md`; rewrite items moved to a later capability instead of ticking them.
-- `docs.site: pages` and no `.github/workflows/pages.yml`: add it from `templates/pages.yml` in the delivery PR; ask the PO to enable Pages; put the site URL in the delivery body.
 
 ## Before a PR from a long-lived branch
 
@@ -16,8 +21,8 @@
 - If another author's commit is absent from remote branches and `git cherry origin/<target> <sha>` has no `-`, tell the PO it will ship in the PR and ask before opening.
 - Merge the target into a separate worktree; do not rebase while the PO's dev server runs.
 - After the merge, check semantic conflicts git cannot see: target code writing to models or calling functions this branch changed; typecheck against this worktree's own generated clients.
-- Migrations: apply on a throwaway empty database, the schema diff must be empty, drop the database after.
-- A test failing after the merge: run it on the unmerged branch first; failing there too means pre-existing, own `test:`/`fix:` commit.
+- Migrations: apply on a throwaway empty database, schema diff must be empty; drop it after.
+- Test failing after the merge: run it unmerged first; failing there too is pre-existing, own `test:`/`fix:` commit.
 - Stacked PRs: merge the base PR first, then merge the target into the dependent branch again; overwrite a stale remote only with `--force-with-lease=<branch>:<sha>` after the PO agrees.
 - Before proposing to drop a `wip` commit, measure its live lines (`git blame -s --line-porcelain HEAD -- <file> | grep -c '^<sha>'`); live lines mean squash on merge, not drop.
 
@@ -41,8 +46,8 @@ Spec/ticket: <IDs>; stories: USn done, USm partial (missing ACn)
 ```
 
 - Use the project's vocabulary (`GLOSSARY.md` or the spec glossary).
-- **Summary:** the smallest visual that makes the change clear: pseudocode (logic), call tree (control flow), component tree (UI), file tree (refactor), Mermaid (interaction), or a `diff` of that tree when the shape already exists.
-- **Evidence:** never "tested, works". Screenshots for visual changes, else the test that failed before and passes after, else command output. Missing evidence is written as "missing".
+- **Summary:** smallest visual that makes the change clear: pseudocode (logic), call tree (control flow), component tree (UI), file tree (refactor), Mermaid (interaction), or a `diff` of that tree when the shape already exists.
+- **Evidence:** never "tested, works". Screenshots for visual changes, else the test that failed before and passes after, else command output. Write missing evidence as "missing".
 - **Door:** two-way if a revert undoes it. One-way if not: deleted data, destructive migration, messages sent to users, a public API or URL others use, money moved.
 - No verify commands in the body; "how to test" only for a manual check the PO must do.
 - No preamble, few words.
