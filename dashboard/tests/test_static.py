@@ -19,8 +19,9 @@ class StaticTests(unittest.TestCase):
                 continue
             with open(os.path.join(WEB, path.lstrip("/")), encoding="utf-8") as f:
                 text = f.read()
-            for spec in re.findall(r"from\s+\"(/js/[^\"]+)\"", text):
-                self.assertIn(spec, config.STATIC, "%s imports %s" % (path, spec))
+            for spec in re.findall(r"from\s+\"([^\"]+\.js)\"", text):
+                url = os.path.normpath(os.path.join(os.path.dirname(path), spec)) if spec.startswith(".") else spec
+                self.assertIn(url, config.STATIC, "%s imports %s" % (path, spec))
 
     def test_only_skill_endpoint_remains(self):
         for gone in ("index", "file", "diagram", "search"):
