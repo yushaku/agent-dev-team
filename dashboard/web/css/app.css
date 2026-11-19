@@ -288,6 +288,14 @@ figure.chart { background: var(--mantle); border: var(--hairline); border-radius
 figure.chart h4 { font-size: var(--fs-4); }
 .chart .chart-subtitle { font-size: var(--fs-1); color: var(--subtext0); }
 .chart-scroll { overflow-x: auto; }
+.role-skills { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-3); }
+.role-skills li { display: grid; grid-template-columns: 150px 1fr; gap: var(--s-4); align-items: start; padding-bottom: var(--s-3); border-bottom: var(--hairline); }
+.role-skills li:last-child { border-bottom: 0; padding-bottom: 0; }
+.rs-role { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--text); font-weight: 600; cursor: pointer; padding-top: 3px; }
+.rs-role i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.rs-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.rs-chip { font-size: var(--fs-1); padding: 3px 8px; border-radius: var(--r-2, 6px); cursor: pointer; white-space: nowrap; }
+.rs-chip b { font-weight: 700; margin-left: 2px; }
 .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .chart svg text { fill: var(--subtext0); font: 400 12px var(--font-sans); }
 .chart svg text.v { fill: var(--text); }

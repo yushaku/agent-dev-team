@@ -50,7 +50,7 @@ test("role skill matrix counts agent loads and hook injections per role", () => 
   ];
   renderRoleSkills(sessions);
   const html = element("#c-role-skills").innerHTML;
-  assert.match(html, /<svg/);
+  assert.match(html, /class="role-skills"/);
   assert.match(html, /builder/);
   assert.match(html, /tdd/);
   assert.match(html, /ponytail/);
