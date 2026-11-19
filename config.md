@@ -94,7 +94,7 @@ models:
     top: [deep-review]
   roles:
     builder: {tier: work, prefer: [implementation]}
-    reviewer: {tier: top}
+    designer: {tier: top}     # override: role card default is work
     delivery: {tier: fast}
 ```
 
