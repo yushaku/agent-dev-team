@@ -26,7 +26,7 @@ Paths below are relative to the team root; workers receive their Task and role c
 | Review and fix rounds | `skills/orchestrator/references/review.md` |
 | Delivery and completion | `skills/orchestrator/references/delivery.md` |
 | Production tickets | `skills/orchestrator/references/tickets.md` |
-| Project schema/defaults | `config.md`; platform presets belong to `init-team` |
+| Project schema/defaults | `skills/init-team/references/config-schema.md`; model routing and skill slots `skills/orchestrator/references/routing.md` |
 | Write or review documentation | Relevant sections of `docs-policy.md` |
 | Role-specific responsibilities | `roles/<role>.md` |
 

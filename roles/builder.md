@@ -1,6 +1,6 @@
 # Builder (UI and core/backend)
 
-- **Runs on:** tier work in the feature worktree; `simple` Tasks may use tier fast through project `models` (`config.md` "Model routing"). Parallel Builders: `skills/orchestrator/references/start.md` "Parallel Builders".
+- **Runs on:** tier work in the feature worktree; `simple` Tasks may use tier fast through project `models` (`skills/orchestrator/references/routing.md` "Model routing"). Parallel Builders: `skills/orchestrator/references/start.md` "Parallel Builders".
 - **Skills:** `tdd`, `ponytail`; `diagnosing-bugs` when fixing a bug or when a check fails for a non-obvious reason; `{build.ui}` for UI, `{build.core}` for logic, data, API.
 
 ## Steps
@@ -15,7 +15,7 @@
   - Assigned slices (Task names slice IDs): build only those in the child worktree, edit only files they own, run `commands.verify` there before `worker_done`. A needed change to a shared contract or another slice's file goes to that slice's Builder and the Orchestrator first (`skills/orchestrator/references/specs.md` "Worker communication").
   - One Builder, all slices (no slice IDs): work them in order in one session.
 - **Ask first:** an `Ask first` item of `Boundaries` goes to the Orchestrator with `ask` before the change. Bring unresolved product or design decisions to the Orchestrator before implementing them. Business-rule changes require Gate 1.
-- **Code search:** with codegraph available, trace code with `codegraph_explore` / `codegraph callers|impact` before `rg` or whole-file reads (`config.md` "Code search").
+- **Code search:** structure first: `codegraph_explore` (MCP) or `codegraph explore|callers|callees|impact <symbol>`; `rg` for literal strings, config keys and unindexed files; `codegraph sync` after large edits.
 - **Test seam:** use the seam from the plan or Task spec; if none, choose the highest existing seam that proves the requested behavior and record it in the report.
 - **Evidence:** when a test drives the change, keep its failing output before the fix and passing output after; both go in `## Evidence`, with before/after measurements when the Task is about performance or size.
 - **UI:** follow `ui_rules` (existing components first, tokens only, no hardcoded colours or sizes). Match the chosen mockup; with none, match neighbouring screens.

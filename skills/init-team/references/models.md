@@ -1,6 +1,6 @@
 # Model presets
 
-Read when the interview reaches `models`. Offer one preset as the starting point, then confirm each entry with the PO (`SKILL.md` "Models"). Schema and routing rules: `config.md` "Model settings" and "Model routing".
+Read when the interview reaches `models`. Offer one preset as the starting point, then confirm each entry with the PO (`SKILL.md` "Models"). Schema and routing rules: `skills/init-team/references/config-schema.md` "Models" and `skills/orchestrator/references/routing.md` "Model routing".
 
 ## Discover ids first
 
@@ -67,5 +67,5 @@ models:
 - Give every tier at least two agents when the PO has them; a single-entry tier blocks on one rate limit.
 - One alias per agent/model/effort combination; the same model at two efforts is two aliases.
 - Top tier is the expensive one (Reviewer runs every Run); keep its effort at `high`, not the maximum, unless the PO asks.
-- Keep the Reviewer's tier at least the Builder's (`config.md` "Model routing"); a different provider for the Reviewer is optional, not required.
+- Keep the Reviewer's tier at least the Builder's (`skills/orchestrator/references/routing.md` "Model routing"); a different provider for the Reviewer is optional, not required.
 - Disable an entry with `enabled: false` instead of deleting it, so the PO's choice stays visible.

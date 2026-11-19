@@ -18,11 +18,11 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 | Step | Read |
 |---|---|
 | Preflight, resume, dispatch and recovery | `references/start.md` |
-| Load the project | `<main checkout>/.team/config.yaml`, `config.md`; no config: `skills/init-team/SKILL.md` |
+| Load the project | `<main checkout>/.team/config.yaml`; missing or unknown key: `skills/init-team/references/config-schema.md`; no config: `skills/init-team/SKILL.md` |
 | Ticket in production | `references/tickets.md` |
 | Role responsibilities | Selected `roles/<role>.md` |
-| Agent/model selection and fallback | `.team/config.yaml` `models`, `config.md` "Model settings" and "Model routing" |
-| Each worker spec | `references/specs.md`, `roles/<role>.md` with slots resolved |
+| Agent/model selection and fallback | `.team/config.yaml` `models`, `references/routing.md` "Model routing" |
+| Each worker spec | `references/specs.md`, `roles/<role>.md` with slots resolved (`references/routing.md` "Skill slots") |
 | Gates, worker questions, changed decisions, escalation | `references/gates.md` |
 | Verification, fix rounds, UI rounds | `references/review.md` |
 | Delivery, Definition of Done, merge on request, cleanup | `references/delivery.md` |
@@ -30,7 +30,7 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 
 ## Every turn
 
-- **Config:** read the main checkout's `.team/config.yaml` on entry/resume and before dispatch or follow-up. Resolve `models` through `config.md`; missing catalog: complete the `init-team` model interview before starting workers.
+- **Config:** read the main checkout's `.team/config.yaml` on entry/resume and before dispatch or follow-up. Resolve `models` through `references/routing.md`; missing catalog: complete the `init-team` model interview before starting workers.
 
 - **Browser:** use Orca browser via `orca-cli` for all browser checks; no Chrome/DevTools browser, even when a role skill names it. Pass this rule in Task constraints.
 - **Reuse:** within the same Run, keep the same workers and independent Reviewer through follow-ups, fixes and delivery. Replace only if Orca refuses reuse or capability/tier must change; hand off first.

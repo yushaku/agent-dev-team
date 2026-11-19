@@ -9,7 +9,7 @@ Read when creating, editing or reviewing documentation; load only the relevant s
 | `docs/product/<capability>.md` | Builder; Tech Lead when assigned | Business spec (below) | The business changes |
 | `docs/adr/NNN-title.md` | Builder or assigned Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line; superseded by a new ADR |
 | `AGENTS.md` | PO | Repo agent rules; read-only for the team (`## AGENTS.md`) | Never by the team |
-| `.team/config.yaml` | PO (Orchestrator proposes) | Team config (`config.md`); local-only until the team adopts it | Project settings change |
+| `.team/config.yaml` | PO (Orchestrator proposes) | Team config (`skills/init-team/references/config-schema.md`); local-only until the team adopts it | Project settings change |
 | `DESIGN.md` | Designer | Visual identity: tokens in use, type, spacing, component rules | The PO picks an option at G-UI that sets a new rule |
 | `README.md` | PO | What it is, how to run it | The PO asks |
 | `todo.md` | PO | Roadmap; each item has **Goal**, **Outcome** (may name story IDs), a checkbox, optional `Ref: .team/research/<topic>.md` | The PO adds items; the delivery owner removes shipped ones |

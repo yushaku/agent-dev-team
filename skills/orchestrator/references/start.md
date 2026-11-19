@@ -2,11 +2,11 @@
 
 ## Preflight
 
-1. Identify the repo and read `.team/config.yaml` (`config.md` defaults for non-model settings; missing config/catalog: `skills/init-team/SKILL.md`). Identify the requested objective and any named Task or handoff; select its Run below. Ask only when the repo, scope or source branch remains ambiguous. Preserve uncommitted user work.
+1. Identify the repo and read `.team/config.yaml` (`skills/init-team/references/config-schema.md` only for a missing or unknown key; missing config/catalog: `skills/init-team/SKILL.md`). Identify the requested objective and any named Task or handoff; select its Run below. Ask only when the repo, scope or source branch remains ambiguous. Preserve uncommitted user work.
 2. Read the relevant request/ticket, `todo.md`, carry-over and research notes it names. Choose the team below; resolve only its role skills and project slots. Report missing required skills once.
-3. Select agents/models from project `models` via `config.md` "Model routing"; complete Run selection below before creating Tasks or dispatching workers.
+3. Select agents/models from project `models` via `skills/orchestrator/references/routing.md` "Model routing"; complete Run selection below before creating Tasks or dispatching workers.
 4. For code changes, use a feature worktree from the configured base or PO-named branch. Link `.team` and each `worktree_links` path to its main-checkout counterpart (one shared `.team/` per repo); follow install/verify commands and `serial`. Keep baseline failures distinct from regressions.
-5. With `codegraph: on` (`config.md` "Code search"), check the worktree has `.codegraph/`; if missing, run `codegraph init .` in it before dispatch. Read-only Investigators without a worktree use the main checkout's index.
+5. With `codegraph: on` (`skills/init-team/references/config-schema.md` "Code search setup"), check the worktree has `.codegraph/`; if missing, run `codegraph init .` in it before dispatch. Read-only Investigators without a worktree use the main checkout's index.
 
 ## Run selection
 
@@ -50,4 +50,4 @@ Evaluate the default over the next three delivered changes using existing report
 - Capabilities and permissions are session-specific. Attempt authorized work and recover from observed failures; give workers absolute skill paths and explicit action boundaries.
 - Report the exact command, error and worker. Simplify a compound command only within the authorized action; use environment approval or an authorized worker rather than bypassing a denial or changing global permissions.
 - Git write denied: preserve changed paths, verify evidence and commit text for an authorized committer. Keep user changes; a committer change alone does not require rerunning checks.
-- `.team` link/write denied: report the resolved destination and requested access, then request narrow permission through the environment. Missing CLI/auth/model follows `config.md` "Model routing" and the Orca recovery guide.
+- `.team` link/write denied: report the resolved destination and requested access, then request narrow permission through the environment. Missing CLI/auth/model follows `skills/orchestrator/references/routing.md` "Model routing" and the Orca recovery guide.

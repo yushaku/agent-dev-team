@@ -1,6 +1,6 @@
-# Project config
+# Project config schema
 
-Schema, defaults and overrides for Orchestrator and `init-team`. Platform starting values live in `skills/init-team/references/platforms.md`. Dispatched workers receive resolved values in their Task.
+Schema and defaults for `.team/config.yaml`, written by `init-team`.
 
 ## Resolution
 
@@ -10,6 +10,10 @@ Schema, defaults and overrides for Orchestrator and `init-team`. Platform starti
 - Repo rules in `AGENTS.md` / `CLAUDE.md` win; the config only maps them to team settings.
 
 Values shown are the defaults; `e.g.` marks an example.
+
+`init-team` writes every key explicitly (value plus a short comment where not obvious), so a complete config needs no schema lookup. The Orchestrator reads this file only for a missing or unknown key.
+
+Platform presets: `skills/init-team/references/platforms.md`. Model presets: `skills/init-team/references/models.md`.
 
 ```yaml
 tracker:
@@ -35,8 +39,8 @@ commands:
   serial: false              # true = run one at a time (shared cache or device)
 e2e: []                      # optional; heavy E2E commands, run only on request
 worktree_links: [.env]       # untracked local files linked from the main checkout
-codegraph: on                # on = index each code worktree; the codegraph MCP is installed globally ("Code search")
-skills:                      # slot values (`Skill slots`); empty = role core skills only
+codegraph: on                # on = index each code worktree; the codegraph MCP is installed globally ("Code search setup" below)
+skills:                      # slot values (`skills/orchestrator/references/routing.md` "Skill slots"); empty = role core skills only
   build.ui: [extra-skill]    # e.g.
   project: [.claude/skills/<name>]   # skills shipped in the repo
 ui_rules:                    # optional; Designer, UI Builders, Reviewer
@@ -66,11 +70,11 @@ models:
   roles: {}                  # optional role -> {tier: work, prefer: [alias]}
 ```
 
-## Model settings
+## Models
 
 `.team/config.yaml` owns the allowed agents, model ids, effort values and fallback order. There is no shared model registry or provider preference. An empty or legacy `models` section requires the model interview in `skills/init-team/SKILL.md` before dispatch; preserve the rest of the config.
 
-Example structure only; replace model placeholders with PO-approved ids supported by the selected agent. Concrete presets and id discovery: `skills/init-team/references/models.md`.
+Example structure only; replace model placeholders with PO-approved ids supported by the selected agent. Concrete presets and id discovery: `skills/init-team/references/models.md`. Runtime routing: `skills/orchestrator/references/routing.md` "Model routing".
 
 ```yaml
 models:
@@ -101,31 +105,14 @@ models:
 - `catalog.<alias>`: required `agent`; `model` and `effort` are strings or null. Null/omitted means omit that launch flag and use the agent's setting, not a guessed model. Optional `enabled: false` removes the entry from routing. Provider/account configuration and secrets stay in the agent; `provider` describes the intended backend without switching it.
 - `tiers`: ordered alias lists, cheapest/preferred first as chosen by the PO. Every alias must exist in `catalog`; supported tier names are `fast`, `work`, `top`. Use separate aliases for different effort settings. Model names and provider names do not establish quality, price or availability.
 - `roles`: optional role-id mappings. `tier` overrides the role's default; `prefer` reorders eligible entries within that tier. Missing keys retain the role default and tier order. A referenced alias must belong to the selected tier.
-- Validate types, alias references, role ids and required tier coverage before dispatch. Require a matching model when an effort flag needs one; use the selected agent's supported effort values rather than a universal effort ladder. Reject placeholder model ids. A missing/disabled eligible entry blocks the affected Task; ask for a config decision rather than inventing a model.
 - Existing `models.agents` and per-agent tier maps are legacy inputs to the interview, not dispatch settings. Show their proposed translation for PO agreement; preserve explicit disabled-agent choices. Missing old model/effort values remain unanswered rather than being filled from a deleted registry.
 
-## Model routing
-
-1. Read the main checkout's `.team/config.yaml` before planning a Run, on resume and before dispatch/follow-up; refresh it when changed. Workers receive resolved settings, not the full catalog. Keep existing workers only while their settings remain eligible; a newly disabled entry is not eligible for further work.
-2. Choose the Task tier from its role and risk. `fast`: a bounded mechanical/simple edit; `work`: implementation, investigation and multi-behaviour fixes; `top`: architecture decisions, difficult reasoning or security-sensitive work. Role cards supply defaults, including the Builder's simple-Task fast option; an explicit project role tier overrides that default. Task risk may require a higher tier at initial planning; failed fix rounds still follow the PO escalation gate. Preserve required checks and keep the Reviewer's tier at least the Builder's. A config override cannot remove a risk-triggered check.
-3. Honor an explicit PO model override for the stated Task and record the exception; ask only for missing routing values, not repeat approval. Otherwise use the configured eligibility rules. Use the role's `prefer` order, then remaining enabled aliases in the tier. Agent availability and supported flags come from the installed Orca/agent guides and observed launch results. Check authentication only through a supported read-only command; no quota probes, account switching or sign-in automation.
-4. Pass only the entry's resolved flags that the selected agent supports. Verify the launch receipt. Missing CLI, authentication failure, unsupported flags/model or rate limit: record the evidence, then try the next eligible entry in the same tier and notify the PO. A repeated ambiguous launch uses the receipt's recovery path, not a fresh launch. An actual code/verify failure follows fix-round policy, not automatic provider retries. If no entry works, ask the PO; never silently lower the tier or start an unapproved higher-tier fix round.
-5. Builder and Reviewer use independent sessions/Dispatches; they may use the same provider/model. Orchestrator and direct Researcher/Solution Architect sessions retain their session model; dispatched workers follow the catalog. Record the chosen alias, tier, agent, model, effort and selection reason in each Task (`skills/orchestrator/references/specs.md`).
-
-## Skill slots
-
-- Slots: `design`, `architecture`, `build.ui`, `build.core`, `qa`, `review`, `security`, `perf`.
-- Resolution: project `skills.<slot>` > empty (role core skills only). A slot skill not installed: tell the PO once, never skip silently.
-- A config with a `profile:` key: ignore the key.
-
-## Code search
+## Code search setup
 
 `codegraph: on` (default): the codegraph MCP is installed globally once per agent; each code worktree needs only an index.
 
 - MCP: install once per agent with `codegraph install` or the agent's user-level MCP config. The Claude entry needs `"alwaysLoad": true`. `codegraph serve --mcp` finds the index by walking up from the session cwd, so no per-project MCP files or trust prompts.
 - Setup: Orca repo Setup script `codegraph init .`; prepend it to any existing setup (e.g. `codegraph init . && cd functions && npm install`). Outside Orca run `codegraph init .` after creating the worktree.
 - Teardown: Orca repo Archive script `${AGENT_TEAM_HOME:-~/.agents/teams}/bin/cg-wt-rm --stop-only` stops the worktree's codegraph daemon and MCP processes; outside Orca, `cg-wt-rm <worktree>` also removes the worktree.
-- Agents search structure first: `codegraph_explore` (MCP) or `codegraph explore|callers|callees|impact <symbol>` (CLI) for "where is X, who calls X, what breaks if X changes"; `rg` for literal strings, config keys and files codegraph does not index. After large edits run `codegraph sync`.
-- Hermes runs outside the worktree: pass `projectPath` to `codegraph_explore`, or run the CLI with the worktree as cwd.
 - `codegraph: off` (unsupported language, huge monorepo): skip setup and the search rule.
 - The dashboard "Tìm code" tab shows codegraph vs rg/grep calls per agent, role and worktree.

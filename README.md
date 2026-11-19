@@ -53,7 +53,7 @@ jq -r '.skills | to_entries | group_by(.value.source)[]
   skills-lock.json | sh
 ```
 
-Every downloaded skill a role card or `config.md` names is pinned in `skills-lock.json` and never edited in place. Add one by running `npx skills add <repo> -s <name> -a claude-code -y` in a scratch git dir and copying its `skills-lock.json` entry here.
+Every downloaded skill a role card or `skills/init-team/references/config-schema.md` names is pinned in `skills-lock.json` and never edited in place. Add one by running `npx skills add <repo> -s <name> -a claude-code -y` in a scratch git dir and copying its `skills-lock.json` entry here.
 
 4. Link the team's own skills (`init-team`, `orchestrator`, `anti-ai`, `frappe-docs`).
 
@@ -91,7 +91,8 @@ No `missing:` lines means every skill is in place.
 - `workflow.md`: short overview, decision boundaries and reading index
 - `roles/`: one card per worker role
 - `skills/orchestrator/`: the Orchestrator skill; `references/` holds its step files, coding agents and ticket mode; Orca commands come from the version-matched skills
-- `config.md`: project config schema, defaults and overrides; platform presets live under `skills/init-team/references/`
+- `skills/init-team/references/config-schema.md`: project config schema and defaults; platform and model presets live beside it
+- `skills/orchestrator/references/routing.md`: model routing and skill slots
 - `docs-policy.md`: document ownership and authoring rules; worker reports use `skills/orchestrator/references/specs.md`
 - `skills/`: skills the team wrote
 - `skills-lock.json`: pinned downloaded skills
