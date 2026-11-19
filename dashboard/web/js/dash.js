@@ -92,6 +92,13 @@ function applyFilter(spec) {
   } else return;
   persist(); render();
 }
+/* An issue sets (not toggles) its filter hint; Run or role hints open the Tasks view. */
+function applyIssue(f) {
+  C.state.repo = f.repo || ""; C.state.runF = f.run || ""; C.state.role = f.role || "";
+  C.state.agent = ""; C.state.wt = ""; C.state.taskF = "";
+  persist();
+  if (f.run || f.role) showView("tk-theo-repo"); else render();
+}
 function clearFilter(k) {
   if (k === "all") { C.state.repo = C.state.agent = C.state.role = C.state.wt = C.state.runF = C.state.taskF = ""; }
   else { C.state[k] = ""; if (k === "repo") C.state.wt = ""; if (k === "runF") C.state.taskF = ""; }
@@ -132,15 +139,16 @@ $("#auto").addEventListener("click", () => { C.state.auto = !C.state.auto; persi
 function activate(el) {
   if (el.dataset.clear) return clearFilter(el.dataset.clear);
   if (el.dataset.f) return applyFilter(el.dataset.f);
+  if (el.dataset.issue) return applyIssue(JSON.parse(el.dataset.issue));
   if (el.dataset.toggle && el.dataset.toggle.startsWith("search:") && toggleSearchKind(el.dataset.toggle.slice(7))) { persist(); return render(); }
   if (el.dataset.sid) return showSession(el.dataset.sid);
 }
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-clear], [data-f], [data-toggle], [data-sid]");
+  const el = e.target.closest("[data-clear], [data-f], [data-toggle], [data-sid], [data-issue]");
   if (el) { hideTip(); activate(el); }
 });
 document.addEventListener("keydown", e => {
-  const el = e.target.closest && e.target.closest("[data-f], [data-toggle], [data-sid]");
+  const el = e.target.closest && e.target.closest("[data-f], [data-toggle], [data-sid], [data-issue]");
   if (el && (e.key === "Enter" || (e.key === " " && el.tagName !== "BUTTON"))) { e.preventDefault(); activate(el); }
 });
 let resizeTimer = null, lastW = window.innerWidth;

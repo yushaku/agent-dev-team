@@ -43,3 +43,17 @@ The page shows only the token metrics. Team docs live on the docs site, linked f
 The Tasks run chart toggles between elapsed time and token consumption while keeping tasks in start order. Token bars chain in row order on a cumulative token axis. Orchestrator has a separate lane: its observed span includes idle time; dispatch, gate and inbox events mark recorded coordination, and gate intervals show PO wait. The sequence diagram shows one lane per worker, with chronological arrows for dispatches, PO gates and inbox messages. Reused workers keep their lane across tasks. Selecting an arrow by pointer or keyboard opens the full message in the dashboard detail modal. It reads inbox history without consuming messages, capped at the newest 500 per Run; unavailable or capped inbox data is labelled. Reused worker handles resolve to the dispatch active at the message timestamp; unknown addresses remain visible.
 
 Model catalogs and tier preferences live in each project's `.team/config.yaml` (`config.md`). Task specs carry the initial `Routing:` selection and a `Routing-log:` pointer to `.team/<feature>/routing.jsonl`. After dispatch, the Orchestrator appends resolved selections keyed by Task and Dispatch id; retries retain separate records. The dashboard reads only matching Task records from logs contained in `.team/`, including shared `.team` symlinks. Role defaults come from `roles/*.md`. A session's observed model/agent and effort are compared with its own resolved selection, without guessing tiers from model names. Missing or ambiguous routing history remains unverified; historical sessions are not classified through the current project catalog. No new YAML dependency is required by the dashboard.
+
+## For agents
+
+`backend/insights.py` aggregates the snapshot server-side; no need to download `/api/data`.
+
+```
+curl -s 'localhost:4747/api/agent/summary?days=7&repo=&run=&role=&agent='   # markdown, a few KB
+curl -s 'localhost:4747/api/agent/summary?days=7&format=json'               # same data as JSON
+curl -s 'localhost:4747/api/agent/run?id=<runId>'                           # one Run (add &format=json)
+```
+
+- `summary`: scope, totals, token by role (model/effort mix, share), skill loads by role, Run table, issues sorted by severity. All filters are optional.
+- `run`: tasks in order (role, kind, round, agent/model/effort, selected tier, tokens, duration, skills), gates with waits, issues for that Run. Unknown id returns 404. Skills cover only the last `days` (default 7).
+- Issues (`id`, `severity`, Vietnamese `title`/`evidence`/`suggestion`, `filter` hint): top-tier reviewer on a scoped re-review, required role-card skill never loaded, more than 2 fix rounds, session tokens above 3x the role median, observed routing differs from the selection, PO gate wait above 50% of lead time. Thresholds are constants at the top of `insights.py`. The Tổng quan page lists the same issues under "Vấn đề".

@@ -402,3 +402,16 @@ test("Codegraph percentage ignores file reads", () => {
   assert.doesNotMatch(html, /10% cg/);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
+
+test("issues section renders severity rows with filter hints and an empty state", async () => {
+  const { renderIssues } = await import("../web/js/tabs/overview.js");
+  renderIssues([{ id: "a", severity: "high", title: "Tiêu đề <b>", evidence: "bằng chứng 1", suggestion: "gợi ý", filter: { run: "r1", role: "builder" } },
+    { id: "b", severity: "low", title: "Khác", evidence: "e", suggestion: "s", filter: {} }]);
+  const html = element("#issues").innerHTML;
+  assert.equal((html.match(/class="issue /g) || []).length, 2);
+  assert.match(html, /class="issue high"/);
+  assert.match(html, /Tiêu đề &lt;b&gt;/);
+  assert.match(html, /data-issue="\{&quot;run&quot;:&quot;r1&quot;,&quot;role&quot;:&quot;builder&quot;\}"/);
+  renderIssues([]);
+  assert.match(element("#issues").innerHTML, /Không phát hiện vấn đề nào trong khoảng này\./);
+});

@@ -7,8 +7,29 @@ import {
   arcPath, donut, squarify, spark, mixc, gantt, hideTip
 } from "../lib/charts.js";
 
+const SEV = { high: "Cao", medium: "Trung bình", low: "Thấp" };
+/* Issues come from the backend (backend/insights.py); each row carries its filter hint in data-issue. */
+export function renderIssues(issues) {
+  $("#issues").innerHTML = issues.length ? `<ul class="issues" aria-label="Danh sách vấn đề">${issues.map(i => `<li class="issue ${esc(i.severity)}" tabindex="0" role="button" data-issue="${esc(JSON.stringify(i.filter || {}))}" aria-label="${esc((SEV[i.severity] || i.severity) + ": " + i.title)}"><span class="issue-dot" title="${esc(SEV[i.severity] || i.severity)}"></span><span><b>${esc(i.title)}</b><span class="ev">${esc(i.evidence)}</span><span class="fix">${esc(i.suggestion)}</span></span></li>`).join("")}</ul>` : '<p class="empty">Không phát hiện vấn đề nào trong khoảng này.</p>';
+}
+let issuesSeq = 0;
+async function loadIssues() {
+  const seq = ++issuesSeq, st = C.state;
+  const q = new URLSearchParams({ days: st.days, format: "json" });
+  [["repo", st.repo], ["agent", st.agent], ["role", st.role], ["run", st.runF]].forEach(([k, v]) => { if (v) q.set(k, v); });
+  try {
+    const r = await fetch("/api/agent/summary?" + q, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const body = await r.json();
+    if (seq === issuesSeq) renderIssues(body.issues || []);
+  } catch (e) {
+    if (seq === issuesSeq) $("#issues").innerHTML = '<p class="empty">Không tải được danh sách vấn đề.</p>';
+  }
+}
+
 export function renderOverview(S) {
   const d = C.state.data;
+  loadIssues();
   const f = [C.state.repo && "repo " + C.state.repo, C.state.wt && "worktree " + C.state.wt, C.state.role && "vai " + C.state.role, C.state.agent && "chỉ " + AG[C.state.agent]].filter(Boolean);
   $("#ov-lead").textContent = `Token Claude, Codex, Copilot và Hermes: ${d.days} ngày gần nhất (từ ${dt(d.range_start).slice(0, 5)}), ${sessionCount(S)} phiên${f.length ? ", " + f.join(", ") : ""}.`;
   $("#measurement-note").textContent = `Trong bộ lọc: ${fmt(sum(S.filter(s => s.attribution === "dispatch_window"), s => s.total))} token suy từ dispatch; ${fmt(sum(S.filter(s => s.aggregate), s => s.total))} token chỉ có tổng phiên, xếp ở ngày bắt đầu phiên. Toàn bộ log có ${fmt(d.attribution?.undated || 0)} token thiếu thời gian, không đưa vào khoảng ngày.${d.orca.available ? "" : " Chưa nối được dữ liệu Orca; tỷ lệ phân bổ chưa đầy đủ."}`;

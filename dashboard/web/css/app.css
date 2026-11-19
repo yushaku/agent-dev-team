@@ -1,3 +1,5 @@
+/* Author display rules (section { display: grid }) must not override the hidden attribute. */
+[hidden] { display: none !important; }
 /* ==========================================================
    1. Tokens: Catppuccin Frappe. Never add colours or sizes.
    ========================================================== */
@@ -363,3 +365,14 @@ details.tbl[open] > summary { margin-bottom: var(--s-3); }
 @media (max-width: 600px) {
   .run-chart-toolbar { align-items: start; }
 }
+
+.issues { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-2); }
+.issue { display: grid; grid-template-columns: 10px 1fr; gap: var(--s-3); align-items: start; background: var(--mantle); border-radius: var(--r-2); padding: var(--s-3) var(--s-4); cursor: pointer; }
+.issue:hover, .issue:focus-visible { background: var(--surface0); }
+.issue-dot { width: 10px; height: 10px; border-radius: var(--r-pill); margin-top: 6px; background: var(--c); }
+.issue.high { --c: var(--red); }
+.issue.medium { --c: var(--yellow); }
+.issue.low { --c: var(--overlay2); }
+.issue b { color: var(--text); font-weight: 600; }
+.issue .ev, .issue .fix { display: block; font-size: var(--fs-1); color: var(--subtext1); overflow-wrap: anywhere; }
+.issue .fix { color: var(--subtext0); }
