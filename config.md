@@ -70,7 +70,7 @@ models:
 
 `.team/config.yaml` owns the allowed agents, model ids, effort values and fallback order. There is no shared model registry or provider preference. An empty or legacy `models` section requires the model interview in `skills/init-team/SKILL.md` before dispatch; preserve the rest of the config.
 
-Example structure only; replace model placeholders with PO-approved ids supported by the selected agent:
+Example structure only; replace model placeholders with PO-approved ids supported by the selected agent. Concrete presets and id discovery: `skills/init-team/references/models.md`.
 
 ```yaml
 models:
