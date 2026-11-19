@@ -6,7 +6,7 @@
 2. Read the relevant request/ticket, `todo.md`, carry-over and research notes it names. Choose the team below; resolve only its role skills and project slots. Report missing required skills once.
 3. Select agents/models from project `models` via `config.md` "Model routing"; complete Run selection below before creating Tasks or dispatching workers.
 4. For code changes, use a feature worktree from the configured base or PO-named branch. Link `.team` and each `worktree_links` path to its main-checkout counterpart (one shared `.team/` per repo); follow install/verify commands and `serial`. Keep baseline failures distinct from regressions.
-5. With `codegraph: on` (`config.md` "Code search"), check the worktree has `.codegraph/` and `.mcp.json`; if the Orca Setup script did not create them, run `${AGENT_TEAM_HOME:-~/.agents/teams}/bin/cg-project <worktree>` before dispatch. Read-only Investigators without a worktree use the main checkout's index.
+5. With `codegraph: on` (`config.md` "Code search"), check the worktree has `.codegraph/`; if missing, run `codegraph init .` in it before dispatch. Read-only Investigators without a worktree use the main checkout's index.
 
 ## Run selection
 

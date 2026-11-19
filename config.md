@@ -35,7 +35,7 @@ commands:
   serial: false              # true = run one at a time (shared cache or device)
 e2e: []                      # optional; heavy E2E commands, run only on request
 worktree_links: [.env]       # untracked local files linked from the main checkout
-codegraph: on                # on = index each code worktree and expose the codegraph MCP per project ("Code search")
+codegraph: on                # on = index each code worktree; the codegraph MCP is installed globally ("Code search")
 skills:                      # slot values (`Skill slots`); empty = role core skills only
   build.ui: [extra-skill]    # e.g.
   project: [.claude/skills/<name>]   # skills shipped in the repo
@@ -120,11 +120,12 @@ models:
 
 ## Code search
 
-`codegraph: on` (default) gives each code worktree its own index and a project-scoped codegraph MCP; nothing is configured globally.
+`codegraph: on` (default): the codegraph MCP is installed globally once per agent; each code worktree needs only an index.
 
-- Setup: `${AGENT_TEAM_HOME:-~/.agents/teams}/bin/cg-project <worktree>` runs `codegraph init` and writes `.mcp.json` (Claude, jcode), `.claude/settings.local.json` (pre-approval) and `.codex/config.toml`, all listed in `.git/info/exclude`. Set it as the Orca repo Setup script (`${AGENT_TEAM_HOME:-~/.agents/teams}/bin/cg-project .`) or run it after creating the worktree.
+- MCP: install once per agent with `codegraph install` or the agent's user-level MCP config. The Claude entry needs `"alwaysLoad": true`. `codegraph serve --mcp` finds the index by walking up from the session cwd, so no per-project MCP files or trust prompts.
+- Setup: Orca repo Setup script `codegraph init .`; prepend it to any existing setup (e.g. `codegraph init . && cd functions && npm install`). Outside Orca run `codegraph init .` after creating the worktree.
 - Teardown: Orca repo Archive script `${AGENT_TEAM_HOME:-~/.agents/teams}/bin/cg-wt-rm --stop-only` stops the worktree's codegraph daemon and MCP processes; outside Orca, `cg-wt-rm <worktree>` also removes the worktree.
 - Agents search structure first: `codegraph_explore` (MCP) or `codegraph explore|callers|callees|impact <symbol>` (CLI) for "where is X, who calls X, what breaks if X changes"; `rg` for literal strings, config keys and files codegraph does not index. After large edits run `codegraph sync`.
-- Hermes has no per-project MCP: give it the CLI commands above.
+- Hermes runs outside the worktree: pass `projectPath` to `codegraph_explore`, or run the CLI with the worktree as cwd.
 - `codegraph: off` (unsupported language, huge monorepo): skip setup and the search rule.
 - The dashboard "Tìm code" tab shows codegraph vs rg/grep calls per agent, role and worktree.

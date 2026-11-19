@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # cg-wt-rm <worktree>...: stop codegraph processes of a worktree, then `git worktree remove` it.
-# Removes .codegraph/, .mcp.json, .codex/, .claude/settings.local.json together with the worktree.
+# Removes .codegraph/ together with the worktree.
 set -euo pipefail
 force=""; remove=1
 [ "${1:-}" = "--stop-only" ] && { remove=0; shift; }
