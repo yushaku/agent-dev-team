@@ -25,6 +25,7 @@ globalThis.history = { replaceState() {} };
 const C = await import("../web/js/lib/charts.js");
 const { repoTree } = await import("../web/js/tabs/repos.js");
 const { renderRoles, roleStats } = await import("../web/js/tabs/roles.js");
+const { renderRoleSkills } = await import("../web/js/tabs/role-skills.js");
 const { runDetail, renderRunTimeline, communicationDiagram } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
 const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../web/js/tabs/search.js");
@@ -39,6 +40,23 @@ test("role charts resolve model colours after rebuilding the palette", () => {
   renderRoles(sessions);
   assert.match(element("#c-roles").innerHTML, /<svg/);
   assert.match(element("#c-roles").innerHTML, /builder/);
+});
+
+test("role skill matrix counts agent loads and hook injections per role", () => {
+  C.state.data = { sessions: [], roles_cfg: { tiers: {}, order: [], roles: {} } };
+  const sessions = [
+    { role: "builder", agent: "codex", session_id: "a", task_id: "t1", start: 5, skills: { tdd: [3, 10] }, hooks: { tdd: 1, ponytail: 1 } },
+    { role: "reviewer", agent: "claude", session_id: "b", task_id: "t2", start: 6, skills: {}, hooks: {} },
+  ];
+  renderRoleSkills(sessions);
+  const html = element("#c-role-skills").innerHTML;
+  assert.match(html, /<svg/);
+  assert.match(html, /builder/);
+  assert.match(html, /tdd/);
+  assert.match(html, /ponytail/);
+  assert.doesNotMatch(html, /reviewer/);
+  renderRoleSkills([sessions[1]]);
+  assert.match(element("#c-role-skills").innerHTML, /Chưa có skill/);
 });
 
 test("Tasks shows code-search usage by role only after filtering a project", () => {
@@ -66,7 +84,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
   await dash.link(specifier => {
     const exports = specifier === "./lib/charts.js" ? C : {
       renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
-      renderRoles() { rendered.push("roles"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
+      renderRoles() { rendered.push("roles"); }, renderRoleSkills() { rendered.push("role-skills"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
       showSession() {}, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); }, toggleSearchKind() { return true; },
     };
     return new SyntheticModule(Object.keys(exports), function () {
@@ -104,7 +122,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     assert.equal(element("#refresh").disabled, false);
     rendered.length = 0;
     dash.namespace.showView("tk-theo-repo", { hash: false });
-    assert.deepEqual(rendered.sort(), ["repos", "roles", "sessions", "task-search", "timeline"]);
+    assert.deepEqual(rendered.sort(), ["repos", "role-skills", "roles", "sessions", "task-search", "timeline"]);
     rendered.length = 0;
     dash.namespace.showView("tk-skills", { hash: false });
     assert.deepEqual(rendered, ["skills"]);

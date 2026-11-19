@@ -4,6 +4,7 @@ import {
 } from "./lib/charts.js";
 import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
+import { renderRoleSkills } from "./tabs/role-skills.js";
 import { renderRepos } from "./tabs/repos.js";
 import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
@@ -49,7 +50,7 @@ function render() {
   const view = views.find(v => !v.hidden)?.id || "tk-tong-quan";
   if (view === "tk-tong-quan") renderOverview(S);
   else if (view === "tk-theo-repo") {
-    renderOverall(S); renderRoles(S); renderRepos(S); renderTaskRoleSearch(S); renderSessionCharts(S);
+    renderOverall(S); renderRoles(S); renderRoleSkills(S); renderRepos(S); renderTaskRoleSearch(S); renderSessionCharts(S);
   } else if (view === "tk-skills") renderSkills(S);
   else if (view === "tk-search") { renderSearch(S); renderRtkCommands(); }
 }
