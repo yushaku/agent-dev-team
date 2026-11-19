@@ -23,9 +23,6 @@
         },
         "external": {
           "label": "Verify"
-        },
-        "database": {
-          "label": "Delivery"
         }
       }
     }
@@ -175,23 +172,9 @@
       "id": "work_3",
       "type": "backend",
       "label": "Builder",
-      "sublabel": "default",
+      "sublabel": "tests, code, PR body",
       "pos": [
         352,
-        330
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "work_4",
-      "type": "external",
-      "label": "QA",
-      "sublabel": "AC to tests",
-      "pos": [
-        508,
         330
       ],
       "size": [
@@ -205,7 +188,7 @@
       "label": "Perf / A11y",
       "sublabel": "when triggered",
       "pos": [
-        664,
+        508,
         330
       ],
       "size": [
@@ -254,20 +237,6 @@
         140,
         56
       ]
-    },
-    {
-      "id": "fast_3",
-      "type": "database",
-      "label": "Delivery Engineer",
-      "sublabel": "draft PR, docs",
-      "pos": [
-        352,
-        490
-      ],
-      "size": [
-        140,
-        56
-      ]
     }
   ],
   "boundaries": [
@@ -291,7 +260,6 @@
         "work_0",
         "work_1",
         "work_3",
-        "work_4",
         "work_5"
       ]
     },
@@ -301,8 +269,7 @@
       "wraps": [
         "t_fast",
         "fast_0",
-        "fast_1",
-        "fast_3"
+        "fast_1"
       ]
     }
   ],

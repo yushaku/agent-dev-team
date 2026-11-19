@@ -20,7 +20,7 @@
 <p class="lead">Chế độ ticket cho phần mềm đang chạy thật: việc đến dưới dạng ticket (lỗi, yêu cầu thay đổi, câu hỏi, sự cố). Kết thúc bằng một bản bàn giao theo <code>delivery.mode</code> hoặc một bản trả lời PO duyệt ở G-Reply. Chỉ nêu chỗ khác với phát triển feature, còn lại theo <a href="quy-trinh.html">Quy trình</a>.</p>
 <h2>Khác gì so với phát triển feature</h2>
 <div class="table-wrap"><table><thead><tr><th scope="col"></th><th scope="col">Chế độ ticket</th></tr></thead><tbody><tr><td>Bắt đầu từ</td><td>Một ticket trong tracker</td></tr><tr><td>Nguồn sự thật</td><td>Toàn bộ thread và yêu cầu đã được xác nhận gần nhất; nêu rõ khi có mâu thuẫn</td></tr><tr><td>Vòng chính</td><td>Làm rõ với client, điều tra, sửa</td></tr><tr><td>Business spec</td><td>Chỉ cập nhật khi ticket đổi quy tắc nghiệp vụ, sau G-Scope</td></tr></tbody></table></div>
-<p>Mặc định Builder điều tra, sửa và soạn bản bàn giao; Reviewer kiểm độc lập. Chỉ thêm Analyst, Investigator hoặc QA khi có phần việc hai người hiện tại chưa đáp ứng được. Xem <a href="vai-tro.html">Vai trò</a>.</p>
+<p>Mặc định Builder điều tra, sửa và soạn bản bàn giao; Reviewer kiểm độc lập. Chỉ thêm Analyst hoặc Investigator khi có phần việc hai người hiện tại chưa đáp ứng được. Xem <a href="vai-tro.html">Vai trò</a>.</p>
 
 <h2>Chọn đội hình theo ticket</h2>
 <p>Orchestrator đánh giá độ rõ của yêu cầu, tác động và rủi ro. Câu hỏi có thể chỉ cần một Investigator trả lời và soạn nháp; bug rõ nguyên nhân có thể gộp điều tra và sửa trong một phiên Builder, rồi review độc lập. Change request cần làm rõ phạm vi trước khi chọn đội hình; incident báo PO ngay và dùng luồng fast-track. Các luồng dưới đây là ví dụ, giữ các cổng riêng của ticket.</p>

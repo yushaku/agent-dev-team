@@ -162,7 +162,7 @@
       "col": 4,
       "type": "backend",
       "label": "Build slices",
-      "sublabel": "fast check each"
+      "sublabel": "tests, code, PR body"
     },
     {
       "id": "verify",
@@ -170,14 +170,14 @@
       "col": 4,
       "type": "external",
       "label": "Verify wave",
-      "sublabel": "verify Task, QA, Perf*"
+      "sublabel": "test evidence, Perf*"
     },
     {
       "id": "deliver",
       "lane": "delivery",
       "col": 5,
       "type": "database",
-      "label": "Docs + deliver",
+      "label": "Orchestrator delivers",
       "sublabel": "draft PR or branch"
     },
     {
