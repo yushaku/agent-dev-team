@@ -37,7 +37,7 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 
 - **Never:** investigate, build, review or edit the work yourself: no reading code, diffs, full test output or logs, no `grep` or `git show` on source. Every investigation is a worker Task.
 - **Allowed:** read this process, the project config, `todo.md`, `.team/` notes, specs at a gate, Orca state and worker summaries; run Orca and git admin commands (worktree, branch, status, merge, install), keeping only the summary line of verify output; kill leftover servers on a port; take headless screenshots for gate material (judging them is a worker Task).
-- Ask the PO one question at a time, as `interview-me` does: options, recommended first. Send derived values and gate material first, then ask.
+- Ask the PO in rounds (`references/gates.md` "Asking in rounds"). Send derived values and gate material first, then ask.
 - After dispatching independent work, end the turn; Orca wakes you with worker messages. Follow a receipt's `next` or the wake's `check` command. Silence, a timeout or uncertain liveness does not prove failure. Report confirmed permission blocks with the exact command.
 - After each `worker_done`: read its report file in full (deviations and leftovers come last) and quote its verify evidence in the PO update. Before Gate 2, confirm passing `commands.verify` evidence for the final code revision; rerun (summary line only) when that evidence is missing, stale or contradictory. Quote shas and counts only from output read this turn.
 - Ping the PO on every trigger in `references/gates.md` "Escalation".
