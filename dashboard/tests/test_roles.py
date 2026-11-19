@@ -1,16 +1,30 @@
 import unittest
 
 from backend.parsers.common import finish_first
-from backend.roles import assign_role, discussion_role, role_from_text, role_from_title
+from backend.roles import assign_role, discussion_role, known_roles, role_from_text, role_from_title
 
 
 ROLES = {
     "builder", "reviewer", "tech-lead", "researcher",
-    "solution-architect", "designer", "doc-keeper", "delivery",
+    "solution-architect", "designer", "doc-keeper",
 }
 
 
 class RoleTests(unittest.TestCase):
+    def test_active_role_count(self):
+        roles = known_roles()
+        self.assertEqual(len(roles), 12)
+        self.assertTrue({"builder", "orchestrator"}.issubset(roles))
+
+    def test_retired_roles_resolve_to_builder(self):
+        for title in ("qa: acceptance tests", "QA", "qa-tests", "delivery: publish", "Delivery", "deliver"):
+            with self.subTest(title=title):
+                self.assertEqual(role_from_title(title, ROLES), "builder")
+        self.assertEqual(role_from_text("Role: roles/qa.md", ROLES), "builder")
+        self.assertEqual(role_from_text("Role: Delivery Engineer", ROLES), "builder")
+        self.assertEqual(assign_role(None, {"role_line": "qa"}), ("builder", "role-line"))
+        self.assertEqual(assign_role({"role": "delivery"}, {"role_line": None}), ("builder", "orca"))
+
     def test_orca_task_titles(self):
         self.assertEqual(role_from_title("builder: implement the change", ROLES), "builder")
         self.assertEqual(role_from_title("verify: check the result", ROLES), "reviewer")

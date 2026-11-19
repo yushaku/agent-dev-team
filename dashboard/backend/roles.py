@@ -21,7 +21,8 @@ ROLE_ALIAS = {
     "build": "builder", "fix": "builder", "review": "reviewer", "re-review": "reviewer",
     "review+security": "reviewer", "docs": "doc-keeper", "doc": "doc-keeper",
     "design": "designer", "perf": "perf-a11y", "a11y": "perf-a11y", "close": "orchestrator",
-    "product": "tech-lead", "research": "researcher", "deliver": "delivery", "verify": "reviewer", "ux": "designer",
+    "product": "tech-lead", "research": "researcher", "verify": "reviewer", "ux": "designer",
+    "qa": "builder", "qa-tests": "builder", "delivery": "builder", "deliver": "builder",
     "spec": "tech-lead", "pm": "tech-lead", "tidy": "tech-lead", "plan": "tech-lead", "arch": "tech-lead", "architect": "tech-lead", "investigate": "researcher",
     "solution": "solution-architect", "sa": "solution-architect", "solution-architect": "solution-architect",
     "arch-review": "solution-architect", "poc": "builder",
@@ -37,10 +38,10 @@ def known_roles():
 
 def norm_role(word, roles):
     w = (word or "").strip().lower()
-    if w in roles:
-        return w
     if w in ROLE_ALIAS:
         return ROLE_ALIAS[w]
+    if w in roles:
+        return w
     return None
 
 def role_from_title(title, roles):
@@ -91,9 +92,9 @@ def note_discussion_tool(s, name, args):
 
 def assign_role(task, session):
     if task and task.get("role"):
-        return task["role"], "orca"
+        return ROLE_ALIAS.get(task["role"], task["role"]), "orca"
     elif session["role_line"]:
-        return session["role_line"], "role-line"
+        return ROLE_ALIAS.get(session["role_line"], session["role_line"]), "role-line"
     elif session.get("dispatcher"):
         return "orchestrator", "dispatch"
     elif "orchestrator" in session.get("title", "").lower():

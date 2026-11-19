@@ -220,10 +220,14 @@ def refresh_orca():
         rtasks = []
         for t in (tl or {}).get("tasks") or []:
             title = t.get("task_title") or t.get("title") or ""
-            rec = {"id": t["id"], "run": rid, "title": title[:120], "role": role_from_title(title, roles),
+            measurement = task_measurement(t)
+            role = role_from_title(title, roles)
+            if not role and measurement["kind"] in ("qa", "delivery"):
+                role = "builder"
+            rec = {"id": t["id"], "run": rid, "title": title[:120], "role": role,
                    "status": t.get("status"), "created": ts_of(t.get("created_at")),
                    "completed": ts_of(t.get("completed_at")), "agent": None, "model": None, "effort": None,
-                   "repo": None, "worktree": None, "measurement": task_measurement(t), "routing": task_routing(t)}
+                   "repo": None, "worktree": None, "measurement": measurement, "routing": task_routing(t)}
             rtasks.append(rec)
             tasks[t["id"]] = rec
         gates = []
