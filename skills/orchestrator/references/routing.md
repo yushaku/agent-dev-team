@@ -13,6 +13,6 @@ Read by the Orchestrator before dispatch. Config schema: `skills/init-team/refer
 
 ## Skill slots
 
-- Slots: `design`, `architecture`, `build.ui`, `build.core`, `qa`, `review`, `security`, `perf`.
+- Slots: `design`, `architecture`, `build.ui`, `build.core`, `review`, `security`, `perf`.
 - Resolution: project `skills.<slot>` > empty (role core skills only). A slot skill not installed: tell the PO once, never skip silently.
 - A config with a `profile:` key: ignore the key.

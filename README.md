@@ -14,7 +14,7 @@ An example with planning and design for a new capability, with the PO's gates:
 
 ![Main dev flow](diagrams/dev-flow.svg)
 
-The Builder covers diagnosis, implementation, tests, related docs and delivery. One Reviewer checks the result; the Orchestrator adds specialists only for uncovered needs. For team selection, see [Team decisions](skills/orchestrator/references/start.md#team-decisions).
+The Builder covers diagnosis, implementation, tests, related docs and delivery evidence. The Orchestrator hands off the reviewed branch or opens the draft PR. One Reviewer checks the result; the Orchestrator adds specialists only for uncovered needs. For team selection, see [Team decisions](skills/orchestrator/references/start.md#team-decisions).
 
 ## Requirements
 

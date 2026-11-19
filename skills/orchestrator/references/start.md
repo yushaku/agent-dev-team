@@ -10,18 +10,18 @@
 
 ## Run selection
 
-- New independent objective: automatically create a new Run before its first Task, even in a reused terminal or after `/clear` and `/orchestrator`. Name the Run for the PO's objective, not the first worker's assignment. Builder, review, fix and delivery Tasks for that objective share the Run.
+- New independent objective: automatically create a new Run before its first Task, even in a reused terminal or after `/clear` and `/orchestrator`. Name the Run for the PO's objective, not the first worker's assignment. Build, review and fix Tasks for that objective share the Run.
 - Continuing an existing objective: find its Run in the matching handoff and verify the repo, objective and Task ownership against live Orca state. Reuse that Run and existing Task identities; address follow-ups to their Dispatches and follow the recovery guide for retries. If the handoff is absent, discover the matching Run through Orca; ask only when ownership is ambiguous. The terminal's current Run alone is not a match.
 - On Run creation or selection, save its ID in `.team/<feature>/handoff.md` before dispatch (`../SKILL.md`); give independent objectives separate feature directories and preserve older handoffs. Refresh Task/Dispatch references after dispatch so another session can resume.
 - Pass the selected Run ID explicitly on Run-scoped commands using the version-matched guide. Before dispatch or follow-up, verify the Task/Dispatch belongs to that Run; check the receipt against it. Handle wakes from older Runs under their owning IDs, without changing the new objective's Run.
 
 ## Team decisions
 
-- Default: one Builder handles diagnosis through delivery, including tests, measurements and docs; one independent Reviewer checks the result.
+- Default: one Builder handles diagnosis, implementation, tests, measurements, docs and delivery evidence. One independent Reviewer checks the result.
 - Add a worker only for a named question/evidence gap the existing team cannot cover. Keep risk-triggered checks; separate workers are optional. Roster selection needs no PO gate.
 - New or changed business rules need a spec and Gate 1. The Builder can author it; add a Tech Lead for unresolved requirements or design. New screens follow G-UI and `ui_rules`; delivery and tickets keep their gates (`gates.md`).
 - Architecture impact without an accepted ADR (external vendor/system, data store, deployment topology, load target or personal-data boundary): ask the PO for a Solution Architect session before planning.
-- **Parallel Builders:** when the plan has two or more slices without `after:` (`roles/tech-lead.md` "Parallel slices") and `flow.max_concurrent_agents` allows, dispatch one Builder per independent slice group, each in a child worktree of the feature branch (preflight steps 4 and 5 apply), naming its slice IDs in the Task. A slice with `after:` starts once those slices are merged. The first-dispatched Builder is the integration owner: it merges finished child branches in plan order (`delivery.md`), reruns `commands.verify` on the feature branch and delivers. One Reviewer reviews the integrated feature branch. Keep one Builder when every slice depends on another, the plan has fewer than three slices, or `serial: true`.
+- **Parallel Builders:** when the plan has two or more slices without `after:` (`roles/tech-lead.md` "Parallel slices") and `flow.max_concurrent_agents` allows, dispatch one Builder per independent slice group, each in a child worktree of the feature branch (preflight steps 4 and 5 apply), naming its slice IDs in the Task. A slice with `after:` starts once those slices are merged. The first-dispatched Builder is the integration owner: it integrates finished child branches in plan order (`delivery.md`), reruns `commands.verify` on the feature branch and prepares delivery evidence. One Reviewer reviews the integrated feature branch. Keep one Builder when every slice depends on another, the plan has fewer than three slices, or `serial: true`.
 - Read-only questions may use one Investigator without a worktree. Respect `flow.max_concurrent_agents`; parallel work needs disjoint ownership or isolated workspaces and an integration owner.
 - PO roster overrides apply. Ignore legacy `flow.default_size` and `flow.max_size`.
 

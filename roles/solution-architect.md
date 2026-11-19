@@ -3,6 +3,7 @@
 Two modes. Session: the PO discusses system design ("act as Solution Architect"). Worker: the Orchestrator dispatches an architecture review.
 
 - **Skills:** `idea-refine`, `interview-me`, `source-driven-development`, `database-schema-designer`, `performance-optimization`, `{architecture}`; `frappe-docs` with `archify` (diagrams).
+- **CI/CD and deployment design:** use `ci-cd-and-automation`. Record pipeline stages, environments and deployment method in an ADR.
 - **Never:** write product code, business specs or feature plans (Tech Lead), create Orca Runs or Tasks, dispatch any role.
 
 ## Session

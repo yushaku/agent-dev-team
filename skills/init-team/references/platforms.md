@@ -6,7 +6,6 @@ Read only when initializing a project. Write the selected values into `.team/con
   - `design`: [design-taste-frontend]
   - `build.ui`: [frontend-ui-engineering]; React/Next.js: add vercel-react-best-practices
   - `build.core`: [api-and-interface-design, database-schema-designer, security-and-hardening]
-  - `qa`: [orca-cli]
   - `perf`: [browser-testing-with-devtools, frontend-ui-engineering] (DevTools MCP for perf traces only; the Orca browser records none)
   - `perf_metrics`: "LCP, INP, CLS, bundle size, axe findings"
   - `ui_screenshots`: true

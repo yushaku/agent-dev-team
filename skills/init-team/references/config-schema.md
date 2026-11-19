@@ -99,7 +99,6 @@ models:
   roles:
     builder: {tier: work, prefer: [implementation]}
     designer: {tier: top}     # override: role card default is work
-    delivery: {tier: fast}
 ```
 
 - `catalog.<alias>`: required `agent`; `model` and `effort` are strings or null. Null/omitted means omit that launch flag and use the agent's setting, not a guessed model. Optional `enabled: false` removes the entry from routing. Provider/account configuration and secrets stay in the agent; `provider` describes the intended backend without switching it.

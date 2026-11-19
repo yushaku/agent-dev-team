@@ -2,7 +2,7 @@
 
 - One independent Reviewer runs `verify` on requirements, code, tests, changed docs and delivery body. Include Anti-AI and triggered Security checks at the highest required tier; extra workers follow `start.md` "Team decisions".
 - `verify` writes `## Standards` and `## Spec`; deduplicate findings across them. Include Builder leftovers and screenshots when the visual loop ran.
-- The Builder supplies tests and measurements; add QA or Perf/A11y only for missing evidence.
+- The Builder supplies tests and measurements; add Perf/A11y only for missing performance or accessibility evidence.
 - Reuse passing verification evidence for the reviewed revision. Run targeted checks for a disputed finding, changed behavior or suspect evidence; run full `commands.verify` once after the final code fix. Repeating review or editing prose alone does not require another full suite.
 - The Reviewer sends consolidated findings and reproduction questions directly to the existing Builder via `specs.md` "Worker communication". The Orchestrator authorizes each fix round and supplies the current Dispatch; peer mail alone does not start a new round. Before editing, the Builder reproduces/traces each issue or rejects it with evidence. The independent Reviewer verifies fixes and confirms rejections or supplies counterexamples; send the resulting verdict and remaining blockers to the Orchestrator.
 - Fix only blockers and fix-induced regressions. Defer optional improvements until PO request; accepted tradeoffs are not new defects.

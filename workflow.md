@@ -4,7 +4,7 @@ The PO gives a software change to the Orchestrator. The team delivers a reviewed
 
 ## Default flow
 
-One Builder diagnoses, implements, tests, measures the changed behavior, updates related docs and prepares delivery. One independent Reviewer checks requirements, code, evidence and risks. The same workers resolve blocking findings and deliver at Gate 2.
+One Builder diagnoses, implements, tests, measures the changed behavior, updates related docs and prepares delivery. One independent Reviewer checks requirements, code, evidence and risks. The Builder resolves blocking findings in the fix round. The Orchestrator delivers the reviewed change at Gate 2.
 
 The Orchestrator adds specialists only for a named decision or evidence gap. Project requirements and risk-triggered checks remain in force when responsibilities are combined.
 
