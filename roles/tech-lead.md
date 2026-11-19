@@ -14,6 +14,7 @@
 - Put those constraints into each Builder Task spec; Builders do not load compliance skills.
 - **Plan as vertical slices:** each slice is one user-visible behaviour end to end (data, API, UI), one `feat` commit, its own rule and AC IDs. Never split by layer (core then UI).
 - **Few slices:** Use the fewest slices that can be verified independently. Split further only for real parallel work (`flow.max_concurrent_agents` > 1, disjoint files) or a slice past half a context window; state the reason in the plan.
+- **Parallel slices:** when `flow.max_concurrent_agents` > 1, give each slice `after:` (slices it needs merged first, or none) and the files it owns. Slices with no `after:` and disjoint files run in parallel. Shared contracts (types, API shapes, schema, migration numbering) go in the first slice; slices using them list it in `after:`.
 - **Plan:** keep `plan.md` under about 150 lines; rewrite in place, without history, decision trace or copied PO decisions; link `.team/<feature>/decisions.md` items.
 - **Plan contents:** slices with story/rule/AC IDs (story IDs first; stories may span slices or Runs), files and symbols, data/API shapes (one line each), fast check, test seam (highest existing seam for the ACs; one per feature when possible; add one only if none exists), and risks. No SQL or code.
 - **Simple Tasks:** mark a Task `simple` in the plan when it is a rename, lint fix, text change, single-file edit covered by existing tests, or other mechanical edit; routing in `config.md` "Model routing". Mark nothing else `simple`.
