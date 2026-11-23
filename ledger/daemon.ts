@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { Store } from './store.ts';
 import { files, ingestFile, missing } from './files.ts';
@@ -15,9 +15,13 @@ export async function cycle(store: Store, env = process.env, timings?: Record<st
     const started = performance.now();
     const root = resolve(env['AGENT_LEDGER_'+kind.toUpperCase()] || join(homedir(),fallback));
     const seen = new Set<string>();
-    store.db.exec('BEGIN IMMEDIATE');
+    const unreadable: string[] = [];
     try {
-      for (const path of kind === 'hermes' || kind === 'rtk' ? [root] : files(root,kind)) {
+      store.db.exec('BEGIN IMMEDIATE');
+      for (const path of kind === 'hermes' || kind === 'rtk' ? [root] : files(root,kind,(dir,error) => {
+        unreadable.push(dir+sep);
+        errors.push(dir+': '+error);
+      })) {
         store.db.exec('SAVEPOINT file');
         try {
           ingestFile(store,kind,path);
@@ -29,18 +33,16 @@ export async function cycle(store: Store, env = process.env, timings?: Record<st
         store.db.exec('RELEASE file');
       }
       for (const row of store.db.prepare('SELECT id,path FROM sources WHERE kind=? AND source_gone_at IS NULL').all(kind)) {
-        if (!seen.has(String(row.path))) store.db.prepare('UPDATE sources SET source_gone_at=CURRENT_TIMESTAMP WHERE id=?').run(row.id);
+        if (!seen.has(String(row.path)) && !unreadable.some(dir => String(row.path).startsWith(dir))) store.db.prepare('UPDATE sources SET source_gone_at=CURRENT_TIMESTAMP WHERE id=?').run(row.id);
       }
       store.db.exec('COMMIT');
-    } catch (error) { store.db.exec('ROLLBACK'); errors.push(kind+': '+error); }
+    } catch (error) { if (store.db.isTransaction) store.db.exec('ROLLBACK'); errors.push(kind+': '+error); }
     if (timings) timings[kind] = Math.round(performance.now() - started);
   }
   const started = performance.now();
-  store.db.exec('BEGIN IMMEDIATE');
   try {
     await snapshot(store,env.AGENT_LEDGER_ORCA || 'orca',errors);
-    store.db.exec('COMMIT');
-  } catch (error) { store.db.exec('ROLLBACK'); errors.push('orca: '+error); }
+  } catch (error) { errors.push('orca: '+error); }
   if (timings) timings.orca = Math.round(performance.now()-started);
   return errors;
 }

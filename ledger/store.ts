@@ -13,6 +13,7 @@ export class Store {
   constructor(home: string) {
     mkdirSync(home, { recursive: true, mode: 0o700 });
     this.db = new DatabaseSync(join(home, 'ledger.sqlite'));
+    this.db.exec('PRAGMA busy_timeout=30000');
     this.db.prepare('ATTACH ? AS archive').run(join(home, 'archive.sqlite'));
     // Rollback journals give attached databases a single atomic commit.
     this.db.exec(`
@@ -30,11 +31,28 @@ export class Store {
         PRIMARY KEY(source,generation,tbl));
       CREATE TABLE IF NOT EXISTS orca_runs (
         id TEXT PRIMARY KEY, entry_hash TEXT, terminal INTEGER, paths TEXT);
+      CREATE TABLE IF NOT EXISTS message_sessions (
+        source INTEGER, generation INTEGER, session TEXT, fingerprint TEXT,
+        PRIMARY KEY(source,generation,session));
+      CREATE TABLE IF NOT EXISTS orca_revision (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER);
+      INSERT OR IGNORE INTO orca_revision VALUES(1,0);
       CREATE TABLE IF NOT EXISTS ingest_log (
         id INTEGER PRIMARY KEY, source INTEGER, generation INTEGER, item TEXT, hash TEXT,
         recorded_at TEXT DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS archive.blobs (hash TEXT PRIMARY KEY, bytes BLOB NOT NULL);
     `);
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      if (!this.db.prepare("SELECT 1 FROM pragma_table_info('orca_runs') WHERE name='next_poll_at'").get()) {
+        this.db.exec(`ALTER TABLE orca_runs ADD COLUMN next_poll_at INTEGER;
+          ALTER TABLE orca_runs ADD COLUMN last_polled_at INTEGER;
+          ALTER TABLE orca_runs ADD COLUMN settled_since INTEGER;`);
+      }
+      if (!this.db.prepare("SELECT 1 FROM pragma_table_info('cursors') WHERE name='checksum'").get()) {
+        this.db.exec('ALTER TABLE cursors ADD COLUMN checksum TEXT');
+      }
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     this.version = this.db.prepare(`INSERT INTO versions VALUES(?,?,?,?) ON CONFLICT DO UPDATE
       SET hash=excluded.hash WHERE hash<>excluded.hash`);
     this.blob = this.db.prepare('INSERT OR IGNORE INTO archive.blobs VALUES(?,?)');
@@ -52,8 +70,9 @@ export class Store {
   record(source: number, generation: number, item: string, bytes: Buffer) {
     const digest = hash(bytes);
     const changed = this.version.run(source, generation, item, digest).changes;
-    if (!changed) return;
+    if (!changed) return false;
     this.blob.run(digest, bytes);
     this.log.run(source, generation, item, digest);
+    return true;
   }
 }
