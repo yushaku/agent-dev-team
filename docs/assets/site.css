@@ -209,15 +209,14 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
 .roles-example li { margin-bottom: 12px; }
 .roles { display: grid; gap: 12px; margin-bottom: 24px; }
 .role { background: var(--surface); border-radius: var(--radius); padding: 12px 16px; scroll-margin-top: 64px; }
-.role h4 { margin: 0; font-size: 1.1rem; }
+.role h5 { margin: 0; font-size: 1.1rem; }
 .role p { margin: 6px 0; }
 .role .card-link { font-size: 0.9rem; }
 .role summary { cursor: pointer; font-weight: 600; padding: 4px 0; color: var(--gate); }
 .role details li { margin-bottom: 8px; }
 
 @media (max-width: 640px) {
-  .roles-page .topbar { position: static; }
-  .roles-page .role { scroll-margin-top: 12px; }
+  .role { scroll-margin-top: 12px; }
 }
 
 @media (max-width: 640px) {
