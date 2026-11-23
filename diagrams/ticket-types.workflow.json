@@ -84,7 +84,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Read thread",
-      "sublabel": "Ticket Analyst",
+      "sublabel": "Investigator",
       "width": 132
     },
     {
@@ -111,7 +111,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Expected vs actual",
-      "sublabel": "Ticket Analyst",
+      "sublabel": "Investigator",
       "width": 132
     },
     {
@@ -165,7 +165,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Clarify scope",
-      "sublabel": "Analyst, G-Reply",
+      "sublabel": "Investigator, G-Reply",
       "width": 132
     },
     {

@@ -40,10 +40,10 @@
       "sublabel": "triage"
     },
     {
-      "id": "analyst",
+      "id": "investigator",
       "type": "messagebus",
-      "label": "Ticket Analyst",
-      "sublabel": "Plan, reads the thread"
+      "label": "Investigator",
+      "sublabel": "reads thread, drafts reply"
     },
     {
       "id": "builder",
@@ -92,13 +92,13 @@
     },
     {
       "from": "orch",
-      "to": "analyst",
+      "to": "investigator",
       "y": 268,
       "label": "read the whole thread",
       "variant": "default"
     },
     {
-      "from": "analyst",
+      "from": "investigator",
       "to": "orch",
       "y": 312,
       "label": "expected vs actual",
@@ -148,13 +148,13 @@
     },
     {
       "from": "orch",
-      "to": "analyst",
+      "to": "investigator",
       "y": 620,
       "label": "draft fix report",
       "variant": "default"
     },
     {
-      "from": "analyst",
+      "from": "investigator",
       "to": "orch",
       "y": 664,
       "label": "draft + translation",
