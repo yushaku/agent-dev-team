@@ -6,6 +6,6 @@
  "refs": [
   "notes.md"
  ],
- "path": "~/orca/workspaces/teams/plugin-tasks-tab/ledger/tests/fixtures/team/skills/team-builder/SKILL.md",
+ "path": "$FIXTURES/team/skills/team-builder/SKILL.md",
  "description": "Builds one ticket test-first and returns evidence."
 }

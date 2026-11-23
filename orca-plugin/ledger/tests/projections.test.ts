@@ -1,5 +1,5 @@
+import './team-env.ts'; // first: the team root is read when modules load, and one process may run every test file
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { once } from 'node:events';
 import { appendFileSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -52,24 +52,8 @@ test('Codex generations preserve prefix, partial-overlap and disjoint histories 
   function golden(text: string) {
     const oracle = join(root, 'oracle.jsonl');
     writeFileSync(oracle, text);
-    // Python's parse_codex of this exact text, frozen in tests/golden (recorded with GOLDEN_RECORD=1).
-    const expected = frozen('codex-generation-' + ++n, root, () =>
-      JSON.parse(
-        execFileSync(
-          'python3',
-          [
-            '-c',
-            'import json,sys;from backend.parsers.codex import parse_codex;print(json.dumps(parse_codex(sys.argv[1])))',
-            oracle,
-          ],
-          {
-            cwd: resolve(import.meta.dirname, '../../dashboard'),
-            encoding: 'utf8',
-            env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
-          },
-        ),
-      ),
-    );
+    // Python's parse_codex of this exact text, frozen in tests/golden before the Python dashboard was removed.
+    const expected = frozen('codex-generation-' + ++n, root);
     assert.deepEqual(
       sessions().find((s) => s.id === 'first'),
       expected,

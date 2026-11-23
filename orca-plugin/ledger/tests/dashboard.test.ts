@@ -1,4 +1,4 @@
-import { teamFixture } from './team-env.ts';
+import './team-env.ts'; // first, and bare: a named import that nothing uses is dropped by some TypeScript transforms
 import { golden } from './golden.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,21 +27,8 @@ import { createApi } from '../api.ts';
 import { discover } from '../commands.ts';
 import { skillDoc } from '../metadata.ts';
 
-const dashboard = resolve(import.meta.dirname, '../../dashboard'),
-  fixtures = join(dashboard, 'tests/fixtures');
-/** Records Python's answer for a label while GOLDEN_RECORD=1; otherwise unused (the golden file is read). */
-function python(source: string, args: string[] = [], env = {}) {
-  return JSON.parse(
-    execFileSync('python3', ['-c', source, ...args], {
-      cwd: dashboard,
-      encoding: 'utf8',
-      env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1', ...env },
-    }),
-  );
-}
-const py = (label: string, root: string, source: string, args: string[] = []) =>
-  golden(label, root, () => python(source, args));
-void teamFixture;
+const web = resolve(import.meta.dirname, '../../dashboard-web'),
+  fixtures = join(import.meta.dirname, 'fixtures/branch-switch');
 function scratch(t) {
   const root = mkdtempSync(join(tmpdir(), 'api-golden-'));
   const store = new Store(root);
@@ -62,34 +49,14 @@ test('archived sessions and snapshots match Python across branch changes, append
     files.push(path);
     ingestFile(store, agent, path);
     refresh();
-    const expected = py('session-' + agent, root,
-      'import sys,json\nfrom backend.parsers.' +
-        agent +
-        ' import parse_' +
-        agent +
-        ' as parse\nprint(json.dumps(parse(sys.argv[1])))',
-      [path],
-    );
+    const expected = golden('session-' + agent, root);
     const row = store.db
       .prepare("select data from dashboard_sessions where json_extract(data,'$.agent')=?")
       .get(agent);
     assert.deepEqual(JSON.parse(String(row.data)), expected);
   }
   const now = Date.parse('2026-11-13T23:59:59Z') / 1000;
-  const expected = py('build-branch-switch', root,
-    `import sys,json
-from unittest.mock import patch
-from backend import usage, insights
-from backend.parsers.codex import parse_codex
-from backend.parsers.claude import parse_claude
-from backend import orca
-orca.orca_state.update(available=False,loaded=False)
-with patch('time.time',return_value=float(sys.argv[3])),patch.object(usage.cache,'load_files',return_value=[parse_claude(sys.argv[1]),parse_codex(sys.argv[2])]),patch.object(usage.hermes,'parse_hermes',return_value=[]),patch.object(usage,'parse_rtk',return_value={'available':False}),patch.object(usage,'HOME',sys.argv[4]):
- d=usage.build(7)
- s=insights.summary(d)
- print(json.dumps([d,s,insights.summary_md(s)]))`,
-    [...files, String(now), root],
-  );
+  const expected = golden('build-branch-switch', root);
   const actual = build(store, 7, now);
   delete actual.build_ms;
   assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected[0]);
@@ -140,28 +107,10 @@ test('Copilot sidecar, JCode and Hermes use the Python parser contract', (t) => 
     writeFileSync(join(root, 'workspace.yaml'), 'id: test\nclient_name: golden\n');
     assert.deepEqual(
       parseFile(agent, path, doc, { id: 'test', client_name: 'golden' }),
-      py('parse-' + agent, root,
-        'import sys,json\nfrom backend.parsers.' +
-          agent +
-          ' import parse_' +
-          agent +
-          '\nprint(json.dumps(parse_' +
-          agent +
-          '(sys.argv[1])))',
-        [path],
-      ),
+      golden('parse-' + agent, root),
     );
   }
-  const expected = py('hermes-contract', root,
-    `import json,sqlite3,sys
-from backend.parsers import hermes
-hermes.HERMES_DB=sys.argv[1]
-db=sqlite3.connect(sys.argv[1])
-db.executescript("CREATE TABLE sessions(id,title,started_at,ended_at,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,cwd,git_branch,model,source);INSERT INTO sessions VALUES('h','hello',100,102,5,7,2,1,3,'/repo','main','model','cli');CREATE TABLE messages(session_id,role,content,tool_name,tool_calls,timestamp,active);INSERT INTO messages VALUES('h','user','hello',null,null,101,1)")
-db.row_factory=sqlite3.Row
-print(json.dumps([dict(db.execute('select * from sessions').fetchone()),[dict(db.execute('select * from messages').fetchone())],hermes.parse_hermes(0)[0]]))`,
-    [join(root, 'hermes.db')],
-  );
+  const expected = golden('hermes-contract', root);
   assert.deepEqual(parseHermes(expected[0], expected[1]), expected[2]);
 });
 test('HTTP handler serves the web bundle and local endpoints', async (t) => {
@@ -181,7 +130,7 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
   for (const path of ['/', '/js/main.js', '/vendor/marked.min.js'])
     assert.deepEqual(
       Buffer.from(await (await fetch(base + path)).arrayBuffer()),
-      readFileSync(join(dashboard, 'web', path === '/' ? 'index.html' : path)),
+      readFileSync(join(web, path === '/' ? 'index.html' : path)),
     );
   assert.equal(
     await new Promise((done) =>
@@ -199,20 +148,14 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
   mkdirSync(p);
   writeFileSync(join(p, 'hello'), 'test', { mode: 0o755 });
   const cli = discover(p),
-    old = py('cli-discover', root,
-      'import json,sys\nfrom backend.cli_tools import discover\nprint(json.dumps(discover(sys.argv[1])))',
-      [p],
-    );
+    old = golden('cli-discover', root);
   cli.generated_at = old.generated_at;
   assert.deepEqual(JSON.parse(JSON.stringify(cli)), old);
   const name = 'team-builder';
   const doc = skillDoc(name);
   assert.deepEqual(
     doc,
-    py('skill-doc-team-builder', root,
-      'import sys,json\nfrom backend.team_docs import skill_doc\nprint(json.dumps(skill_doc(sys.argv[1])))',
-      [name],
-    ),
+    golden('skill-doc-team-builder', root),
   );
 });
 test('archived Orca requests and agent run match Python JSON and Markdown', (t) => {
@@ -271,18 +214,7 @@ test('archived Orca requests and agent run match Python JSON and Markdown', (t) 
   }
   const fixture = join(root, 'orca.json');
   writeFileSync(fixture, JSON.stringify(calls));
-  const expected = py('orca-runs-run-detail', root,
-    `import sys,json
-from unittest.mock import patch
-from backend import orca,usage,insights
-calls=json.load(open(sys.argv[1]))
-with patch('time.time',return_value=float(sys.argv[2])),patch.object(orca,'orca',side_effect=lambda command,*args:calls[command]),patch.object(usage.cache,'load_files',return_value=[]),patch.object(usage.hermes,'parse_hermes',return_value=[]),patch.object(usage,'parse_rtk',return_value={'available':False}):
- orca.refresh_orca()
- d=usage.build(7)
- r=insights.run_detail(d,'run_a')
- print(json.dumps([d['orca']['runs'],r,insights.run_md(r)]))`,
-    [fixture, String(now)],
-  );
+  const expected = golden('orca-runs-run-detail', root);
   projections(store)();
   const data = build(store, 7, now);
   assert.deepEqual(JSON.parse(JSON.stringify(data.orca.runs)), expected[0]);
@@ -300,18 +232,7 @@ test('SQLite row corrections update only the affected session and RTK commands m
   for (const id of ['a', 'b']) put(source, 'sessions/' + id, { id, started_at: 100, input_tokens: 5 });
   put(source, 'messages/1', { session_id: 'a', role: 'user', content: 'before', timestamp: 101, active: 1 });
   const path = join(root, 'oracle.db');
-  const expected = py('rtk-commands', root,
-    `import json,sys,sqlite3
-from backend.parsers import common
-db=sqlite3.connect(sys.argv[1])
-db.execute('create table commands(timestamp,rtk_cmd,project_path,input_tokens,output_tokens,saved_tokens,exec_time_ms)')
-rows=[('1970-01-01','rg','/repo',40,20,20,3),('1970-01-01','rg','/repo',60,10,50,8),('1970-01-01','git','',100,5,95,10)]
-db.executemany('insert into commands values (?,?,?,?,?,?,?)',rows);db.commit()
-common.RTK_DB=sys.argv[1]
-db.row_factory=sqlite3.Row
-print(json.dumps([[dict(r) for r in db.execute('select * from commands')],common.parse_rtk('1969-12-20')]))`,
-    [path],
-  );
+  const expected = golden('rtk-commands', root);
   expected[0].forEach((r, i) => put(rtk, 'commands/' + i, r));
   refresh();
   assert.deepEqual(JSON.parse(JSON.stringify(build(store, 14, 120).rtk)), expected[1]);
@@ -368,10 +289,7 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
   );
   ingestFile(store, 'codex', path);
   projections(store)();
-  const expected = py('repo-defects', root,
-    'import json,sys\nfrom backend.escaped import default_head,repo_defects\np=sys.argv[1]\nprint(json.dumps(repo_defects(p,default_head(p))))',
-    [repo],
-  );
+  const expected = golden('repo-defects', root);
   const gitMetrics = new GitMetrics(store.db);
   try {
     gitMetrics.warm();
