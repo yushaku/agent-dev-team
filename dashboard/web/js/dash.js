@@ -10,6 +10,7 @@ import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderRtkCommands } from "./tabs/tokens.js";
 import { renderSearch, renderTaskRoleSearch, toggleSearchKind } from "./tabs/search.js";
+import { renderFeatures } from "./tabs/runs.js";
 import { renderOverall } from "./tabs/overall.js";
 import { showCliTools } from "./tabs/cli-tools.js";
 
@@ -50,6 +51,7 @@ function render() {
   const S = sessionsF();
   const view = views.find(v => !v.hidden)?.id || "tk-tong-quan";
   if (view === "tk-tong-quan") renderOverview(S);
+  else if (view === "tk-features") renderFeatures(S);
   else if (view === "tk-theo-repo") {
     renderOverall(S); renderRoles(S); renderRoleSkills(S); renderRepos(S); renderTaskRoleSearch(S); renderSessionCharts(S);
   } else if (view === "tk-agents-tools") { renderSkills(S); renderSearch(S); renderRtkCommands(); }

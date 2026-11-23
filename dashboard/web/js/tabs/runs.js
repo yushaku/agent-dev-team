@@ -5,7 +5,7 @@ import { $, esc, agentsF, sum, runChart, EVENT_NAMES, dt } from "../lib/charts.j
 export function runDetail(r) {
   const fixes = r.tasks.filter(t => t.measurement?.kind === "fix").sort((a, b) => (a.started || a.created) - (b.started || b.created));
   const fix = fixes.length, rer = r.tasks.filter(t => t.measurement?.kind === "re-review").length;
-  const rounds = new Set(r.tasks.filter(t => ["fix", "re-review"].includes(t.measurement?.kind) && t.measurement.round).map(t => t.measurement.round)).size;
+  const rounds = r.fix_rounds?.count ?? new Set(r.tasks.filter(t => ["fix", "re-review"].includes(t.measurement?.kind) && t.measurement.round).map(t => t.measurement.round)).size;
   const unknownRounds = r.tasks.filter(t => ["fix", "re-review"].includes(t.measurement?.kind) && !t.measurement.round).length;
   const estimated = r.tasks.filter(t => t.measurement?.source !== "metadata").length;
   const cnt = k => r.gates.filter(g => g.kind === k).length;
@@ -101,4 +101,27 @@ export function renderRunTimeline(info, selectedId, role = C.state.role, contain
     });
   };
   draw();
+}
+
+export function renderFeatures(S) {
+  const features = C.state.data.features?.runs || [];
+  const keys = new Set(S.map(s => JSON.stringify([s.repo, s.branch])));
+  const rows = features.filter(f => keys.has(JSON.stringify([f.repo, f.branch])));
+  const value = v => v == null ? "Chưa rõ" : C.fmt(v);
+  const median = values => {
+    const sorted = [...values].sort((a, b) => a - b), n = sorted.length;
+    return n ? (sorted[Math.floor(n / 2)] + sorted[Math.floor((n - 1) / 2)]) / 2 : null;
+  };
+  const variant = v => v === "orca" ? "Có Orca" : "Trực tiếp";
+  const source = { reports: "report Builder", "code-review": "lượt tải code-review", measurement: "Task Measurement" };
+  const table = (headers, body) => `<div class="table-wrap" tabindex="0" role="region" aria-label="Bảng so sánh Run"><table><thead><tr>${headers.map(h => `<th scope="col">${h}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
+  $("#feature-comparison").innerHTML = table(["Cách chạy", "Số Run", "Token trung vị", "Vòng sửa trung vị", "Lỗi Gate 2 (đã biết)"], ["direct", "orca"].map(v => {
+    const group = rows.filter(f => f.variant === v), known = group.filter(f => f.gate2_findings != null);
+    return `<tr><th scope="row">${variant(v)}</th><td>${group.length}</td><td>${value(median(group.map(f => f.tokens)))}</td><td>${value(median(group.map(f => f.fix_rounds.count)))}</td><td>${known.length ? value(sum(known, f => f.gate2_findings)) : "Chưa rõ"} (${known.length}/${group.length} Run)</td></tr>`;
+  }).join(""));
+  $("#feature-runs").innerHTML = rows.length ? table(["Cách chạy", "Repo / nhánh", "Hoạt động", "Thời gian", "Token", "Vòng sửa / nguồn", "Lỗi Gate 2", "Đã giao"], rows.map(f => {
+    const skills = Object.entries(f.loaded_skills).map(([name, count]) => name + " × " + count).join(", ");
+    const split = f.variant === "orca" ? `<br><small>Điều phối: ${value(f.orchestrator_tokens)} · Worker: ${value(f.worker_tokens)}</small>` : "";
+    return `<tr><td>${variant(f.variant)}</td><th scope="row">${esc(f.repo)}<br>${esc(f.branch)}<br><small>${f.session_count} phiên · ${esc(f.agents.join(", "))}</small><details><summary>Skill và Run liên kết</summary><p>${esc(skills || "Chưa ghi nhận skill")}</p><p>${esc(f.run_ids.join(", "))}</p></details></th><td>${esc(dt(f.first_activity))}<br>${esc(dt(f.last_activity))}</td><td>${f.lead_seconds == null ? "Chưa rõ" : C.dur(f.lead_seconds)}</td><td>${value(f.tokens)}${split}</td><td>${f.fix_rounds.count}<br><small>${esc(source[f.fix_rounds.source] || f.fix_rounds.source)}</small></td><td>${value(f.gate2_findings)}</td><td>${f.delivered == null ? "Chưa rõ" : f.delivered ? "Đã merge" : "Chưa merge"}</td></tr>`;
+  }).join("")) : '<p class="muted">Không có Run trên nhánh tính năng trong khoảng và bộ lọc này.</p>';
 }

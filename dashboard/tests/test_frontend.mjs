@@ -14,7 +14,7 @@ function element(id) {
 }
 globalThis.document = {
   querySelector: element,
-  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-theo-repo", "tk-agents-tools", "tk-cli-tools", "tk-cach-tinh"].map(element) : [],
+  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-features", "tk-theo-repo", "tk-agents-tools", "tk-cli-tools", "tk-cach-tinh"].map(element) : [],
   addEventListener() {},
 };
 globalThis.window = { innerWidth: 1000, addEventListener() {} };
@@ -26,7 +26,7 @@ const C = await import("../web/js/lib/charts.js");
 const { repoTree } = await import("../web/js/tabs/repos.js");
 const { renderRoles, roleStats } = await import("../web/js/tabs/roles.js");
 const { renderRoleSkills } = await import("../web/js/tabs/role-skills.js");
-const { runDetail, renderRunTimeline, communicationDiagram } = await import("../web/js/tabs/runs.js");
+const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
 const { renderCliTools, showCliTools } = await import("../web/js/tabs/cli-tools.js");
 const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../web/js/tabs/search.js");
@@ -246,7 +246,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
   const dash = new SourceTextModule(await readFile(new URL("../web/js/dash.js", import.meta.url), "utf8"));
   await dash.link(specifier => {
     const exports = specifier === "./lib/charts.js" ? C : {
-      renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
+      renderFeatures() { rendered.push("features"); }, renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
       renderRoles() { rendered.push("roles"); }, renderRoleSkills() { rendered.push("role-skills"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
       showSession() {}, showCliTools() { rendered.push("cli-tools"); }, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); }, toggleSearchKind() { return true; },
     };
@@ -585,4 +585,29 @@ test("issues section renders severity rows with filter hints and an empty state"
   assert.match(html, /data-issue="\{&quot;run&quot;:&quot;r1&quot;,&quot;role&quot;:&quot;builder&quot;\}"/);
   renderIssues([]);
   assert.match(element("#issues").innerHTML, /Không phát hiện vấn đề nào trong khoảng này\./);
+});
+
+
+test("feature Runs compare variants, preserve unknowns and escape branch and skill names", () => {
+  const feature = { repo: "sample", branch: "feat/<example>", variant: "direct", tokens: 100,
+    first_activity: 10, last_activity: 20, lead_seconds: 10, session_count: 2, agents: ["codex"],
+    loaded_skills: { "<skill>": 1 }, run_ids: [], fix_rounds: { count: 0, source: "code-review" },
+    gate2_findings: null, delivered: null };
+  C.state.data = { features: { runs: [feature, { ...feature, branch: "feat/orca", variant: "orca",
+    tokens: 300, gate2_findings: 0, delivered: false, orchestrator_tokens: 50, worker_tokens: 250 }] } };
+  const sessions = C.state.data.features.runs.map(f => ({ repo: f.repo, branch: f.branch }));
+  renderFeatures(sessions);
+  assert.match(element("#feature-comparison").innerHTML, /Trực tiếp/);
+  assert.match(element("#feature-comparison").innerHTML, /Có Orca/);
+  assert.match(element("#feature-comparison").innerHTML, /Chưa rõ \(0\/1 Run\)/);
+  const html = element("#feature-runs").innerHTML;
+  assert.match(html, /feat\/&lt;example&gt;/);
+  assert.match(html, /&lt;skill&gt;/);
+  assert.match(html, /Chưa merge/);
+  assert.match(html, /Điều phối: 50/);
+  assert.doesNotMatch(html, /<skill>|<example>|undefined|NaN/);
+  renderFeatures([sessions[0]]);
+  assert.doesNotMatch(element("#feature-runs").innerHTML, /feat\/orca/);
+  renderFeatures([]);
+  assert.match(element("#feature-runs").innerHTML, /Không có Run/);
 });

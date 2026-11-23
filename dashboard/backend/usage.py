@@ -4,11 +4,12 @@ import re
 import statistics
 import time
 
+from .features import build_features, feature_dir, report_rounds
 from . import cache
 from . import orca as orca_mod
 from .parsers import hermes
 from .config import COPILOT_GLOB, HOME, SKILLS_DIR, TEAMS
-from .parsers.common import local_date, parse_rtk, repo_of
+from .parsers.common import local_date, main_checkout, parse_rtk, repo_of
 from .roles import TEAM_PREFIX, assign_role, known_roles
 
 
@@ -133,7 +134,7 @@ def build(days):
             key = (rid, task["id"] if task else None, role, source, routing["dispatch"] if routing else None)
             if key not in rows:
                 rows[key] = {"id": s["id"], "session_id": s["id"], "agent": s["agent"], "repo": repo,
-                    "worktree": wt, "branch": s.get("branch"), "role": role, "role_src": role_src,
+                    "worktree": wt, "branch": s.get("branch"), "cwd": s["cwd"], "role": role, "role_src": role_src,
                     "originator": (s.get("originator") or "?") + (" (subagent)" if s.get("subagent") else ""),
                     "start": s["start"], "end": s["end"], "preview": s["preview"], "title": s.get("title") or "",
                     "task_id": task["id"] if task else None, "task_title": task["title"] if task else None,
@@ -197,6 +198,7 @@ def build(days):
             row["total"] = row["fin"] + row["cr"] + row["cw"] + row["out"]
             sessions.append(row)
     sessions.sort(key=lambda r: r["start"] or 0, reverse=True)
+    checkouts = {repo_of(s["cwd"])[0]: root for s in parsed if (root := main_checkout(s["cwd"]))}
     runs = []
     for r in orca_mod.orca_state["runs"]:
         rr = dict(r)
@@ -215,13 +217,19 @@ def build(days):
                 counts = rr["fix_tokens_by_cause"].setdefault(cause, {})
                 for agent, value in t["tokens"].items():
                     counts[agent] = counts.get(agent, 0) + value
+        for task in rr["tasks"]:
+            directory = feature_dir(checkouts.get(task.get("repo")), task.get("worktree"))
+            count = report_rounds(directory)
+            if count is not None and count >= (rr.get("fix_rounds") or {}).get("count", -1):
+                rr["fix_rounds"] = dict(count=count, source="reports")
         runs.append(rr)
+    features = build_features(sessions, runs)
     installed = sorted(d for d in os.listdir(SKILLS_DIR)
                        if os.path.isfile(os.path.join(SKILLS_DIR, d, "SKILL.md"))) if os.path.isdir(SKILLS_DIR) else []
     return {
         "generated_at": now, "days": days, "range_start": start,
         "dates": [local_date(start + 86400 * i + 3600) for i in range(days)],
-        "sessions": sessions, "attribution": attribution,
+        "sessions": sessions, "attribution": attribution, "features": features,
         "copilot_dirs": len(glob.glob(os.path.join(HOME, ".copilot", "session-state", "*", ""))),
         "orca": {"available": orca_mod.orca_state["available"], "error": orca_mod.orca_state["error"],
                  "fetched_at": orca_mod.orca_state["fetched_at"], "runs": runs},
