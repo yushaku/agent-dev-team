@@ -118,8 +118,9 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 The dashboard computes metrics per feature Run (repo + branch), for direct sessions and Orca Runs. Compare Runs before changing the process.
 
 - Fix rounds: distinct round numbers in `.team/<feature>/reports/*-builder-r<N>*.md`, falling back to code-review skill loads minus one (minimum zero), then Orca Task Measurement rounds.
-- Gate 2 findings: count of `- Gate 2 finding: <what>` lines in `.team/<feature>/decisions.md`. Whoever ran Gate 2 records each problem that sent work back using that line. This is the only manual metric input; a missing file means unknown.
-- Tokens: observed session totals on the branch, with worker and Orchestrator totals for Orca Runs.
+- Gate 2 findings: count of `- Gate 2 finding: <what>` lines in `.team/<feature>/decisions.md`. Whoever ran Gate 2 records each problem that sent work back using that line. This is the only manual metric input; a missing file or a file without the convention means unknown. Record `- Gate 2: no findings` when Gate 2 sends no work back. The convention starts on 2026-11-23.
+- Tokens: observed branch segments plus tokens attributed to linked Orca Run IDs, including workers and Orchestrators on other branches, counted once per feature within the selected time range.
+- Escaped defects: distinct fix commits within 30 days after the feature merge, estimated from blame and merge ancestry. A `Fixes-feature: <branch>` trailer overrides blame; fixes without a traceable feature stay unattributed.
 
 ## Dashboard
 
