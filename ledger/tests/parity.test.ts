@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -21,6 +21,7 @@ test('parity CLI compares all transcript, sidecar and SQLite source types', (t) 
   const path = join(root, 'codex', 'trimmed.jsonl');
   const original = Buffer.concat([readFileSync(path), Buffer.from('{"partial":')]);
   writeFileSync(path, original);
+  chmodSync(path, 0o400);
   const hermes = new DatabaseSync(join(root, 'state.db'));
   hermes.exec(`
     CREATE TABLE sessions(id,title,started_at,ended_at,input_tokens,output_tokens,cache_read_tokens,

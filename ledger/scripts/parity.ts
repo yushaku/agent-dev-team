@@ -3,6 +3,7 @@
 // All writes, including SQLite backups and the rebuilt ledger, are under a private temporary directory.
 import { execFileSync } from 'node:child_process';
 import {
+  chmodSync,
   copyFileSync,
   existsSync,
   lstatSync,
@@ -91,9 +92,12 @@ async function parity(dir: string, scratch: string) {
       if (copy.endsWith('.jsonl')) {
         // Ingest defers a trailing unterminated event until its writer finishes the line.
         const row = store.db
-          .prepare('SELECT offset FROM cursors JOIN sources ON source=id WHERE path=?')
+          .prepare('SELECT offset,size FROM cursors JOIN sources ON source=id WHERE path=?')
           .get(copy)!;
-        truncateSync(copy, Number(row.offset));
+        if (row.offset !== row.size) {
+          chmodSync(copy, 0o600);
+          truncateSync(copy, Number(row.offset));
+        }
       }
       count++;
     }
