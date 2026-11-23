@@ -74,7 +74,7 @@
       "id": "orchestrator",
       "type": "cloud",
       "label": "Orchestrator",
-      "sublabel": "dispatches, ships",
+      "sublabel": "plans, dispatches, ships",
       "pos": [
         440,
         210
@@ -99,54 +99,12 @@
       ]
     },
     {
-      "id": "designer",
-      "type": "messagebus",
-      "label": "UX / UI Designer",
-      "sublabel": "flow, options",
-      "pos": [
-        476,
-        340
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "tech-lead",
-      "type": "messagebus",
-      "label": "Tech Lead",
-      "sublabel": "spec, ADR, slice plan",
-      "pos": [
-        320,
-        340
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
       "id": "builder",
       "type": "backend",
       "label": "Builder",
-      "sublabel": "tests, code, PR body",
+      "sublabel": "tickets, tests, PR body",
       "pos": [
         320,
-        460
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "sa_worker",
-      "type": "messagebus",
-      "label": "Solution Architect",
-      "sublabel": "arch review worker",
-      "pos": [
-        632,
         340
       ],
       "size": [
@@ -161,7 +119,7 @@
       "sublabel": "fresh context",
       "pos": [
         320,
-        580
+        460
       ],
       "size": [
         140,
@@ -172,10 +130,10 @@
       "id": "reviewer",
       "type": "external",
       "label": "Code Reviewer",
-      "sublabel": "checks test evidence",
+      "sublabel": "code-review, other agent",
       "pos": [
         476,
-        580
+        460
       ],
       "size": [
         140,
@@ -189,7 +147,7 @@
       "sublabel": "when triggered",
       "pos": [
         632,
-        580
+        460
       ],
       "size": [
         140,
@@ -203,7 +161,7 @@
       "sublabel": "when triggered",
       "pos": [
         788,
-        580
+        460
       ],
       "size": [
         140,
@@ -212,15 +170,6 @@
     }
   ],
   "boundaries": [
-    {
-      "kind": "region",
-      "label": "Plan",
-      "wraps": [
-        "designer",
-        "tech-lead",
-        "sa_worker"
-      ]
-    },
     {
       "kind": "region",
       "label": "Build",
@@ -317,9 +266,9 @@
       "toSide": "right"
     },
     {
-      "id": "to-plan",
+      "id": "to-build",
       "from": "orchestrator",
-      "to": "tech-lead",
+      "to": "builder",
       "label": "dispatch",
       "fromSide": "left",
       "toSide": "left",
@@ -339,9 +288,9 @@
       ]
     },
     {
-      "id": "to-build",
+      "id": "to-verify",
       "from": "orchestrator",
-      "to": "builder",
+      "to": "antiai",
       "label": "dispatch",
       "fromSide": "left",
       "toSide": "left",
@@ -358,28 +307,6 @@
       "labelAt": [
         260,
         474
-      ]
-    },
-    {
-      "id": "to-verify",
-      "from": "orchestrator",
-      "to": "antiai",
-      "label": "dispatch",
-      "fromSide": "left",
-      "toSide": "left",
-      "via": [
-        [
-          200,
-          238
-        ],
-        [
-          200,
-          608
-        ]
-      ],
-      "labelAt": [
-        260,
-        594
       ]
     }
   ]

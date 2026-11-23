@@ -57,26 +57,12 @@
       ]
     },
     {
-      "id": "top_0",
-      "type": "messagebus",
-      "label": "Tech Lead",
-      "sublabel": "spec, ADR, plan",
-      "pos": [
-        40,
-        170
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
       "id": "top_2",
       "type": "backend",
       "label": "Builder",
       "sublabel": "role override",
       "pos": [
-        196,
+        40,
         170
       ],
       "size": [
@@ -88,9 +74,9 @@
       "id": "top_3",
       "type": "external",
       "label": "Code Reviewer",
-      "sublabel": "not below Builder",
+      "sublabel": "not below Builder, other agent",
       "pos": [
-        352,
+        196,
         170
       ],
       "size": [
@@ -104,7 +90,7 @@
       "label": "Security",
       "sublabel": "when triggered",
       "pos": [
-        508,
+        352,
         170
       ],
       "size": [
@@ -118,7 +104,7 @@
       "label": "Solution Architect",
       "sublabel": "arch review worker",
       "pos": [
-        664,
+        508,
         170
       ],
       "size": [
@@ -141,40 +127,12 @@
       ]
     },
     {
-      "id": "work_0",
-      "type": "messagebus",
-      "label": "Tech Lead",
-      "sublabel": "spec updates",
-      "pos": [
-        40,
-        330
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "work_1",
-      "type": "messagebus",
-      "label": "Designer",
-      "sublabel": "flow, options",
-      "pos": [
-        196,
-        330
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
       "id": "work_3",
       "type": "backend",
       "label": "Builder",
       "sublabel": "tests, code, PR body",
       "pos": [
-        352,
+        40,
         330
       ],
       "size": [
@@ -188,7 +146,7 @@
       "label": "Perf / A11y",
       "sublabel": "when triggered",
       "pos": [
-        508,
+        196,
         330
       ],
       "size": [
@@ -245,7 +203,6 @@
       "label": "top tier",
       "wraps": [
         "t_top",
-        "top_0",
         "top_2",
         "top_3",
         "top_4",
@@ -257,8 +214,6 @@
       "label": "work tier",
       "wraps": [
         "t_work",
-        "work_0",
-        "work_1",
         "work_3",
         "work_5"
       ]

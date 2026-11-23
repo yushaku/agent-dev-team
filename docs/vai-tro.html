@@ -39,56 +39,29 @@
 <h2>Ví dụ thêm nút xuất CSV</h2>
 <p>Đội thêm nút xuất danh sách hàng tồn kho ra tệp CSV. Ví dụ này có quy tắc xuất mới và một hộp chọn cột, với cổng duyệt giao diện được bật.</p>
 <ol class="roles-example">
-<li><strong>Chốt quy tắc (Gate 1).</strong> Tech Lead viết yêu cầu. Orchestrator đưa PO một ví dụ: bộ lọc trả về 25 dòng, trang đang hiện 10 dòng, tệp nên có bao nhiêu dòng? PO chọn xuất cả 25 dòng và chốt các cột được phép xuất.</li>
-<li><strong>Chọn giao diện (G-UI).</strong> Designer vẽ luồng và đưa các mẫu có thể bấm thử. PO xem ảnh ở kích thước máy tính và điện thoại rồi chọn hộp chọn cột mở từ nút “Xuất CSV”. Nếu PO đã chọn mẫu bằng ảnh tham chiếu hoặc yêu cầu bỏ qua Designer, bước duyệt này được bỏ qua.</li>
-<li><strong>Viết và thử tính năng.</strong> Builder viết bài kiểm thử trước, rồi thêm nút, hộp chọn cột và phần tạo tệp. Bài kiểm thử xác nhận tệp có đủ 25 dòng theo bộ lọc và chỉ chứa các cột đã chọn.</li>
-<li><strong>Kiểm tra độc lập và chuẩn bị bản giao.</strong> Reviewer đọc bài kiểm thử, code, tài liệu và nội dung bàn giao trong phiên riêng, có bước rà văn bản Anti-AI. Nếu thay đổi thuộc diện kiểm tra bảo mật, phần đó chạy trước khi Reviewer đánh giá. Reviewer kiểm tra bài thử có chứng minh đúng hành vi đã chốt, rồi ghi ca kiểm thử còn thiếu vào mục phải sửa (Must fix). Builder bổ sung bài thử còn thiếu, sửa các lỗi chặn bàn giao và gửi lại cho Reviewer kiểm tra. Sau hai vòng sửa vẫn thất bại, Orchestrator hỏi PO cách tiếp tục, có thể đề xuất tăng một tier.</li>
-<li><strong>Duyệt bản giao (Gate 2).</strong> Builder soạn nội dung bàn giao và đính kèm bằng chứng. Orchestrator đẩy nhánh theo cấu hình và mở pull request nháp nếu dự án dùng pull request. PO nhận nhánh code hoặc đề nghị gộp code, kết quả kiểm thử, rủi ro còn lại và đường dẫn chạy thử. PO làm theo danh sách kiểm tra thủ công của Builder, tải thử tệp và quyết định duyệt hay yêu cầu sửa. Khi PO duyệt, Orchestrator hoàn tất phần đóng Run.</li>
+<li><strong>Chốt quy tắc (Gate 1).</strong> Orchestrator chạy grill với PO và hỏi từng đợt, mỗi câu có đề xuất: bộ lọc trả về 25 dòng, trang đang hiện 10 dòng, tệp nên có bao nhiêu dòng? PO chọn xuất cả 25 dòng và chốt các cột được phép xuất. Orchestrator viết spec cùng các seam kiểm thử, PO xác nhận; sau đó chia thành các ticket có quan hệ chặn và PO xác nhận tiếp.</li>
+<li><strong>Chọn giao diện.</strong> Vì hộp chọn cột đổi giao diện, grill hỏi thêm bốn điều: mẫu tham chiếu, nút nằm đâu, trạng thái rỗng hoặc lỗi hoặc đang tải, vị trí trên điện thoại. Câu trả lời nằm trong ticket. Nếu PO nói phải thấy mới chọn được, Builder dựng prototype ở pane DEV (G-UI) và PO chọn một mẫu; không thì bước này được bỏ qua.</li>
+<li><strong>Viết và thử tính năng.</strong> Builder làm từng ticket theo TDD: viết bài kiểm thử trước, rồi thêm nút, hộp chọn cột và phần tạo tệp. Bài kiểm thử xác nhận tệp có đủ 25 dòng theo bộ lọc và chỉ chứa các cột đã chọn.</li>
+<li><strong>Kiểm tra độc lập và chuẩn bị bản giao.</strong> Reviewer (chạy trên agent khác với Builder) đọc bài kiểm thử, code, tài liệu và nội dung bàn giao trong phiên riêng bằng <code>code-review</code>, có bước rà văn bản Anti-AI. Nếu thay đổi thuộc diện kiểm tra bảo mật, phần đó chạy trước khi Reviewer đánh giá. Reviewer kiểm tra bài thử có chứng minh đúng hành vi đã chốt, rồi ghi ca kiểm thử còn thiếu vào mục phải sửa (Must fix). Builder bổ sung bài thử còn thiếu, sửa các lỗi chặn bàn giao và gửi lại cho Reviewer kiểm tra. Sau hai vòng sửa vẫn thất bại, Orchestrator hỏi PO cách tiếp tục, có thể đề xuất tăng một tier.</li>
+<li><strong>Duyệt bản giao (Gate 2).</strong> Builder soạn nội dung bàn giao theo skill <code>pr</code> và đính kèm bằng chứng. Orchestrator đẩy nhánh theo cấu hình và mở pull request nháp nếu dự án dùng pull request. PO nhận nhánh code hoặc đề nghị gộp code, kết quả kiểm thử, rủi ro còn lại và đường dẫn chạy thử. PO làm theo danh sách kiểm tra thủ công của Builder, tải thử tệp và quyết định duyệt hay yêu cầu sửa. Khi PO duyệt, Orchestrator hoàn tất phần đóng Run.</li>
 </ol>
 <p>Việc xử lý phiếu yêu cầu của khách hàng đi theo nhánh riêng. Nếu cần cam kết phạm vi hoặc công sức, PO chốt ở G-Scope trước khi làm. Nếu cần gửi phản hồi cho khách, PO duyệt bản nháp ở G-Reply. Xem <a href="quy-trinh.html">Quy trình</a> để theo dõi từng nhánh.</p>
 </section>
 <section>
-<h2>8 vai trò chia thành hai nhóm</h2>
-<p>Hai nhóm khác nhau ở chỗ ai chạy và chạy ở đâu. Worker là phiên riêng do Orchestrator giao, mỗi worker là một skill <code>team-*</code>. Các kiểm tra bảo mật, hiệu năng và Anti-AI là phần của Reviewer và Builder, chạy bên trong phiên của họ. Lệnh là phiên PO tự mở và trò chuyện trực tiếp.</p>
+<h2>6 vai trò chia thành hai nhóm</h2>
+<p>Hai nhóm khác nhau ở chỗ ai chạy và chạy ở đâu. Worker là phiên riêng do Orchestrator giao, mỗi worker là một skill <code>team-*</code>. Việc lên kế hoạch (grill, spec, ticket) do Orchestrator làm cùng PO bằng các skill của Matt Pocock, không có worker riêng. Các kiểm tra bảo mật, hiệu năng và Anti-AI là phần của Reviewer và Builder, chạy bên trong phiên của họ. Lệnh là phiên PO tự mở và trò chuyện trực tiếp.</p>
 <h3>Worker: phiên riêng do Orchestrator giao (skill <code>team-*</code>)</h3>
 <div class="roles">
-<article class="role" id="tech-lead">
-<h4>Tech Lead</h4>
-<p>Viết quy tắc sản phẩm và chia công việc thành các phần có thể kiểm thử.</p>
-<p><strong>Khi nào?</strong> Khi yêu cầu hoặc thiết kế triển khai cần làm rõ.</p>
-<p><strong>Bằng chứng.</strong> Yêu cầu, ví dụ và tiêu chí để nghiệm thu.</p>
-<details class="verify">
-<summary>Kiểm tra theo từng bước</summary>
-<ul>
-<li><strong>Gate 1.</strong> Trình quy tắc mới hoặc đổi để PO chốt. <strong>Bằng chứng.</strong> Ví dụ, giả định và câu hỏi còn mở.</li>
-<li><strong>Trước khi triển khai.</strong> Chỉ ra phạm vi và cách kiểm thử từng phần. <strong>Bằng chứng.</strong> Kế hoạch có tiêu chí nghiệm thu và giới hạn thay đổi.</li>
-</ul>
-</details>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/team-tech-lead/SKILL.md">Hướng dẫn Tech Lead trên GitHub</a></p>
-</article>
-<article class="role" id="designer">
-<h4>Designer</h4>
-<p>Vẽ luồng sử dụng và làm mẫu giao diện để so sánh.</p>
-<p><strong>Khi nào?</strong> Khi cần thiết kế màn hình hoặc luồng mới và PO giao phần thiết kế.</p>
-<p><strong>Bằng chứng.</strong> Mẫu bấm thử và ảnh ở các kích thước đã quy định.</p>
-<details class="verify">
-<summary>Kiểm tra theo từng bước</summary>
-<ul>
-<li><strong>G-UI.</strong> Sau khi xem luồng, PO chọn mẫu nếu cổng bật. Khi cổng tắt, Orchestrator chọn và ghi lý do. <strong>Bằng chứng.</strong> Liên kết tới mẫu được chọn và ảnh kèm theo cho Builder.</li>
-</ul>
-</details>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/team-designer/SKILL.md">Hướng dẫn Designer trên GitHub</a></p>
-</article>
 <article class="role" id="builder">
 <h4>Builder</h4>
-<p>Viết bài kiểm thử trước khi triển khai (TDD), soạn nội dung bàn giao và thu thập bằng chứng. Khi đổi CI/CD, Builder triển khai theo ADR của Solution Architect.</p>
-<p><strong>Khi nào?</strong> Khi có phần việc cần triển khai.</p>
+<p>Làm từng ticket theo TDD tại các seam đã duyệt, soạn nội dung bàn giao và thu thập bằng chứng. Dựng prototype khi được giao. Khi đổi CI/CD, Builder triển khai theo ADR của Solution Architect.</p>
+<p><strong>Khi nào?</strong> Khi có ticket cần triển khai.</p>
 <p><strong>Bằng chứng.</strong> Bài kiểm thử, kết quả chạy trên bản giao và danh sách kiểm tra thủ công cho PO ở Gate 2.</p>
 <details class="verify">
 <summary>Kiểm tra theo từng bước</summary>
 <ul>
-<li><strong>Gate 1.</strong> Nếu được giao viết yêu cầu, đưa quy tắc mới hoặc đổi qua Orchestrator để PO chốt. Báo qua Orchestrator khi còn quyết định sản phẩm hoặc thiết kế chưa chốt. <strong>Bằng chứng.</strong> Bản yêu cầu và câu hỏi cần quyết định.</li>
-<li><strong>Kiểm tra bản triển khai.</strong> Chạy các kiểm tra bắt buộc. Nếu được giao đối chiếu giao diện, mở từng phần sau kiểm tra nhanh và so với mẫu hoặc màn hình hiện có. <strong>Bằng chứng.</strong> Kết quả kiểm tra và ảnh theo kích thước, trạng thái được giao khi có đối chiếu.</li>
+<li><strong>Trước khi đổi.</strong> Báo qua Orchestrator khi còn quyết định sản phẩm hoặc thiết kế chưa chốt, đổi hợp đồng dùng chung hoặc cần sửa file ngoài ticket. <strong>Bằng chứng.</strong> Câu hỏi cần quyết định.</li>
+<li><strong>Kiểm tra bản triển khai.</strong> Chạy các kiểm tra bắt buộc. Nếu được giao đối chiếu giao diện, mở từng phần sau kiểm tra nhanh và so với prototype hoặc màn hình hiện có. <strong>Bằng chứng.</strong> Kết quả kiểm tra và ảnh theo kích thước, trạng thái được giao khi có đối chiếu.</li>
 <li><strong>Đo hiệu năng.</strong> Khi đổi màn hình người dùng thấy hoặc đường đi được đánh dấu nóng, đo trước và sau trên đúng luồng. <strong>Bằng chứng.</strong> Số đo so với ngưỡng hoặc bước tái hiện lỗi tiếp cận.</li>
 <li><strong>Trước Gate 2.</strong> Chạy bản cuối và giữ máy chủ hoạt động để PO thử nếu có ứng dụng chạy được. <strong>Bằng chứng.</strong> Đường dẫn, quyền truy cập và danh sách kiểm tra thủ công do Builder soạn, kèm dữ liệu mẫu nếu phù hợp.</li>
 </ul>
@@ -97,14 +70,14 @@
 </article>
 <article class="role" id="reviewer">
 <h4>Code Reviewer</h4>
-<p>Kiểm tra độc lập xem bản thay đổi đúng yêu cầu và bài kiểm thử có chứng minh hành vi cần có hay không.</p>
+<p>Kiểm tra độc lập, bằng skill <code>code-review</code>, xem bản thay đổi đúng ticket và spec (trục Spec), đúng chuẩn của repo (trục Standards) và bài kiểm thử có chứng minh hành vi cần có hay không. Hai trục do hai sub-agent mới làm và không xếp hạng chéo.</p>
 <p><strong>Khi nào?</strong> Khi kiểm tra bản giao. Dùng top cho lượt kiểm tra đầy đủ tính năng. Với kiểm tra lại có phạm vi hẹp, commit thêm sau lượt kiểm tra cuối hoặc thay đổi chỉ giao diện hay tài liệu, dùng mức của Builder và ít nhất là work.</p>
 <p><strong>Bằng chứng.</strong> Mỗi lỗi có tình huống tái hiện, bài kiểm thử thất bại hoặc đường đi trong code.</p>
 <details class="verify">
 <summary>Kiểm tra theo từng bước</summary>
 <ul>
-<li><strong>Kiểm tra độc lập.</strong> Đối chiếu yêu cầu, bài kiểm thử, giao diện nếu có, tài liệu và nội dung bàn giao. Chạy kiểm tra có trọng tâm nếu bằng chứng thiếu hoặc đáng ngờ. <strong>Bằng chứng.</strong> Báo cáo lỗi theo tiêu chuẩn kỹ thuật và yêu cầu sản phẩm. Nếu bài kiểm thử gắn mã yêu cầu đổi hành vi mong đợi mà dòng yêu cầu vẫn giữ nguyên, ghi nhận chỗ lệch đặc tả.</li>
-<li><strong>Lỗi chặn bàn giao (Must fix).</strong> Ghi các ca kiểm thử hoặc bằng chứng nghiệm thu còn thiếu để Builder bổ sung. Chặn việc làm yếu bài kiểm thử, quy tắc lint, mục tiêu độ phủ, chỉ tiêu tải hoặc chất lượng trong ADR trừ khi Task ghi lý do. Chặn vi phạm giới hạn cấm, thay đổi cần hỏi trước mà chưa có quyết định, sửa AGENTS.md hoặc CLAUDE.md, và bài kiểm thử duy nhất cho một tiêu chí mà không chứng minh được tiêu chí đó. <strong>Bằng chứng.</strong> Lỗi lặp lại mà công cụ có thể bắt phải được bổ sung quy tắc kiểm tra tự động trong Run này.</li>
+<li><strong>Kiểm tra độc lập.</strong> Đối chiếu ticket, spec, bài kiểm thử, giao diện nếu có, tài liệu và nội dung bàn giao. Chạy kiểm tra có trọng tâm nếu bằng chứng thiếu hoặc đáng ngờ. <strong>Bằng chứng.</strong> Báo cáo lỗi theo tiêu chuẩn kỹ thuật và yêu cầu sản phẩm. Nếu bài kiểm thử gắn mã yêu cầu đổi hành vi mong đợi mà dòng yêu cầu vẫn giữ nguyên, ghi nhận chỗ lệch đặc tả.</li>
+<li><strong>Lỗi chặn bàn giao (Must fix).</strong> Ghi các ca kiểm thử hoặc bằng chứng nghiệm thu còn thiếu để Builder bổ sung. Chặn việc làm yếu bài kiểm thử, quy tắc lint, mục tiêu độ phủ, chỉ tiêu tải hoặc chất lượng trong ADR trừ khi Task ghi lý do. Chặn thay đổi cần hỏi trước mà chưa có quyết định, sửa AGENTS.md hoặc CLAUDE.md, và bài kiểm thử duy nhất cho một tiêu chí mà không chứng minh được tiêu chí đó. <strong>Bằng chứng.</strong> Lỗi lặp lại mà công cụ có thể bắt phải được bổ sung quy tắc kiểm tra tự động trong Run này.</li>
 <li><strong>Kiểm tra theo kích hoạt.</strong> Bảo mật (quyền truy cập, đầu vào, thanh toán, dữ liệu cá nhân hoặc tài chính, tải tệp, API ngoài, thư viện phụ thuộc): chạy một lần trong Task kiểm tra, tier top, mỗi phát hiện có tình huống rủi ro cụ thể. Hiệu năng và khả năng tiếp cận: xét bằng chứng Builder đo; thiếu thì quay lại Builder. Anti-AI: rà câu chữ và dữ kiện của bản giao, chỉ góp ý về văn phong thì không chặn. <strong>Bằng chứng.</strong> Phát hiện kèm đường dẫn tới code liên quan.</li>
 <li><strong>Kiểm tra lại.</strong> Xem lỗi cũ, bằng chứng phản biện, các commit sửa được chỉ định và bản tài liệu, nội dung bàn giao đã chốt. Chỉ thêm lỗi do bản sửa gây ra. <strong>Bằng chứng.</strong> Trạng thái từng lỗi và vị trí trong file.</li>
 </ul>
@@ -130,13 +103,13 @@
 <div class="roles">
 <article class="role" id="orchestrator">
 <h4>Orchestrator</h4>
-<p>Giao việc, theo dõi kết quả và đưa các quyết định cần duyệt đến PO.</p>
+<p>Lên kế hoạch cùng PO, giao việc, theo dõi kết quả và đưa các quyết định cần duyệt đến PO.</p>
 <p><strong>Khi nào?</strong> PO gõ <code>/orchestrator</code>; vai này chạy suốt mỗi Run.</p>
 <p><strong>Bằng chứng.</strong> Tóm tắt quyết định của PO và hồ sơ bàn giao có thể kiểm tra.</p>
 <details class="verify">
 <summary>Kiểm tra theo từng bước</summary>
 <ul>
-<li><strong>Gate 1 và G-UI.</strong> Đưa quy tắc cần chốt hoặc mẫu cần chọn cho PO khi cổng áp dụng. <strong>Bằng chứng.</strong> Quyết định đã ghi lại và chuyển cho người thực hiện.</li>
+<li><strong>Lên kế hoạch, Gate 1 và G-UI.</strong> Chạy grill, to-spec, to-tickets cùng PO (không đọc code, hỏi subagent chỉ đọc khi cần sự thật về repo), tạo mỗi ticket thành một Task Orca có phụ thuộc. Đưa spec, seam, ticket hoặc prototype cho PO duyệt khi cổng áp dụng. <strong>Bằng chứng.</strong> Quyết định đã ghi lại và chuyển cho người thực hiện.</li>
 <li><strong>Gate 2.</strong> Đẩy nhánh theo cấu hình và mở pull request nháp khi cần. Đưa bản giao đã qua kiểm tra, rủi ro và việc PO cần thử. <strong>Bằng chứng.</strong> Nhánh hoặc đề nghị gộp code, kết quả kiểm tra và đường dẫn chạy thử nếu có. Đóng Run sau khi PO duyệt.</li>
 </ul>
 </details>
@@ -157,7 +130,7 @@
 <details class="verify">
 <summary>Kiểm tra theo từng bước</summary>
 <ul>
-<li><strong>Quyết định kiến trúc.</strong> Ghi mỗi quyết định thành một ADR kèm chỉ tiêu tải và chi phí hằng tháng. <strong>Bằng chứng.</strong> ADR và pull request nháp để PO duyệt. Reviewer đối chiếu kế hoạch với ADR trong bước kiểm tra bản giao.</li>
+<li><strong>Quyết định kiến trúc.</strong> Ghi mỗi quyết định thành một ADR kèm chỉ tiêu tải và chi phí hằng tháng. <strong>Bằng chứng.</strong> ADR và pull request nháp để PO duyệt. Reviewer đối chiếu thay đổi với ADR trong bước kiểm tra bản giao.</li>
 </ul>
 </details>
 <p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/solution-architect/SKILL.md">Hướng dẫn Solution Architect trên GitHub</a></p>
