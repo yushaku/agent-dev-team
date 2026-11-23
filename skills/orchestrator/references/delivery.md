@@ -2,7 +2,7 @@
 
 - Remove shipped items from `todo.md` and rewrite deferred items for the later capability.
 - With `docs.site: pages` and no `.github/workflows/pages.yml`, copy `templates/pages.yml` there and commit it before review. Assign the Builder if it needs more than the template copy. Ask the PO to enable Pages per `docs-policy.md` "Published site".
-- Use Git, PR administration and Orca commands without reading code or diffs. For `delivery.mode: branch`, leave commits on the feature branch and push only if `delivery.push`. For `delivery.mode: pr`, push the feature branch, open a draft PR with title per `delivery.pr_title` and the Builder report’s `## Commit body` contents verbatim, confirm CI is green, then run `orca worktree set --worktree <selector> --pr <n>`. Move the card per `start.md` "Board mapping".
+- Use Git, PR administration and Orca commands without reading code or diffs. For `delivery.mode: branch`, leave commits on the feature branch and push only if `delivery.push`. For `delivery.mode: pr`, push the feature branch, open a draft PR with title per `delivery.pr_title` and the Builder report’s `## Commit body` contents verbatim (format: Matt `pr`, `skills/team-builder/references/delivery.md` "Body"), confirm CI is green, then run `orca worktree set --worktree <selector> --pr <n>`. Move the card per `start.md` "Board mapping".
 - Record delivery in the Run as a completed Orchestrator Task with `Measurement.kind: delivery`.
 - Report link/branch, summary, risks, pending `human_only` steps and ticket fix draft for G-Reply.
 - Features land through a feature branch and a merge commit. Keep feature commits off the default branch and preserve merge commits instead of squashing. On a fix commit, an optional `Fixes-feature: <branch>` trailer overrides the dashboard's blame attribution.
@@ -23,7 +23,7 @@
 
 ## Definition of Done (feature)
 
-- Evidence for every acceptance criterion: passing test, measurement, rendered check or recorded manual result. Mark pending `human_only` checks for PO review; required automation and project thresholds must pass.
+- Evidence for every acceptance criterion of every ticket: passing test, measurement, rendered check or recorded manual result. Mark pending `human_only` checks for PO review; required automation and project thresholds must pass.
 - Zero Must fix findings; triggered audits: zero high-severity findings.
 - Anti-AI pass clean.
 - `commands.verify` green.
