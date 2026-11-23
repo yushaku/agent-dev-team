@@ -766,7 +766,7 @@ test('plugin host: a second activation without a shutdown replaces the first cle
   Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
   t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
   const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
-  const { status } = await import('../ingest.ts');
+  const { status } = await import('../../orca-plugin/ledger/ingest.ts'); // the packaged copy the host runs
   const make = () => { const handlers: Record<string,()=>void> = {}; return { handlers, orca: { log() {}, host: { call: async () => {} }, events: { on: (e: string, h: () => void) => { handlers[e] = h; } } } }; };
   const one = make(), two = make();
   const probe = () => fetch(`http://127.0.0.1:${port}/health`,{signal:AbortSignal.timeout(500)}).then(r => r.json(),() => null);
@@ -860,4 +860,113 @@ test('plugin host: two overlapping shutdowns both wait for the drain, in order',
   const got = acquire(h.home,'after');
   assert.ok('held' in got,'the lock is free');
   (got as {held:{release():void}}).held.release();
+});
+
+test('http: a non-loopback Host is 403 on every route, /health and unknown paths included', async t => {
+  const { serve } = await import('../http.ts');
+  const { request } = await import('node:http');
+  const srv = serve({'/health':() => ({ok:true})},{port:0});
+  t.after(() => srv.close());
+  for (let i=0;i<100 && !srv.server.listening;i++) await sleep(10);
+  const { port } = srv.server.address() as {port:number};
+  const status = (path: string, host: string) => new Promise<number>(resolve => { request({port,host:'127.0.0.1',path,headers:{Host:host}},res => { res.resume(); resolve(res.statusCode!); }).end(); });
+  assert.equal(await status('/health','example.com'),403);
+  assert.equal(await status('/health','evil.test:4748'),403);
+  assert.equal(await status('/nothing','example.com'),403);
+  assert.equal(await status('/health',`localhost:${port}`),200);
+  assert.equal(await status('/health',`127.0.0.1:${port}`),200);
+  assert.equal(await status('/health','[::1]:4748'),200);
+  assert.equal(await status('/health','127.0.0.1.evil.test'),403);
+});
+
+test('lock: only a missing ingest.lock is ignored; any other failure to remove it fails the acquire and frees the connection', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'stuck');
+  mkdirSync(join(home,'ingest.lock'),{recursive:true});
+  writeFileSync(join(home,'ingest.lock','inside'),'x'); // a non-empty directory cannot be unlinked
+  const { acquire } = await import('../lock.ts');
+  assert.throws(() => acquire(home,'x'),(e: NodeJS.ErrnoException) => ['EISDIR','EPERM','ENOTEMPTY','EACCES'].includes(String(e.code)));
+  rmSync(join(home,'ingest.lock'),{recursive:true});
+  const got = acquire(home,'x'); // the failed attempt left no open connection behind
+  assert.ok('held' in got);
+  (got as {held:{release():void}}).held.release();
+});
+
+test('plugin host: the packaged copy serves the dashboard on both ports, waits for a busy port, and shuts down in order', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'full');
+  const healthPort = 20000 + Math.floor(Math.random()*10000), apiPort = healthPort + 1;
+  const saved = {...process.env};
+  const repo = new URL('../..',import.meta.url).pathname.replace(/\/$/,'');
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(healthPort),TEAM_DASHBOARD_PORT:String(apiPort),AGENT_TEAM_HOME:repo});
+  delete process.env.AGENT_DASHBOARD_WEB; // the host must point it at its own bundle
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  // Another server holds the API port, as the Python dashboard does before the cutover.
+  const { createServer } = await import('node:http');
+  const squatter = createServer((_,res) => res.end('python')).listen(apiPort,'127.0.0.1');
+  await once(squatter,'listening');
+  const { run, shutdown, dashboardData } = await import('../../orca-plugin/src/ledger-host.ts');
+  const bars: string[] = [];
+  const orca = { log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on() {} } };
+  const get = async (port: number, path: string) => fetch(`http://127.0.0.1:${port}${path}`,{signal:AbortSignal.timeout(15000)});
+  const withHost = async (port: number, path: string, host: string) => { // fetch may not set Host; http.request can
+    const { request } = await import('node:http');
+    return new Promise<number>((resolve,reject) => { request({port,host:'127.0.0.1',path,headers:{Host:host}},res => { res.resume(); resolve(res.statusCode!); }).on('error',reject).end(); });
+  };
+  t.after(() => { squatter.close(); });
+  await run(orca);
+  try {
+    for (let i=0;i<200 && !(await get(healthPort,'/health').then(r => r.ok,() => false));i++) await sleep(25);
+    assert.equal((await get(healthPort,'/health')).status,200);
+    assert.equal(await (await get(apiPort,'/')).text(),'python','4747 still belongs to the other server');
+    assert.ok(bars.some(b => b.includes(`${healthPort} (${apiPort} busy)`)),bars.join(' | '));
+    // Every dashboard route answers on the health port: index.html equals the packaged bundle byte for byte.
+    const index = await get(healthPort,'/');
+    assert.equal(index.status,200);
+    assert.equal(Buffer.compare(Buffer.from(await index.arrayBuffer()),readFileSync(join(here,'../../orca-plugin/dashboard-web/index.html'))),0);
+    for (const path of ['/js/dash.js','/vendor/marked.min.js','/css/app.css']) assert.equal((await get(healthPort,path)).status,200,path);
+    let data = await get(healthPort,'/api/data?days=7');
+    for (let i=0;i<100 && data.status === 503;i++) { await sleep(100); data = await get(healthPort,'/api/data?days=7'); }
+    assert.equal(data.status,200);
+    const body = await data.json() as {sessions:unknown[],days:number};
+    assert.equal(body.days,7);
+    assert.ok(Array.isArray(body.sessions));
+    assert.equal((await get(healthPort,'/api/team/skill?name=team-builder')).status,200);
+    assert.equal(await withHost(healthPort,'/health','example.com'),403,'the Host check covers /health');
+    assert.equal(await withHost(healthPort,'/api/data','example.com'),403);
+    // The Tasks panel reads the same data in process.
+    const inProcess = await dashboardData(7);
+    assert.equal(inProcess.days,7);
+    // Release the API port: the host binds it within its retry interval.
+    if (squatter.listening) { squatter.close(); await once(squatter,'close'); }
+    for (let i=0;i<300 && !(await get(apiPort,'/health').then(r => r.ok,() => false));i++) await sleep(50);
+    assert.equal((await get(apiPort,'/health')).status,200,'4747 is taken over once it is free');
+    assert.ok(bars.some(b => /✓ \d+·\d+$/.test(b) || b.includes(`${healthPort}·${apiPort}`) || b.includes(`${apiPort}·${healthPort}`)),bars.join(' | '));
+  } finally { await shutdown(); }
+  for (const port of [healthPort,apiPort]) await assert.rejects(get(port,'/health'),undefined,'listener closed');
+  await assert.rejects(dashboardData(7),/chưa sẵn sàng/);
+  const { acquire } = await import('../lock.ts');
+  const got = acquire(home,'after');
+  assert.ok('held' in got,'ingest released the lock after the API stopped');
+  (got as {held:{release():void}}).held.release();
+});
+
+test('plugin host: an API that cannot start leaves ingest and /health running and says so', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'noapi');
+  const healthPort = 30000 + Math.floor(Math.random()*10000);
+  const saved = {...process.env};
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(healthPort),TEAM_DASHBOARD_PORT:String(healthPort),AGENT_TEAM_HOME:join(f.root,'no-team-here')});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  const bars: string[] = [];
+  await run({ log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on() {} } });
+  try {
+    let health: {ok:boolean,listening:{apiError?:string}} | null = null;
+    for (let i=0;i<200 && !health?.ok;i++) { await sleep(25); health = await fetch(`http://127.0.0.1:${healthPort}/health`).then(r => r.json(),() => null); }
+    assert.equal(health?.ok,true,'ingest and /health run');
+    assert.match(health?.listening.apiError ?? '',/AGENT_TEAM_HOME/);
+    assert.ok(bars.some(b => b.endsWith('⚠')),bars.join(' | '));
+    assert.equal((await fetch(`http://127.0.0.1:${healthPort}/api/data`)).status,404,'no dashboard routes without the API');
+  } finally { await shutdown(); }
 });

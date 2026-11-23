@@ -46,7 +46,9 @@ export function acquire(home: string, host: string, onLocked?: () => void): { he
     onLocked?.();
     // `ingest.lock` was the lock file of builds before the SQLite lock. No such host runs any more (a plugin
     // reload starts a new worker process), so a leftover file is only debris: no pid checks, no waiting.
-    try { unlinkSync(join(home, 'ingest.lock')); } catch { /* usually absent */ }
+    try { unlinkSync(join(home, 'ingest.lock')); } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; // anything but "not there" means we cannot be sure the way is clear
+    }
     tightenFiles(home);
     try {
       writeFileSync(info + '.tmp', JSON.stringify({ pid: process.pid, host, token, since: new Date().toISOString() }), { mode: 0o600 });

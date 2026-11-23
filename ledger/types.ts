@@ -34,3 +34,7 @@ export type HttpApi = {
     onError?: (error: Error & { code?: string }) => void, onListening?: () => void,
   }): { close(): Promise<void> },
 };
+/** createApi (api.ts): the dashboard's routes, for mounting next to /health; close() stops its worker. */
+export type ApiModule = {
+  createApi(home: string): { routes: Record<string, Route>, close(): Promise<void> },
+};

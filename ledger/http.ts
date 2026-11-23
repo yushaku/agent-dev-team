@@ -3,6 +3,9 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { HttpApi, Route } from './types.ts';
 
 export type Routes = Record<string, Route>;
+/** The dashboard answers only to loopback Host names, which closes DNS rebinding for every route on a listener. */
+export const hostAllowed = (req: { headers?: IncomingMessage['headers'] }) =>
+  /^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(req.headers?.host || '');
 const reply = (res: ServerResponse, status: number, body: unknown) => {
   const text = JSON.stringify(body);
   if (!res.headersSent) res.writeHead(status, { 'Content-Type': 'application/json' });
@@ -16,12 +19,13 @@ export async function sendResponse(res: ServerResponse, response: Response) {
   res.end(body);
 }
 
-/** Serves JSON for GET routes keyed by path; unknown paths are 404, other methods 405, a bad URL 400, a failing route 500. */
+/** Serves JSON for GET routes keyed by path; a non-loopback Host is 403 on every route, unknown paths are 404, other methods 405, a bad URL 400, a failing route 500. */
 export function serve(routes: Routes, { port = 4748, host = '127.0.0.1', retryMs = 0, onError = (_: Error) => {}, onListening = () => {} }: Parameters<HttpApi['serve']>[1] = {}) {
   const server: Server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     try {
       let url: URL;
       try { url = new URL(req.url ?? '/', 'http://localhost'); } catch { return reply(res, 400, { error: 'invalid URL' }); }
+      if (!hostAllowed(req)) return reply(res, 403, { error: 'forbidden' });
       if (!Object.hasOwn(routes, url.pathname)) return reply(res, 404, { error: 'not found' });
       if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return reply(res, 405, { error: 'method not allowed' }); }
       const result = await routes[url.pathname](req, url); // built before any header is written
