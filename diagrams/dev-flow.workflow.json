@@ -2,7 +2,7 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "New capability flow",
+    "title": "Feature flow",
     "output": "diagrams/dev-flow.html",
     "locale": "en",
     "quality_profile": "showcase",
@@ -12,17 +12,14 @@
         "frontend": {
           "label": "PO"
         },
-        "cloud": {
-          "label": "Orchestrator"
-        },
         "messagebus": {
           "label": "Plan"
         },
         "backend": {
-          "label": "Build"
+          "label": "Builder"
         },
         "external": {
-          "label": "Review"
+          "label": "Reviewer"
         },
         "database": {
           "label": "Delivery"
@@ -44,12 +41,8 @@
       "label": "Builder"
     },
     {
-      "id": "verify",
+      "id": "reviewer",
       "label": "Reviewer"
-    },
-    {
-      "id": "delivery",
-      "label": "Delivery"
     }
   ],
   "phases": [
@@ -60,20 +53,14 @@
       "toCol": 2
     },
     {
-      "id": "proto",
-      "label": "Prototype",
-      "fromCol": 3,
-      "toCol": 3
-    },
-    {
       "id": "build",
       "label": "Build + review",
-      "fromCol": 4,
+      "fromCol": 3,
       "toCol": 4
     },
     {
-      "id": "deliver",
-      "label": "Deliver",
+      "id": "ship",
+      "label": "Gate 2",
       "fromCol": 5,
       "toCol": 5
     }
@@ -82,11 +69,11 @@
     "idea",
     "grill",
     "spec",
-    "gate1a",
+    "g1a",
     "tickets",
-    "gate1b",
+    "g1b",
     "build",
-    "verify",
+    "review",
     "deliver",
     "gate2",
     "close"
@@ -106,7 +93,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Grill",
-      "sublabel": "grill-with-docs, glossary, ADRs"
+      "sublabel": "grill-with-docs"
     },
     {
       "id": "spec",
@@ -117,7 +104,7 @@
       "sublabel": "to-spec"
     },
     {
-      "id": "gate1a",
+      "id": "g1a",
       "lane": "po",
       "col": 1,
       "type": "frontend",
@@ -131,10 +118,10 @@
       "col": 2,
       "type": "messagebus",
       "label": "Tickets",
-      "sublabel": "to-tickets, blocking edges"
+      "sublabel": "to-tickets, blockers"
     },
     {
-      "id": "gate1b",
+      "id": "g1b",
       "lane": "po",
       "col": 2,
       "type": "frontend",
@@ -143,33 +130,16 @@
       "tag": "PO decision"
     },
     {
-      "id": "proto",
-      "lane": "builder",
-      "col": 3,
-      "type": "backend",
-      "label": "Prototype*",
-      "sublabel": "only if the PO must see it"
-    },
-    {
-      "id": "gui",
-      "lane": "po",
-      "col": 3,
-      "type": "frontend",
-      "label": "G-UI*",
-      "sublabel": "PO picks a variant",
-      "tag": "PO decision"
-    },
-    {
       "id": "build",
       "lane": "builder",
-      "col": 4,
+      "col": 3,
       "type": "backend",
       "label": "Build tickets",
       "sublabel": "tdd, one Orca Task each"
     },
     {
-      "id": "verify",
-      "lane": "verify",
+      "id": "review",
+      "lane": "reviewer",
       "col": 4,
       "type": "external",
       "label": "Review",
@@ -177,10 +147,10 @@
     },
     {
       "id": "deliver",
-      "lane": "delivery",
-      "col": 5,
+      "lane": "orch",
+      "col": 4,
       "type": "database",
-      "label": "Orchestrator delivers",
+      "label": "Deliver",
       "sublabel": "draft PR, app in DEV pane"
     },
     {
@@ -198,12 +168,12 @@
       "col": 5,
       "type": "messagebus",
       "label": "Metrics, retro*",
-      "sublabel": "retro only if the Run had problems"
+      "sublabel": "then close the Run"
     }
   ],
   "edges": [
     {
-      "id": "ask",
+      "id": "idea-grill",
       "from": "idea",
       "to": "grill",
       "fromSide": "bottom",
@@ -215,70 +185,52 @@
       "to": "spec"
     },
     {
-      "id": "spec-gate",
+      "id": "spec-g1a",
       "from": "spec",
-      "to": "gate1a"
+      "to": "g1a"
     },
     {
-      "id": "gate-tickets",
-      "from": "gate1a",
+      "id": "g1a-tickets",
+      "from": "g1a",
       "to": "tickets",
       "label": "approved"
     },
     {
-      "id": "tickets-gate",
+      "id": "tickets-g1b",
       "from": "tickets",
-      "to": "gate1b"
+      "to": "g1b"
     },
     {
-      "id": "gate-proto",
-      "from": "gate1b",
-      "to": "proto",
-      "label": "UI to see*"
-    },
-    {
-      "id": "proto-gui",
-      "from": "proto",
-      "to": "gui"
-    },
-    {
-      "id": "gui-build",
-      "from": "gui",
-      "to": "build",
-      "label": "chosen variant"
-    },
-    {
-      "id": "gate-build",
-      "from": "gate1b",
+      "id": "g1b-build",
+      "from": "g1b",
       "to": "build",
       "label": "approved"
     },
     {
-      "id": "build-verify",
+      "id": "build-review",
       "from": "build",
-      "to": "verify"
+      "to": "review"
     },
     {
-      "id": "fix-loop",
-      "from": "verify",
+      "id": "review-build",
+      "from": "review",
       "to": "build",
-      "label": "fix + re-review, max 2",
-      "variant": "default",
+      "label": "fix, max 2",
       "role": "return"
     },
     {
-      "id": "verify-deliver",
-      "from": "verify",
+      "id": "review-deliver",
+      "from": "review",
       "to": "deliver",
-      "label": "green"
+      "label": "no Must fix"
     },
     {
-      "id": "deliver-gate",
+      "id": "deliver-gate2",
       "from": "deliver",
       "to": "gate2"
     },
     {
-      "id": "gate-close",
+      "id": "gate2-close",
       "from": "gate2",
       "to": "close",
       "label": "approved"

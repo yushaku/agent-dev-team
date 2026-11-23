@@ -1,0 +1,233 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Other ways in",
+    "output": "diagrams/flow-onramps.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "Trigger or PO"
+        },
+        "cloud": {
+          "label": "Orchestrator"
+        },
+        "messagebus": {
+          "label": "Feature flow"
+        },
+        "backend": {
+          "label": "Builder"
+        },
+        "external": {
+          "label": "Reviewer tier"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "bug",
+      "label": "Hard bug"
+    },
+    {
+      "id": "issue",
+      "label": "Raw issue"
+    },
+    {
+      "id": "main",
+      "label": "Feature flow"
+    },
+    {
+      "id": "arch",
+      "label": "Architecture scan"
+    }
+  ],
+  "phases": [
+    {
+      "id": "in",
+      "label": "Comes in",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "work",
+      "label": "Skill",
+      "fromCol": 1,
+      "toCol": 2
+    },
+    {
+      "id": "merge",
+      "label": "Joins the flow",
+      "fromCol": 3,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "grill",
+    "build",
+    "review"
+  ],
+  "nodes": [
+    {
+      "id": "raw",
+      "lane": "issue",
+      "col": 0,
+      "type": "frontend",
+      "label": "Issue or PR",
+      "sublabel": "from outside"
+    },
+    {
+      "id": "triage",
+      "lane": "issue",
+      "col": 1,
+      "type": "cloud",
+      "label": "triage",
+      "sublabel": "labels are drafts"
+    },
+    {
+      "id": "brief",
+      "lane": "issue",
+      "col": 2,
+      "type": "cloud",
+      "label": "Agent-ready brief",
+      "sublabel": "or needs-info"
+    },
+    {
+      "id": "hard",
+      "lane": "bug",
+      "col": 0,
+      "type": "frontend",
+      "label": "Bug resists",
+      "sublabel": "no clear cause"
+    },
+    {
+      "id": "diag",
+      "lane": "bug",
+      "col": 1,
+      "type": "backend",
+      "label": "diagnosing-bugs",
+      "sublabel": "red loop first"
+    },
+    {
+      "id": "regress",
+      "lane": "bug",
+      "col": 2,
+      "type": "backend",
+      "label": "Fix + regression",
+      "sublabel": "at a real seam"
+    },
+    {
+      "id": "scan",
+      "lane": "arch",
+      "col": 0,
+      "type": "frontend",
+      "label": "Periodic scan",
+      "sublabel": "or PO asks"
+    },
+    {
+      "id": "ica",
+      "lane": "arch",
+      "col": 1,
+      "type": "external",
+      "label": "Deepening report",
+      "sublabel": "improve-codebase-architecture",
+      "width": 230
+    },
+    {
+      "id": "pickc",
+      "lane": "arch",
+      "col": 2,
+      "type": "frontend",
+      "label": "PO picks one",
+      "sublabel": "HTML report",
+      "tag": "PO decision"
+    },
+    {
+      "id": "grill",
+      "lane": "main",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Grill",
+      "sublabel": "new idea"
+    },
+    {
+      "id": "build",
+      "lane": "main",
+      "col": 4,
+      "type": "messagebus",
+      "label": "Build ticket",
+      "sublabel": "tdd"
+    },
+    {
+      "id": "review",
+      "lane": "main",
+      "col": 5,
+      "type": "messagebus",
+      "label": "Review",
+      "sublabel": "code-review"
+    }
+  ],
+  "edges": [
+    {
+      "id": "raw-triage",
+      "from": "raw",
+      "to": "triage"
+    },
+    {
+      "id": "triage-brief",
+      "from": "triage",
+      "to": "brief"
+    },
+    {
+      "id": "brief-build",
+      "from": "brief",
+      "to": "build",
+      "label": "ready-for-agent"
+    },
+    {
+      "id": "hard-diag",
+      "from": "hard",
+      "to": "diag"
+    },
+    {
+      "id": "diag-regress",
+      "from": "diag",
+      "to": "regress"
+    },
+    {
+      "id": "regress-review",
+      "from": "regress",
+      "to": "review",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "scan-ica",
+      "from": "scan",
+      "to": "ica"
+    },
+    {
+      "id": "ica-pickc",
+      "from": "ica",
+      "to": "pickc"
+    },
+    {
+      "id": "pickc-grill",
+      "from": "pickc",
+      "to": "grill"
+    },
+    {
+      "id": "grill-build",
+      "from": "grill",
+      "to": "build"
+    },
+    {
+      "id": "build-review",
+      "from": "build",
+      "to": "review"
+    }
+  ]
+}
