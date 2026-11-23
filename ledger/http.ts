@@ -9,6 +9,13 @@ const reply = (res: ServerResponse, status: number, body: unknown) => {
   res.end(text);
 };
 
+/** Writes a fetch Response (status, headers, body) to the node response; the body is read before any header is written. */
+export async function sendResponse(res: ServerResponse, response: Response) {
+  const body = Buffer.from(await response.arrayBuffer());
+  res.writeHead(response.status, Object.fromEntries(response.headers));
+  res.end(body);
+}
+
 /** Serves JSON for GET routes keyed by path; unknown paths are 404, other methods 405, a bad URL 400, a failing route 500. */
 export function serve(routes: Routes, { port = 4748, host = '127.0.0.1', retryMs = 0, onError = (_: Error) => {}, onListening = () => {} }: Parameters<HttpApi['serve']>[1] = {}) {
   const server: Server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -17,7 +24,9 @@ export function serve(routes: Routes, { port = 4748, host = '127.0.0.1', retryMs
       try { url = new URL(req.url ?? '/', 'http://localhost'); } catch { return reply(res, 400, { error: 'invalid URL' }); }
       if (!Object.hasOwn(routes, url.pathname)) return reply(res, 404, { error: 'not found' });
       if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return reply(res, 405, { error: 'method not allowed' }); }
-      reply(res, 200, await routes[url.pathname](req, url)); // the body is built before any header is written
+      const result = await routes[url.pathname](req, url); // built before any header is written
+      if (result instanceof Response) return await sendResponse(res, result);
+      reply(res, 200, result);
     } catch (error) {
       try { reply(res, 500, { error: String(error) }); } catch { res.destroy(); }
     }

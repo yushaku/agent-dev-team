@@ -12,7 +12,7 @@ Run the fixture suite with `node --test ledger/tests/*.test.ts`.
 | AGENT_LEDGER_HOME | ~/.agents/ledger | Private output directory |
 | AGENT_LEDGER_CLAUDE | ~/.claude/projects | Recursive *.jsonl |
 | AGENT_LEDGER_CODEX | ~/.codex/sessions | Recursive *.jsonl |
-| AGENT_LEDGER_COPILOT | ~/.copilot/session-state | */events.jsonl |
+| AGENT_LEDGER_COPILOT | ~/.copilot/session-state | */events.jsonl and */workspace.yaml |
 | AGENT_LEDGER_JCODE | ~/.jcode/sessions | *.json |
 | AGENT_LEDGER_HERMES | ~/.hermes/state.db | sessions, messages, system_prompts and session_model_usage |
 | AGENT_LEDGER_RTK | ~/Library/Application Support/rtk/history.db | commands |
@@ -20,6 +20,89 @@ Run the fixture suite with `node --test ledger/tests/*.test.ts`.
 
 Use absolute paths for overrides. Choose a private output directory outside
 the inputs. Raw archives contain complete conversations and command lines.
+
+## Dashboard API
+
+With an ingested ledger, run `node ledger/serve.ts --port 4748` on Node 24 or 26.
+The server binds to 127.0.0.1. For IPv6 loopback use `--host ::1`.
+The standalone API and the daemon share `AGENT_LEDGER_HOME`.
+
+Pass an open Store or ledger directory to `createApi`. Its `routes` property
+contains the dashboard endpoints and static assets for the plugin's listener.
+
+```ts
+import { createApi } from './api.ts';
+import { serve } from './http.ts';
+
+const api = createApi(store);
+const http = serve({ '/health': health, ...api.routes }, { port: 4748 });
+```
+
+During deactivation, call `await http.close()` and `await api.close()`.
+The API is also callable as a standalone Node HTTP request listener. The query
+worker writes derived tables, so use a scratch ledger when testing alongside
+the plugin. Wire types for dashboard JSON responses are in `ledger/protocol.ts`.
+
+Set `AGENT_DASHBOARD_WEB` to a directory containing `index.html` for an
+installed frontend. Set `AGENT_TEAM_HOME` to the team checkout containing
+`skills/`. The defaults are `dashboard/web` and the repository root.
+Startup errors name the missing root or the occupied listen address.
+
+The query worker checks the ingest log every second. During catch-up it
+commits one source generation per turn, yielding between jobs. Each job uses
+a savepoint. If a parser throws, the job records the failure in
+`dashboard_errors`, keeps its previous successful projection and lets the
+cursor advance. A later edit or parser version retries the source. Each
+`/api/data` response includes `projection.errors` for the current version
+and `projection.lag`, the highest ingest-log ID minus the committed cursor.
+During a rebuild, the response contains the sources projected so far.
+
+A changed JSONL file replays its archived transcript. The replay log records
+its source ID, generation, byte count and duration. Copilot workspace
+metadata is available from the first pass that archives its sidecar. Older
+archives with events only use the event context.
+
+The projection groups transcript generations by source path and session ID.
+For JSONL it matches complete lines byte for byte and by occurrence within
+the generation. Restoring an old prefix counts that prefix once. A partial
+overlap retains the unmatched records from both sides, including repeated
+identical lines in a single generation. A different session ID starts a
+separate history. A headerless Codex or Claude continuation inherits the
+previous ID. JCode combines messages by message ID, falling back to their
+JSON when an ID is absent.
+
+For a replaced Hermes database, the latest archived session row for each
+session ID supplies the totals. Messages within a session use the newest
+archived row for their message ID, falling back to the archived item key.
+For RTK, a restored row with the same rowid, timestamp, command and project
+uses the latest counters. Reusing the rowid for a different command,
+project or time preserves both commands. A row found only in a previous
+generation remains available.
+
+All `dashboard_*` tables in `ledger.sqlite` are derived and safe to drop
+with the API stopped. Restarting the API rebuilds them from `ledger.sqlite`
+and `archive.sqlite`. Git metrics come from each available checkout.
+Parser cleanup retains the current version and its immediate predecessor
+after catch-up. History in the archive survives deletions from live files
+and databases, including Hermes messages.
+
+The API reads current Git metadata, report files, installed skills and CLI
+metadata. A background worker analyzes Git defects per checkout and
+default-branch head. A cached result stays visible during a Git update.
+`features.repositories[repo].loading` marks work in progress, `stale`
+marks a previous head, and `error` names a failed probe or analysis.
+Failed heads retry after five minutes. The worker warms known repositories
+at startup. Git timings are logged per repository and stored in
+`dashboard_git_attempts`. CLI discovery runs in a separate worker and
+shares a result for 60 seconds. The query worker caches up to four
+serialized date windows, refreshing them on projection or Git changes or
+after 30 seconds. If the query worker takes over 10 seconds to answer, the
+listener returns HTTP 503 with `{"loading":true}`.
+
+To compare an input directory with the Python parsers, run
+`node ledger/scripts/parity.ts DIRECTORY`. It builds a temporary ledger and
+reports differing fields. For arbitrary transcript names, use agent-named
+subdirectories such as `claude/` and `codex/`.
 
 ## Reading the archive
 

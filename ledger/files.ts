@@ -12,9 +12,13 @@ export function* files(root: string, kind: string, onError: (dir:string,error:un
   for (const entry of entries) {
     const path = join(root, entry.name);
     if (entry.isDirectory()) {
+      if (kind === 'copilot' && depth === 0) {
+        if (entry.name.startsWith('.')) continue;
+        yield path;
+      }
       if (kind !== 'jcode' && (kind !== 'copilot' || depth === 0)) yield* files(path, kind, onError, depth+1);
     } else if (entry.isFile()) {
-      if (kind === 'copilot' ? depth === 1 && entry.name === 'events.jsonl' :
+      if (kind === 'copilot' ? depth === 1 && ['events.jsonl','workspace.yaml'].includes(entry.name) :
           entry.name.endsWith(kind === 'jcode' ? '.json' : '.jsonl')) yield path;
     }
   }
@@ -89,6 +93,12 @@ export function ingestFile(store: Store, kind: string, path: string) {
   const fd = openSync(path,'r');
   try {
     const s = fstatSync(fd,{ bigint: true });
+    if (kind === 'copilot' && s.isDirectory()) {
+      const id = store.source(kind,path);
+      store.record(id,1,'directory',Buffer.alloc(0));
+      store.db.prepare('UPDATE sources SET source_gone_at=NULL WHERE id=? AND source_gone_at IS NOT NULL').run(id);
+      return;
+    }
     const sqlite = kind === 'hermes' || kind === 'rtk';
     const identity = (sqlite ? [s.dev,s.ino] : [s.dev,s.ino,s.birthtimeNs]).join(':');
     const signature = [identity,s.size,s.mtimeNs,s.ctimeNs,sqlite ? 'v2:'+stamp(path+'-wal') : ''].join('/');
@@ -98,7 +108,8 @@ export function ingestFile(store: Store, kind: string, path: string) {
     const size = Number(s.size);
     const oldIdentity = sqlite ? String(cursor.identity).split(':').slice(0,2).join(':') : cursor.identity;
     let reset = oldIdentity !== identity || (!sqlite && size < Number(cursor.size));
-    const jsonl = !sqlite && kind !== 'jcode';
+    const whole = kind === 'jcode' || (kind === 'copilot' && path.endsWith('/workspace.yaml'));
+    const jsonl = !sqlite && !whole;
     const priorOffset = Number(cursor.offset);
     let tail: Buffer = Buffer.alloc(0);
     if (jsonl && !reset && priorOffset > 0) {
@@ -120,7 +131,6 @@ export function ingestFile(store: Store, kind: string, path: string) {
     } else {
       let position = offset;
       let pending: Buffer[] = [];
-      const whole = kind === 'jcode';
       if (whole) position = 0;
       while (position < size) {
         const buffer = Buffer.allocUnsafe(Math.min(1024*1024,size-position));
