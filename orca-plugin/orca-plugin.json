@@ -3,9 +3,9 @@
   "id": "team-dashboard",
   "name": "Team dashboard",
   "version": "0.1.0",
-  "description": "A sidebar panel and the worker that answers it.",
+  "description": "The dashboard Tasks tab inside Orca, and the host of the agent history ledger.",
   "engines": {
-    "orca": ">=1.4.246"
+    "orca": ">=1.4.248"
   },
   "execution": "trusted-worker",
   "pluginApi": 1,
@@ -13,17 +13,41 @@
   "contributes": {
     "panels": [
       {
-        "id": "team-dashboard",
-        "title": "Team dashboard",
-        "icon": "blocks",
-        "entry": "src/panel.tsx",
-        "ui": "components"
+        "id": "tasks",
+        "title": "Tasks",
+        "icon": "bar-chart-3",
+        "entry": "web/panel.html",
+        "ui": "html"
+      }
+    ],
+    "statusBarItems": [
+      {
+        "id": "ledger",
+        "text": "Ledger starting",
+        "icon": "database"
+      }
+    ],
+    "events": [
+      {
+        "on": "agent.status.changed"
+      },
+      {
+        "on": "workspace.created"
+      },
+      {
+        "on": "workspace.removed"
       }
     ]
   },
   "capabilities": [
     {
       "kind": "storage:own"
+    },
+    {
+      "kind": "agent:read"
+    },
+    {
+      "kind": "workspace:read"
     }
   ]
 }

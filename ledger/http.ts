@@ -9,6 +9,7 @@ const reply = (res: ServerResponse, status: number, body: unknown) => {
   res.end(text);
 };
 
+/** Writes a fetch Response (status, headers, body) to the node response; the body is read before any header is written. */
 export async function sendResponse(res: ServerResponse, response: Response) {
   const body = Buffer.from(await response.arrayBuffer());
   res.writeHead(response.status, Object.fromEntries(response.headers));
@@ -23,27 +24,32 @@ export function serve(routes: Routes, { port = 4748, host = '127.0.0.1', retryMs
       try { url = new URL(req.url ?? '/', 'http://localhost'); } catch { return reply(res, 400, { error: 'invalid URL' }); }
       if (!Object.hasOwn(routes, url.pathname)) return reply(res, 404, { error: 'not found' });
       if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return reply(res, 405, { error: 'method not allowed' }); }
-      const result = await routes[url.pathname](req, url);
+      const result = await routes[url.pathname](req, url); // built before any header is written
       if (result instanceof Response) return await sendResponse(res, result);
       reply(res, 200, result);
     } catch (error) {
       try { reply(res, 500, { error: String(error) }); } catch { res.destroy(); }
     }
   });
-  let timer: NodeJS.Timeout | undefined, closed = false;
+  let timer: NodeJS.Timeout | undefined, closed = false, binding = true; // binding: listen() asked, neither 'listening' nor 'error' seen yet
   server.on('error', (error: NodeJS.ErrnoException) => {
+    binding = false;
     onError(error);
     // A previous host (a reload) may still hold the port: try again instead of staying dark.
-    if (error.code === 'EADDRINUSE' && retryMs && !closed) timer = setTimeout(() => server.listen(port, host), retryMs);
+    if (error.code === 'EADDRINUSE' && retryMs && !closed) timer = setTimeout(() => { binding = true; server.listen(port, host); }, retryMs);
   });
-  server.on('listening', onListening);
+  server.on('listening', () => { binding = false; onListening(); });
   server.listen(port, host);
   return {
     server,
     close: () => new Promise<void>((done) => {
       closed = true; clearTimeout(timer);
-      if (!server.listening) return done();
-      server.close(() => done()); server.closeAllConnections();
+      const shut = () => { server.close(() => done()); server.closeAllConnections(); };
+      if (server.listening) return shut();
+      if (!binding) return done();
+      // Closed before the socket finished binding: wait for the bind, then close it (or for its failure).
+      server.once('listening', shut);
+      server.once('error', () => done());
     }),
   };
 }

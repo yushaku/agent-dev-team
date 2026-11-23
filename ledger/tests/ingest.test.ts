@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { utimesSync, appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { spawn, execFile } from 'node:child_process';
 import { once } from 'node:events';
 import { promisify } from 'node:util';
@@ -390,7 +390,7 @@ test('unreadable subtree keeps prior sources present and siblings ingest', async
   } finally { chmodSync(dir,0o700); }
 });
 
-test('--once completes while the daemon waits for an Orca response', async t => {
+test('--once is refused by the lock while the daemon waits for an Orca response', async t => {
   const f = fixture(t);
   const cli = join(f.root,'orca');
   const gate = join(f.root,'waiting');
@@ -407,12 +407,11 @@ test('--once completes while the daemon waits for an Orca response', async t => 
     for (let i=0;i<200 && !existsSync(gate);i++) await sleep(25);
     assert.ok(existsSync(gate));
     f.db.exec('PRAGMA busy_timeout=100; BEGIN IMMEDIATE; COMMIT');
-    await promisify(execFile)(process.execPath,[script,'--once'],{env,timeout:5000});
-    const before = f.history('orca');
-    assert.ok(before.length);
+    // The daemon holds ingest.lock, so a second host exits cleanly (75) without touching the ledger.
+    await assert.rejects(promisify(execFile)(process.execPath,[script,'--once'],{env,timeout:5000}),
+      (error: {code?:number,stderr?:string}) => error.code === 75 && /held by launchd pid \d+/.test(String(error.stderr)));
+    assert.deepEqual(f.history('orca'),[]);
     unlinkSync(gate);
-    await sleep(200);
-    assert.deepEqual(f.history('orca'),before);
   } finally {
     rmSync(gate,{force:true});
     child.kill();
@@ -451,4 +450,414 @@ test('round-one ledger migrates in place and checks the archived cursor tail', a
     {gen:1,item:'0',text:'original\n'},{gen:2,item:'0',text:'replacement line\n'},
   ]);
   assert.ok(f.db.prepare('SELECT last_polled_at FROM orca_runs').get()?.last_polled_at);
+});
+
+const here = new URL('.',import.meta.url).pathname;
+const nodeBin = process.execPath;
+async function holder(home: string) {
+  const child = spawn(nodeBin,[join(here,'lock-child.ts'),home],{stdio:['pipe','pipe','inherit']});
+  const [line] = await once(child.stdout,'data');
+  return { child, said: String(line).trim(), stopped: once(child,'exit') };
+}
+
+test('start() ingests under a lock, trigger() coalesces to one pass, stop() releases', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'host');
+  const passes: string[] = [];
+  const { start, stop, trigger, status } = await import('../ingest.ts');
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:60_000,debounceMs:50,minGapMs:0,host:'test',onPass:p=>passes.push(p.reason)});
+  try {
+    for (let i=0;i<200 && passes.length<1;i++) await sleep(25);
+    assert.deepEqual(passes,['start']);
+    assert.equal(status()?.lock,'held');
+    assert.ok(existsSync(join(home,'ingest.lock.db')));
+    assert.ok(Object.keys(status()?.counts?.sources ?? {}).length);
+    for (let i=0;i<5;i++) trigger('event');
+    for (let i=0;i<200 && passes.length<2;i++) await sleep(25);
+    await sleep(300);
+    assert.deepEqual(passes,['start','event']);
+  } finally { await stop(); }
+  const { acquire } = await import('../lock.ts');
+  const again = acquire(home,'after');
+  assert.ok('held' in again);
+  again.held.release();
+});
+
+test('lock: simultaneous acquisition by several processes has exactly one winner', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'race');
+  mkdirSync(home);
+  const racers = await Promise.all(Array.from({length:6},() => holder(home)));
+  try {
+    assert.equal(racers.filter(r => r.said.startsWith('held')).length,1);
+    assert.equal(racers.filter(r => r.said.startsWith('refused')).length,5);
+  } finally { for (const r of racers) r.child.kill('SIGKILL'); await Promise.all(racers.map(r => r.stopped)); }
+});
+
+test('lock: a crashed holder (SIGKILL) frees it at once; a live holder keeps it past the old five-minute threshold', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'crash');
+  mkdirSync(home);
+  const { acquire } = await import('../lock.ts');
+  const first = await holder(home);
+  assert.match(first.said,/^held/);
+  // Make every file look ten minutes idle: the old design would have evicted the live holder here.
+  const old = new Date(Date.now()-10*60_000);
+  for (const name of ['ingest.lock.db','ingest.lock.info']) utimesSync(join(home,name),old,old);
+  const refused = acquire(home,'second');
+  assert.ok('by' in refused);
+  assert.match((refused as {by:string}).by,/child-\d+ pid \d+/);
+  first.child.kill('SIGKILL');
+  await first.stopped;
+  const taken = acquire(home,'second');
+  assert.ok('held' in taken, 'the OS drops the lock with the dead process');
+  // A second acquisition inside this same process (a reload) is refused too.
+  assert.ok('by' in acquire(home,'third'));
+  (taken as {held:{release():void}}).held.release();
+  assert.ok('held' in acquire(home,'fourth'));
+});
+
+test('--once exits 75 with the holder named, then runs once the holder is gone', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'once');
+  mkdirSync(home);
+  const first = await holder(home);
+  const env = {...process.env,...f.env,AGENT_LEDGER_HOME:home};
+  const script = join(here,'..','daemon.ts');
+  await assert.rejects(promisify(execFile)(nodeBin,[script,'--once'],{env}),(e:{code?:number,stderr?:string}) => e.code === 75 && /held by child-\d+ pid \d+/.test(String(e.stderr)));
+  first.child.stdin.end();
+  await first.stopped;
+  const ok = await promisify(execFile)(nodeBin,[script,'--once'],{env});
+  assert.match(ok.stdout,/wall_ms/);
+});
+
+test('private: an existing group-readable home and its files are tightened before use', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'shared');
+  mkdirSync(home,{mode:0o755});
+  chmodSync(home,0o755);
+  for (const name of ['ledger.sqlite','archive.sqlite']) { writeFileSync(join(home,name),''); chmodSync(join(home,name),0o644); }
+  const store = new Store(home);
+  store.db.close();
+  assert.equal(statSync(home).mode & 0o777,0o700);
+  for (const name of ['ledger.sqlite','archive.sqlite']) assert.equal(statSync(join(home,name)).mode & 0o777,0o600);
+  const { acquire } = await import('../lock.ts');
+  const got = acquire(home,'p');
+  assert.ok('held' in got);
+  assert.equal(statSync(join(home,'ingest.lock.db')).mode & 0o077,0);
+  (got as {held:{release():void}}).held.release();
+});
+
+test('scheduler: the periodic pass keeps its deadline under a stream of events, and event passes keep their spacing', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'sched');
+  const passes: {reason:string,at:number}[] = [];
+  const { start, stop, trigger } = await import('../ingest.ts');
+  const t0 = Date.now();
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:700,debounceMs:20,minGapMs:150,host:'test',onPass:p=>passes.push({reason:p.reason,at:Date.now()-t0})});
+  try {
+    const burst = setInterval(() => trigger('event'),10); // a continuous stream below the debounce
+    await sleep(2300);
+    clearInterval(burst);
+    await sleep(100);
+  } finally { await stop(); }
+  assert.ok(passes.filter(p => p.reason === 'interval').length >= 2, 'interval passes keep running: '+JSON.stringify(passes));
+  const events = passes.filter(p => p.reason === 'event');
+  assert.ok(events.length >= 3, 'a stream of events still gets event passes: '+JSON.stringify(passes));
+  assert.ok(events.length <= 2300/150+1, 'event passes are rate limited: '+events.length);
+});
+
+test('stop() twice during a delayed Orca call drains once, releases the lock last, and a stopped runner cannot be restarted early', async t => {
+  const f = fixture(t);
+  const cli = join(f.root,'orca');
+  const gate = join(f.root,'gate');
+  writeFileSync(cli,readFileSync(cli,'utf8').replace('case "$2"',`if [ "$2" = task-list ]; then
+    touch "$GATE"
+    while [ -f "$GATE" ]; do sleep 0.05; done
+  fi
+  case "$2"`));
+  const home = join(f.root,'drain');
+  const { start, stop } = await import('../ingest.ts');
+  const { acquire } = await import('../lock.ts');
+  process.env.GATE = gate; // the Orca CLI child inherits the test process's environment
+  t.after(() => { delete process.env.GATE; });
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},host:'test'});
+  for (let i=0;i<200 && !existsSync(gate);i++) await sleep(25);
+  assert.ok(existsSync(gate));
+  let done = 0;
+  const a = stop().then(() => done++), b = stop().then(() => done++);
+  await sleep(150);
+  assert.equal(done,0,'both callers wait for the drain');
+  assert.ok('by' in acquire(home,'x'),'the lock is still held while the pass drains');
+  assert.throws(() => start({home,host:'again'}),/still stopping/);
+  unlinkSync(gate);
+  await Promise.all([a,b]);
+  assert.equal(done,2);
+  const got = acquire(home,'x');
+  assert.ok('held' in got);
+  (got as {held:{release():void}}).held.release();
+});
+
+test('http: bad URL is 400, inherited names are 404, a failing route is 500, POST is 405', async t => {
+  const { serve } = await import('../http.ts');
+  const hits: string[] = [];
+  const srv = serve({'/ok':() => ({ok:true}),'/boom':() => { throw new Error('nope'); }},{port:0,onListening:() => hits.push('up')});
+  t.after(() => srv.close());
+  for (let i=0;i<100 && !srv.server.listening;i++) await sleep(10);
+  const { port } = srv.server.address() as {port:number};
+  const get = (path: string, method = 'GET') => new Promise<{status:number,body:string}>(resolve => {
+    import('node:http').then(({request}) => { const r = request({port,host:'127.0.0.1',path,method},res => { let b=''; res.on('data',d=>b+=d); res.on('end',()=>resolve({status:res.statusCode!,body:b})); }); r.end(); });
+  });
+  assert.equal((await get('/ok')).status,200);
+  assert.equal((await get('/boom')).status,500);
+  assert.equal((await get('/constructor')).status,404);
+  assert.equal((await get('/__proto__')).status,404);
+  assert.equal((await get('/ok','POST')).status,405);
+  assert.equal((await get('/nothing')).status,404);
+  assert.ok([200,400,404].includes((await get('//[bad')).status)); // never hangs or crashes
+});
+
+test('plugin host: deactivating during activation starts nothing; a later activation serves /health and shuts down clean', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'plugin-host');
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const saved = {...process.env};
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  const bars: string[] = [], listeners: Record<string,()=>void> = {};
+  const orca = { log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on: (e: string, h: () => void) => { listeners[e] = h; } } };
+  const probe = () => fetch(`http://127.0.0.1:${port}/health`,{signal:AbortSignal.timeout(500)}).then(r => r.json(),() => null);
+  // Deactivate while the modules are still loading.
+  const first = run(orca);
+  await shutdown();
+  await first;
+  assert.equal(await probe(),null,'the cancelled activation never bound the port');
+  assert.equal(existsSync(join(home,'ingest.lock.db')),false,'and never touched the ledger');
+  // A later activation works, and a reload (shutdown + run) hands the lock over.
+  await run(orca);
+  let health: {ok:boolean,host:string,node:string,lock:string} | null = null;
+  for (let i=0;i<200 && !health?.ok;i++) { await sleep(25); health = await probe(); }
+  assert.equal(health?.host,'orca-plugin');
+  assert.equal(health?.lock,'held');
+  assert.ok(bars.some(b => /^Ledger \d\d:\d\d ✓/.test(b)),'status bar: '+bars.join(' | '));
+  assert.ok(listeners['agent.status.changed'] && listeners['workspace.created'] && listeners['workspace.removed']);
+  await shutdown();
+  assert.equal(await probe(),null);
+  await run(orca);
+  for (let i=0;i<200 && !(await probe())?.ok;i++) await sleep(25);
+  assert.equal((await probe())?.lock,'held');
+  await shutdown();
+});
+
+test('plugin host: a failed startup shows in the status bar', async t => {
+  const f = fixture(t);
+  const saved = {...process.env};
+  // An unwritable home makes the ledger refuse to start its pass; a missing ledger module would fail the same way.
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:'/proc/definitely/not/writable',TEAM_DASHBOARD_HEALTH_PORT:String(20000+Math.floor(Math.random()*20000))});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  const bars: string[] = [];
+  const orca = { log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on() {} } };
+  await run(orca);
+  try {
+    for (let i=0;i<100 && !bars.some(b => b.includes('✗'));i++) await sleep(25);
+    assert.ok(bars.some(b => b.includes('✗')),'status bar: '+bars.join(' | '));
+  } finally { await shutdown(); }
+});
+
+test('http: close() right after serve() leaves no listener behind', async () => {
+  const { serve } = await import('../http.ts');
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const srv = serve({'/ok':() => 1},{port});
+  await srv.close();
+  await sleep(100);
+  assert.equal(srv.server.listening,false);
+  await assert.rejects(fetch(`http://127.0.0.1:${port}/ok`,{signal:AbortSignal.timeout(500)}));
+});
+
+test('a leftover ingest.lock file from an older build is removed once the lock is held, and ingest runs', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'leftover');
+  mkdirSync(home);
+  writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:process.pid,host:'launchd',token:'old'}));
+  const { start, stop, status } = await import('../ingest.ts');
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},host:'new'});
+  try {
+    for (let i=0;i<200 && !status()?.passes;i++) await sleep(25);
+    assert.equal(status()?.lock,'held');
+    assert.ok((status()?.passes ?? 0) >= 1,'a pass ran');
+    assert.equal(existsSync(join(home,'ingest.lock')),false);
+  } finally { await stop(); }
+});
+
+test('a failure after the lock is taken closes the connection: the very next acquire succeeds, in this process too', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'initfail');
+  const { acquire } = await import('../lock.ts');
+  assert.throws(() => acquire(home,'x',() => { throw Object.assign(new Error('disk says no'),{code:'EIO'}); }),/disk says no/);
+  const got = acquire(home,'x'); // a leaked connection in this process would answer BUSY
+  assert.ok('held' in got);
+  (got as {held:{release():void}}).held.release();
+});
+
+test('a store that fails to initialise leaves no open connection, and once() frees the lock', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'badstore');
+  mkdirSync(home,{mode:0o700});
+  writeFileSync(join(home,'archive.sqlite'),'this is not a database'.repeat(50));
+  const { once: runOnce } = await import('../ingest.ts');
+  const { acquire } = await import('../lock.ts');
+  await assert.rejects(runOnce({home,env:{...process.env,...f.env}}));
+  const got = acquire(home,'after');
+  assert.ok('held' in got,'the lock was released');
+  (got as {held:{release():void}}).held.release();
+  assert.throws(() => new Store(home));
+  rmSync(join(home,'archive.sqlite'));
+  const store = new Store(home); // the ledger database is not stuck behind a leaked handle
+  store.db.close();
+});
+
+test('tightening tolerates files that are not there', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'vanish');
+  mkdirSync(home,{mode:0o700});
+  const { tightenFiles } = await import('../private.ts');
+  tightenFiles(home);
+  writeFileSync(join(home,'ingest.lock.info'),'x');
+  chmodSync(join(home,'ingest.lock.info'),0o644);
+  unlinkSync(join(home,'ingest.lock.info'));
+  tightenFiles(home);
+});
+
+test('scheduler: event passes keep their spacing at dispatch even when a slow pass or a queued rerun is in the way', async t => {
+  const f = fixture(t);
+  const cli = join(f.root,'orca');
+  writeFileSync(cli,readFileSync(cli,'utf8').replace('case "$2"',`if [ "$2" = task-list ]; then sleep 0.3; fi
+  case "$2"`));
+  for (const interval of [60_000, 450]) {
+    const home = join(f.root,'spacing'+interval);
+    const starts: {reason:string,at:number}[] = [];
+    const { start, stop, trigger } = await import('../ingest.ts');
+    start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:interval,debounceMs:10,minGapMs:600,host:'test',onPass:p => starts.push({reason:p.reason,at:Date.parse(p.startedAt)})});
+    try {
+      const burst = setInterval(() => trigger('event'),20);
+      await sleep(4500);
+      clearInterval(burst);
+      await sleep(900);
+    } finally { await stop(); }
+    const ordered = starts.sort((a,b) => a.at-b.at);
+    const events = ordered.filter(p => p.reason === 'event');
+    // With a 450 ms period the periodic passes already cover the events; the spacing must hold for any event pass that does run.
+    if (interval > 1000) assert.ok(events.length >= 3,`interval ${interval}: ${JSON.stringify(ordered)}`);
+    for (const e of events) {
+      const previous = ordered[ordered.indexOf(e)-1];
+      assert.ok(previous,'an event pass follows the first pass');
+      assert.ok(e.at - previous.at >= 600-25,`interval ${interval}: event pass ${e.at-previous.at} ms after the previous pass started`);
+    }
+  }
+});
+
+test('plugin host: a second activation without a shutdown replaces the first cleanly (one listener, one ingest, old handlers inert)', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'twice');
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const saved = {...process.env};
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  const { status } = await import('../ingest.ts');
+  const make = () => { const handlers: Record<string,()=>void> = {}; return { handlers, orca: { log() {}, host: { call: async () => {} }, events: { on: (e: string, h: () => void) => { handlers[e] = h; } } } }; };
+  const one = make(), two = make();
+  const probe = () => fetch(`http://127.0.0.1:${port}/health`,{signal:AbortSignal.timeout(500)}).then(r => r.json(),() => null);
+  await run(one.orca);
+  for (let i=0;i<200 && !(await probe())?.ok;i++) await sleep(25);
+  assert.equal((await probe())?.lock,'held');
+  const firstPid = (await probe())?.startedAt;
+  await run(two.orca); // no shutdown in between
+  for (let i=0;i<200 && !(await probe())?.ok;i++) await sleep(25);
+  const second = await probe();
+  assert.equal(second?.lock,'held');
+  assert.notEqual(second?.startedAt,firstPid,'a new ingest runner replaced the first');
+  const passes = status()!.passes;
+  one.handlers['agent.status.changed']();
+  await sleep(300);
+  assert.equal(status()!.passes,passes,'the first activation\'s event handler does nothing now');
+  await shutdown(); // closes only the live listener, and it is the only one
+  await sleep(100);
+  assert.equal(await probe(),null,'no listener is left on the port');
+});
+
+/** An Orca stand-in whose first task-list call stalls until the gate file is removed (later calls do not). */
+function stalled(f: ReturnType<typeof fixture>) {
+  const cli = join(f.root,'orca');
+  writeFileSync(cli,readFileSync(cli,'utf8').replace('case "$2"',`if [ "$2" = task-list ] && [ ! -f "$GATE.done" ]; then
+    touch "$GATE"
+    while [ -f "$GATE" ]; do sleep 0.05; done
+    touch "$GATE.done"
+  fi
+  case "$2"`));
+  return join(f.root,'gate');
+}
+function hostFixture(t: import('node:test').TestContext, f: ReturnType<typeof fixture>, name: string) {
+  const home = join(f.root,name);
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const saved = {...process.env};
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const bars: string[] = [];
+  const make = () => ({ log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on() {} } });
+  const probe = () => fetch(`http://127.0.0.1:${port}/health`,{signal:AbortSignal.timeout(500)}).then(r => r.json(),() => null);
+  return { home, port, bars, make, probe };
+}
+
+test('plugin host: shutdown and a new activation overlapping a delayed pass run in order, and the activation is not lost', async t => {
+  const f = fixture(t);
+  const gate = stalled(f);
+  process.env.GATE = gate;
+  t.after(() => { delete process.env.GATE; });
+  const h = hostFixture(t,f,'overlap');
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.make());
+  for (let i=0;i<200 && !existsSync(gate);i++) await sleep(25);
+  assert.ok(existsSync(gate),'a pass is in flight');
+  let shutDown = false, reactivated = false;
+  const sd = shutdown().then(() => { shutDown = true; });
+  const re = run(h.make()).then(() => { reactivated = true; });
+  await sleep(300);
+  assert.equal(shutDown,false,'shutdown waits for the pass to drain');
+  assert.equal(reactivated,false,'the new activation waits for the shutdown');
+  unlinkSync(gate);
+  await Promise.all([sd,re]);
+  assert.ok(shutDown && reactivated);
+  let health: {ok:boolean,lock:string} | null = null;
+  for (let i=0;i<200 && !health?.ok;i++) { await sleep(25); health = await h.probe(); }
+  assert.equal(health?.lock,'held','the second activation is running');
+  assert.ok(!h.bars.some(b => b.includes('not started')),h.bars.join(' | '));
+  await shutdown();
+  assert.equal(await h.probe(),null);
+});
+
+test('plugin host: two overlapping shutdowns both wait for the drain, in order', async t => {
+  const f = fixture(t);
+  const gate = stalled(f);
+  process.env.GATE = gate;
+  t.after(() => { delete process.env.GATE; });
+  const h = hostFixture(t,f,'twoshut');
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.make());
+  for (let i=0;i<200 && !existsSync(gate);i++) await sleep(25);
+  assert.ok(existsSync(gate));
+  const order: string[] = [];
+  const a = shutdown().then(() => order.push('a')), b = shutdown().then(() => order.push('b'));
+  await sleep(300);
+  assert.deepEqual(order,[],'neither resolves while the pass drains');
+  unlinkSync(gate);
+  await Promise.all([a,b]);
+  assert.deepEqual(order,['a','b']);
+  assert.equal(await h.probe(),null,'the listener is closed');
+  const { acquire } = await import('../lock.ts');
+  const got = acquire(h.home,'after');
+  assert.ok('held' in got,'the lock is free');
+  (got as {held:{release():void}}).held.release();
 });

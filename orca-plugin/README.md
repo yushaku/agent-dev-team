@@ -1,14 +1,26 @@
-# Team dashboard
+# Team dashboard (Orca plugin)
 
-A right-sidebar panel (`src/panel.tsx`) and the plugin's own worker (`src/worker.ts`). The panel asks with `plugin.request`, the worker answers with `orca.panels.handle`, keeps the total in `orca.storage` and tells every open panel with `orca.panels.post`; `src/protocol.ts` types both sides. Orca transpiles both files when they load, so there is no build step: save and the panel or worker reloads (a worker reload drops its in-memory state, so keep what must last in storage). `orca plugin test .` runs `src/panel.test.tsx` and `src/worker.test.ts` in Node with `orca/testing`, and `orca plugin check .` renders the panel with the worker in each `src/panel.check.ts` scenario; `npx tsc -p .` type-checks against the typings `orca plugin types .` writes to `.orca/types/`. With the folder loaded, `orca plugin dev request . counter.add --data '{"by":1}'` calls the worker as the panel does.
+The dashboard's **Tasks** tab (`#tk-theo-repo`) as an Orca right-sidebar panel, with live data from the Python dashboard on `http://127.0.0.1:4747`.
+
+Open it: `orca plugin open local.team-dashboard --panel tasks`
+
+## How it works
+
+- `web/` is generated from `dashboard/web` by `scripts/sync-web.mjs`: the dashboard's own `dash.js`, `lib/charts.js`, every `tabs/*.js` and `css/app.css` byte for byte, and `panel.html` made from `index.html` (top bar and `main.js` removed). Never edit those by hand. The copied set is `dash.js` plus every module it imports, so a new shared module follows automatically. After changing `dashboard/web`, run `node orca-plugin/scripts/sync-web.mjs` (it also deletes generated files the dashboard no longer has; imports must be relative and stay inside `js/`, otherwise the sync stops with an explanation); `orca plugin test` fails (`src/web-sync.test.ts`) while the two differ.
+- `web/panel.js` and `web/panel.css` are this plugin's own. `panel.js` answers dash.js's `fetch("/api/data?days=N")` through `plugin.request('tasks.open')` and `tasks.chunk` (see the next point), shows a bar with a message and retry when 4747 is down, and keeps the last snapshot in `localStorage` so the panel paints at once and refreshes after. `panel.css` adds a light palette (Orca's `html.light`) and a narrow-sidebar gutter.
+- `src/worker.ts` fetches `/api/data` and `src/trim.ts` cuts it to what the Tasks tab reads (message bodies to 600 characters, repo names kept for the filter). A 30-day snapshot is still over 1 MiB, so the worker holds it as numbered chunks (`tasks.open`, then `tasks.chunk` per piece, each reply under 900 KB; ids are unique per worker lifetime, so a restart answers `expired` and the panel reopens the range it asked for) and `web/panel.js` joins them; `src/protocol.ts` types both calls. `web/source.js` is the panel's fetch shim and status bar logic (tested in `scripts/source.test.mjs`).
+
+## Ledger host
+
+The worker also hosts the agent history ledger (`ledger/`, step 2a): `src/ledger-host.ts` starts ingest into `~/.agents/ledger` (or `AGENT_LEDGER_HOME`) at once and every 60 s, runs a debounced pass on `agent.status.changed` and `workspace.created/removed`, shows "Ledger HH:MM ✓" in the status bar, and serves `GET http://127.0.0.1:4748/health`. The worker imports `../../ledger/*.ts` by relative path, so it works from this repository's dev folder; shipping the plugin elsewhere needs `ledger/` copied in. Tests set `TEAM_DASHBOARD_NO_LEDGER=1` so they never ingest or bind 4748. A failed startup shows as "Ledger ✗ not started" in the status bar, and a `/health` listener that cannot bind adds a ⚠ with the reason.
 
 ## Develop
 
 ```sh
-orca plugin validate .
-orca plugin dev watch .    # loads this folder into Orca and prints its logs and reloads; Ctrl-C unloads it
+node orca-plugin/scripts/sync-web.mjs --check   # fails when web/ drifted from dashboard/web
+orca plugin test orca-plugin && orca plugin check orca-plugin
+npx -p typescript@5 tsc -p orca-plugin
+orca plugin dev watch ./orca-plugin --check --shot ./orca-plugin/.orca/shots
 ```
 
-Orca names the publisher after where the plugin is installed from: the GitHub or GitLab owner of
-its repository, or `local` for a folder. See
-https://github.com/stablyai/orca/blob/main/docs/reference/plugin-authoring.md.
+An HTML panel counts as drawn when its page has loaded, so a shot shows the cached first paint, not the worker's answer.
