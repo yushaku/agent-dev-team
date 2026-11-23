@@ -84,7 +84,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Read thread",
-      "sublabel": "Investigator",
+      "sublabel": "Support Engineer",
       "width": 132
     },
     {
@@ -93,7 +93,7 @@
       "col": 1,
       "type": "messagebus",
       "label": "Answer from code",
-      "sublabel": "Investigator",
+      "sublabel": "Support Engineer",
       "width": 132
     },
     {
@@ -111,7 +111,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Expected vs actual",
-      "sublabel": "Investigator",
+      "sublabel": "Support Engineer",
       "width": 132
     },
     {
@@ -120,7 +120,7 @@
       "col": 1,
       "type": "messagebus",
       "label": "Root cause",
-      "sublabel": "Investigator",
+      "sublabel": "Support Engineer",
       "width": 132
     },
     {
@@ -165,7 +165,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Clarify scope",
-      "sublabel": "Investigator, G-Reply",
+      "sublabel": "Support Engineer, G-Reply",
       "width": 132
     },
     {
@@ -174,7 +174,7 @@
       "col": 1,
       "type": "messagebus",
       "label": "Impact, estimate",
-      "sublabel": "Investigator",
+      "sublabel": "Support Engineer",
       "width": 132
     },
     {
@@ -228,7 +228,7 @@
       "col": 1,
       "type": "backend",
       "label": "Investigate || fix",
-      "sublabel": "Investigator, Builder",
+      "sublabel": "Support Engineer, Builder",
       "width": 132
     },
     {

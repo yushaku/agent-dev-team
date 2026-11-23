@@ -7,11 +7,7 @@
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
-    "viewBox": [
-      960,
-      872
-    ],
-    "legend": {
+        "legend": {
       "mode": "auto",
       "entries": {
         "emphasis": {
@@ -40,9 +36,9 @@
       "sublabel": "triage"
     },
     {
-      "id": "investigator",
+      "id": "support",
       "type": "messagebus",
-      "label": "Investigator",
+      "label": "Support Engineer",
       "sublabel": "reads thread, drafts reply"
     },
     {
@@ -92,13 +88,13 @@
     },
     {
       "from": "orch",
-      "to": "investigator",
+      "to": "support",
       "y": 268,
       "label": "read the whole thread",
       "variant": "default"
     },
     {
-      "from": "investigator",
+      "from": "support",
       "to": "orch",
       "y": 312,
       "label": "expected vs actual",
@@ -148,13 +144,13 @@
     },
     {
       "from": "orch",
-      "to": "investigator",
+      "to": "support",
       "y": 620,
       "label": "draft fix report",
       "variant": "default"
     },
     {
-      "from": "investigator",
+      "from": "support",
       "to": "orch",
       "y": 664,
       "label": "draft + translation",

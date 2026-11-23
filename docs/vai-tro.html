@@ -48,43 +48,10 @@
 <p>Việc xử lý phiếu yêu cầu của khách hàng đi theo nhánh riêng. Nếu cần cam kết phạm vi hoặc công sức, PO chốt ở G-Scope trước khi làm. Nếu cần gửi phản hồi cho khách, PO duyệt bản nháp ở G-Reply. Xem <a href="quy-trinh.html">Quy trình</a> để theo dõi từng nhánh.</p>
 </section>
 <section>
-<h2>12 vai trò theo từng giai đoạn</h2>
-<h3>Điều phối và chuẩn bị</h3>
+<h2>11 vai trò chia thành ba nhóm</h2>
+<p>Ba nhóm khác nhau ở chỗ ai chạy và chạy ở đâu. Worker là phiên riêng do Orchestrator giao. Check là danh sách kiểm tra chạy bên trong phiên của một worker. Lệnh là phiên PO tự mở và trò chuyện trực tiếp.</p>
+<h3>Worker: phiên riêng do Orchestrator giao</h3>
 <div class="roles">
-<article class="role" id="orchestrator">
-<h4>Orchestrator</h4>
-<p>Giao việc, theo dõi kết quả và đưa các quyết định cần duyệt đến PO.</p>
-<p><strong>Khi nào?</strong> Suốt mỗi Run.</p>
-<p><strong>Bằng chứng.</strong> Tóm tắt quyết định của PO và hồ sơ bàn giao có thể kiểm tra.</p>
-<details class="verify">
-<summary>Kiểm tra theo từng bước</summary>
-<ul>
-<li><strong>Gate 1 và G-UI.</strong> Đưa quy tắc cần chốt hoặc mẫu cần chọn cho PO khi cổng áp dụng. <strong>Bằng chứng.</strong> Quyết định đã ghi lại và chuyển cho người thực hiện.</li>
-<li><strong>Gate 2.</strong> Đẩy nhánh theo cấu hình và mở pull request nháp khi cần. Đưa bản giao đã qua kiểm tra, rủi ro và việc PO cần thử. <strong>Bằng chứng.</strong> Nhánh hoặc đề nghị gộp code, kết quả kiểm tra và đường dẫn chạy thử nếu có. Đóng Run sau khi PO duyệt.</li>
-</ul>
-</details>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/orchestrator/SKILL.md">Hướng dẫn Orchestrator trên GitHub</a></p>
-</article>
-<article class="role" id="researcher">
-<h4>Researcher</h4>
-<p>Giúp PO làm rõ vấn đề trước khi giao việc.</p>
-<p><strong>Khi nào?</strong> Khi PO muốn tìm hiểu một ý tưởng sản phẩm.</p>
-<p><strong>Bằng chứng.</strong> Ghi chú về lựa chọn, quyết định hoặc câu hỏi còn mở.</p>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/researcher.md">Hướng dẫn Researcher trên GitHub</a></p>
-</article>
-<article class="role" id="solution-architect">
-<h4>Solution Architect</h4>
-<p>So sánh các phương án khi cần thay đổi thiết kế cấp hệ thống. Thiết kế các bước tự động kiểm tra và triển khai (CI/CD), chọn môi trường và cách triển khai rồi ghi quyết định vào ADR.</p>
-<p><strong>Khi nào?</strong> Khi PO cần quyết định kiến trúc hoặc cần đối chiếu kế hoạch với quyết định kiến trúc đã duyệt.</p>
-<p><strong>Bằng chứng.</strong> Phương án có số liệu tải và chi phí, hoặc nhận xét chỉ rõ chỗ kế hoạch lệch quyết định.</p>
-<details class="verify">
-<summary>Kiểm tra theo từng bước</summary>
-<ul>
-<li><strong>Trước khi triển khai.</strong> Xem kế hoạch có tuân theo hồ sơ quyết định kiến trúc (ADR) được áp dụng không. <strong>Bằng chứng.</strong> Nhận xét trỏ tới ràng buộc cụ thể trong ADR.</li>
-</ul>
-</details>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/solution-architect.md">Hướng dẫn Solution Architect trên GitHub</a></p>
-</article>
 <article class="role" id="tech-lead">
 <h4>Tech Lead</h4>
 <p>Viết quy tắc sản phẩm và chia công việc thành các phần có thể kiểm thử.</p>
@@ -112,9 +79,6 @@
 </details>
 <p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/designer.md">Hướng dẫn Designer trên GitHub</a></p>
 </article>
-</div>
-<h3>Triển khai và kiểm thử</h3>
-<div class="roles">
 <article class="role" id="builder">
 <h4>Builder</h4>
 <p>Viết bài kiểm thử trước khi triển khai (TDD), soạn nội dung bàn giao và thu thập bằng chứng. Khi đổi CI/CD, Builder triển khai theo ADR của Solution Architect.</p>
@@ -129,42 +93,6 @@
 </ul>
 </details>
 <p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/builder.md">Hướng dẫn Builder trên GitHub</a></p>
-</article>
-<article class="role" id="perf-a11y">
-<h4>Performance / Accessibility</h4>
-<p>Đo tốc độ hoặc kiểm tra khả năng sử dụng với công cụ hỗ trợ.</p>
-<p><strong>Khi nào?</strong> Khi cần bổ sung bằng chứng về hiệu năng hoặc khả năng tiếp cận.</p>
-<p><strong>Bằng chứng.</strong> Số đo so với ngưỡng, hoặc bước tái hiện lỗi tiếp cận.</p>
-<details class="verify">
-<summary>Kiểm tra theo từng bước</summary>
-<ul>
-<li><strong>Kiểm tra bản triển khai.</strong> Đo đúng luồng và điều kiện được giao. <strong>Bằng chứng.</strong> Kết quả đo hoặc kiểm tra có thể lặp lại.</li>
-</ul>
-</details>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/perf-a11y.md">Hướng dẫn Performance / Accessibility trên GitHub</a></p>
-</article>
-</div>
-<h3>Kiểm tra độc lập và bàn giao</h3>
-<div class="roles">
-<article class="role" id="security">
-<h4>Security Auditor</h4>
-<p>Rà rủi ro bảo mật trên phần thay đổi.</p>
-<p><strong>Khi nào?</strong> Khi thay đổi liên quan đến quyền truy cập, đầu vào, thanh toán, dữ liệu cá nhân hoặc tài chính, tải tệp lên, API ngoài hay thư viện phụ thuộc.</p>
-<p><strong>Bằng chứng.</strong> Tình huống rủi ro cụ thể và đường dẫn tới code liên quan.</p>
-<details class="verify">
-<summary>Kiểm tra theo từng bước</summary>
-<ul>
-<li><strong>Trước khi Reviewer đánh giá.</strong> Rà bảo mật trong cùng Task kiểm tra. Dùng danh sách kiểm tra tuân thủ nếu dự án bật cấu hình này và có đổi mô hình dữ liệu cá nhân, API liên quan, cách ghi log, lưu trữ, thời hạn giữ hoặc xóa dữ liệu cá nhân. <strong>Bằng chứng.</strong> Tình huống cụ thể. Orchestrator báo PO nếu phát hiện rủi ro mức cao hoặc nghi có rò rỉ dữ liệu cá nhân.</li>
-</ul>
-</details>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/security.md">Hướng dẫn Security Auditor trên GitHub</a></p>
-</article>
-<article class="role" id="anti-ai">
-<h4>Anti-AI Editor</h4>
-<p>Rà câu chữ, định dạng và tính chính xác của nội dung thay đổi.</p>
-<p><strong>Khi nào?</strong> Trong bước kiểm tra bản giao, ở phiên khác người viết. Có thể giao riêng để rà bản nháp.</p>
-<p><strong>Bằng chứng.</strong> Chỗ cần sửa và kết quả đối chiếu nội dung với thay đổi thực tế.</p>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/anti-ai.md">Hướng dẫn Anti-AI Editor trên GitHub</a></p>
 </article>
 <article class="role" id="reviewer">
 <h4>Code Reviewer</h4>
@@ -181,26 +109,9 @@
 </details>
 <p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/reviewer.md">Hướng dẫn Code Reviewer trên GitHub</a></p>
 </article>
-</div>
-<h3>Khi làm việc với phiếu yêu cầu hoặc cần điều tra</h3>
-<div class="roles">
-<article class="role" id="ticket-analyst">
-<h4>Ticket Analyst</h4>
-<p>Đọc trao đổi với khách và tóm tắt yêu cầu hiện tại.</p>
-<p><strong>Khi nào?</strong> Khi phiếu có chỗ thiếu về yêu cầu hoặc trao đổi mà người đang làm chưa xử lý được.</p>
-<p><strong>Bằng chứng.</strong> Danh sách câu hỏi còn mở và bản nháp phản hồi nếu được giao.</p>
-<details class="verify">
-<summary>Kiểm tra theo từng bước</summary>
-<ul>
-<li><strong>G-Scope.</strong> Làm rõ yêu cầu còn thiếu hoặc mâu thuẫn để PO chốt phạm vi. <strong>Bằng chứng.</strong> Tóm tắt yêu cầu và điểm cần quyết định.</li>
-<li><strong>G-Reply.</strong> Soạn nội dung gửi khách để PO duyệt. <strong>Bằng chứng.</strong> Bản nháp bằng ngôn ngữ của khách và bản dịch cho PO.</li>
-</ul>
-</details>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/ticket-analyst.md">Hướng dẫn Ticket Analyst trên GitHub</a></p>
-</article>
-<article class="role" id="investigator">
-<h4>Investigator</h4>
-<p>Tìm nguyên nhân của hành vi hiện tại và đánh giá phần code bị ảnh hưởng.</p>
+<article class="role" id="support">
+<h4>Support Engineer</h4>
+<p>Đọc trao đổi với khách, tìm nguyên nhân của hành vi hiện tại, đánh giá phần code bị ảnh hưởng và soạn bản nháp phản hồi.</p>
 <p><strong>Khi nào?</strong> Khi phiếu cần điều tra kỹ thuật hoặc khi có câu hỏi chỉ cần đọc code.</p>
 <p><strong>Bằng chứng.</strong> Phát hiện có vị trí trong code và ước lượng có căn cứ nếu được giao.</p>
 <details class="verify">
@@ -210,7 +121,80 @@
 <li><strong>G-Reply.</strong> Cung cấp phát hiện kỹ thuật cho bản nháp khi được giao. <strong>Bằng chứng.</strong> Kết quả điều tra và bản nháp hoặc đầu vào cho người soạn.</li>
 </ul>
 </details>
-<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/investigator.md">Hướng dẫn Investigator trên GitHub</a></p>
+<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/roles/support.md">Hướng dẫn Support Engineer trên GitHub</a></p>
+</article>
+</div>
+<h3>Check: danh sách kiểm tra chạy trong phiên của worker</h3>
+<div class="roles">
+<article class="role" id="security">
+<h4>Security</h4>
+<p>Danh sách kiểm tra bảo mật do Reviewer chạy trong Task kiểm tra, không phải một worker riêng.</p>
+<p><strong>Khi nào?</strong> Khi thay đổi liên quan đến quyền truy cập, đầu vào, thanh toán, dữ liệu cá nhân hoặc tài chính, tải tệp lên, API ngoài hay thư viện phụ thuộc.</p>
+<p><strong>Bằng chứng.</strong> Tình huống rủi ro cụ thể và đường dẫn tới code liên quan.</p>
+<details class="verify">
+<summary>Kiểm tra theo từng bước</summary>
+<ul>
+<li><strong>Trước khi Reviewer đánh giá.</strong> Reviewer rà bảo mật trong cùng Task kiểm tra (tier top khi có kích hoạt). Dùng danh sách kiểm tra tuân thủ nếu dự án bật cấu hình này và có đổi mô hình dữ liệu cá nhân, API liên quan, cách ghi log, lưu trữ, thời hạn giữ hoặc xóa dữ liệu cá nhân. <strong>Bằng chứng.</strong> Tình huống cụ thể. Orchestrator báo PO nếu phát hiện rủi ro mức cao hoặc nghi có rò rỉ dữ liệu cá nhân.</li>
+</ul>
+</details>
+<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/checks/security.md">Hướng dẫn kiểm tra bảo mật trên GitHub</a></p>
+</article>
+<article class="role" id="perf-a11y">
+<h4>Performance / Accessibility</h4>
+<p>Danh sách kiểm tra do Builder đo trên luồng thay đổi và Reviewer xét bằng chứng, không phải một worker riêng.</p>
+<p><strong>Khi nào?</strong> Khi đổi màn hình người dùng thấy hoặc đường đi được đánh dấu nóng. Bằng chứng thiếu thì quay lại Builder.</p>
+<p><strong>Bằng chứng.</strong> Số đo so với ngưỡng, hoặc bước tái hiện lỗi tiếp cận.</p>
+<details class="verify">
+<summary>Kiểm tra theo từng bước</summary>
+<ul>
+<li><strong>Kiểm tra bản triển khai.</strong> Builder đo đúng luồng và điều kiện được giao, Reviewer xét kết quả. <strong>Bằng chứng.</strong> Kết quả đo hoặc kiểm tra có thể lặp lại.</li>
+</ul>
+</details>
+<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/checks/perf-a11y.md">Hướng dẫn kiểm tra hiệu năng và khả năng tiếp cận trên GitHub</a></p>
+</article>
+<article class="role" id="anti-ai">
+<h4>Anti-AI</h4>
+<p>Danh sách kiểm tra câu chữ, định dạng và tính chính xác của nội dung thay đổi, do Reviewer chạy trong lượt kiểm tra, không phải một worker riêng.</p>
+<p><strong>Khi nào?</strong> Trong bước kiểm tra bản giao và mỗi lần kiểm tra lại; bản nháp gửi ra ngoài do phiên viết ra nó rà.</p>
+<p><strong>Bằng chứng.</strong> Chỗ cần sửa và kết quả đối chiếu nội dung với thay đổi thực tế.</p>
+<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/checks/anti-ai.md">Hướng dẫn kiểm tra Anti-AI trên GitHub</a></p>
+</article>
+</div>
+<h3>Lệnh: PO gọi trực tiếp, Orchestrator không giao</h3>
+<div class="roles">
+<article class="role" id="orchestrator">
+<h4>Orchestrator</h4>
+<p>Giao việc, theo dõi kết quả và đưa các quyết định cần duyệt đến PO.</p>
+<p><strong>Khi nào?</strong> PO gõ <code>/orchestrator</code>; vai này chạy suốt mỗi Run.</p>
+<p><strong>Bằng chứng.</strong> Tóm tắt quyết định của PO và hồ sơ bàn giao có thể kiểm tra.</p>
+<details class="verify">
+<summary>Kiểm tra theo từng bước</summary>
+<ul>
+<li><strong>Gate 1 và G-UI.</strong> Đưa quy tắc cần chốt hoặc mẫu cần chọn cho PO khi cổng áp dụng. <strong>Bằng chứng.</strong> Quyết định đã ghi lại và chuyển cho người thực hiện.</li>
+<li><strong>Gate 2.</strong> Đẩy nhánh theo cấu hình và mở pull request nháp khi cần. Đưa bản giao đã qua kiểm tra, rủi ro và việc PO cần thử. <strong>Bằng chứng.</strong> Nhánh hoặc đề nghị gộp code, kết quả kiểm tra và đường dẫn chạy thử nếu có. Đóng Run sau khi PO duyệt.</li>
+</ul>
+</details>
+<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/orchestrator/SKILL.md">Hướng dẫn Orchestrator trên GitHub</a></p>
+</article>
+<article class="role" id="researcher">
+<h4>Researcher</h4>
+<p>Giúp PO làm rõ vấn đề trước khi giao việc.</p>
+<p><strong>Khi nào?</strong> PO gõ <code>/researcher</code> khi muốn tìm hiểu một ý tưởng sản phẩm. Orchestrator không giao vai này.</p>
+<p><strong>Bằng chứng.</strong> Ghi chú về lựa chọn, quyết định hoặc câu hỏi còn mở.</p>
+<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/researcher/SKILL.md">Hướng dẫn Researcher trên GitHub</a></p>
+</article>
+<article class="role" id="solution-architect">
+<h4>Solution Architect</h4>
+<p>So sánh các phương án khi cần thay đổi thiết kế cấp hệ thống. Thiết kế các bước tự động kiểm tra và triển khai (CI/CD), chọn môi trường và cách triển khai rồi ghi quyết định vào ADR.</p>
+<p><strong>Khi nào?</strong> PO gõ <code>/solution-architect</code> khi cần quyết định kiến trúc. Orchestrator không giao vai này.</p>
+<p><strong>Bằng chứng.</strong> Phương án có số liệu tải và chi phí, ghi trong mô tả pull request nháp.</p>
+<details class="verify">
+<summary>Kiểm tra theo từng bước</summary>
+<ul>
+<li><strong>Quyết định kiến trúc.</strong> Ghi mỗi quyết định thành một ADR kèm chỉ tiêu tải và chi phí hằng tháng. <strong>Bằng chứng.</strong> ADR và pull request nháp để PO duyệt. Reviewer đối chiếu kế hoạch với ADR trong bước kiểm tra bản giao.</li>
+</ul>
+</details>
+<p class="card-link"><a href="https://github.com/yushaku/agent-dev-team/blob/main/skills/solution-architect/SKILL.md">Hướng dẫn Solution Architect trên GitHub</a></p>
 </article>
 </div>
 </section>
