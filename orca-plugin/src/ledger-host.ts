@@ -59,21 +59,34 @@ let generation = 0
 /** Tests mount the worker for the panel handler only; they must not start a real ingest or bind 4748. */
 const disabled = () => env('TEAM_DASHBOARD_NO_LEDGER') === '1'
 
-/** Starts the host. Deactivating (or activating again) while its modules still load cancels this activation. */
+/** Stops what a running host holds: ingest drains and releases the lock, then the listener closes. Safe to call twice. */
+async function teardown() {
+  const i = ingest, h = http
+  ingest = http = undefined
+  try { await i?.stop() } finally { await h?.close() }
+}
+
+/**
+ * Starts the host. Activations are serialized: a new one first waits for the previous startup and tears down
+ * whatever it left running (ingest, the /health listener), so two activations never overlap. Deactivating, or
+ * activating again, while modules still load cancels the older activation; its event handlers go inert.
+ */
 export function run(orca: Api): Promise<void> {
   const mine = ++generation
   const cancelled = () => mine !== generation
+  const prior = startup
   const bar = (text: string, tone: Report['tone'], tooltip: string) =>
     void orca.host.call('statusBar.update', { id: 'ledger', text, tone, tooltip }).catch((e) => orca.log(`statusBar.update failed: ${e}`))
   startup = (async () => {
+    await prior?.catch(() => {})
     if (disabled()) return
     try {
       const [ing, ht] = await Promise.all([load<IngestApi>('ingest.ts'), load<HttpApi>('http.ts')])
       if (cancelled()) return
-      await ing.stop() // an earlier runner of this process may still be draining
+      await teardown() // the previous activation's host, if it got as far as starting one
       if (cancelled()) return
       let healthError: string | undefined
-      const show = () => { const s = ing.status(); if (s) { const r = report(s, healthError); bar(r.text, r.tone, r.tooltip) } }
+      const show = () => { const s = ing.status(); if (s && !cancelled()) { const r = report(s, healthError); bar(r.text, r.tone, r.tooltip) } }
       ingest = ing
       ing.start({
         host: 'orca-plugin',
@@ -85,10 +98,10 @@ export function run(orca: Api): Promise<void> {
         onError: (e) => { healthError = e.code ?? String(e); orca.log(`health server ${healthError}`); show() },
         onListening: () => { healthError = undefined; show() }
       })
-      for (const event of ['agent.status.changed', 'workspace.created', 'workspace.removed']) orca.events.on(event, () => ing.trigger(event))
+      for (const event of ['agent.status.changed', 'workspace.created', 'workspace.removed']) orca.events.on(event, () => { if (!cancelled()) ing.trigger(event) })
     } catch (e) {
       orca.log(`ledger host failed to start: ${e}`)
-      bar('Ledger ✗ not started', 'danger', `The ledger host could not start: ${String(e).split('\n')[0]}`)
+      if (!cancelled()) bar('Ledger ✗ not started', 'danger', `The ledger host could not start: ${String(e).split('\n')[0]}`)
     }
   })()
   return startup
@@ -98,7 +111,5 @@ export function run(orca: Api): Promise<void> {
 export async function shutdown() {
   generation++
   await startup?.catch(() => {})
-  const i = ingest, h = http
-  ingest = http = undefined
-  try { await i?.stop() } finally { await h?.close() }
+  await teardown()
 }

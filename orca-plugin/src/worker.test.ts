@@ -62,3 +62,19 @@ test('says so when the dashboard on 4747 is down', async () => {
   await worker.deactivate()
   globalThis.fetch = realFetch
 })
+
+test('snapshot ids are unique across worker lifetimes: an old id never resolves to a newer snapshot', async () => {
+  dashboard(() => Response.json({ generated_at: 1, sessions: [{ id: 'x' }], orca: { runs: [] } }))
+  const first = await mountWorker(main)
+  const old = (await first.request('tasks.open', { days: 7 })) as { id: string }
+  await first.deactivate()
+  const second = await mountWorker(main) // a restarted worker: the counter starts over
+  const fresh = (await second.request('tasks.open', { days: 30 })) as { id: string; days: number }
+  assert.notEqual(old.id, fresh.id)
+  assert.equal(fresh.days, 30)
+  await assert.rejects(second.request('tasks.chunk', { id: old.id, index: 0 }), /expired/)
+  const piece = (await second.request('tasks.chunk', { id: fresh.id, index: 0 })) as { id: string }
+  assert.equal(piece.id, fresh.id)
+  await second.deactivate()
+  globalThis.fetch = realFetch
+})

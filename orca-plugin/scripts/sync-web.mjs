@@ -3,7 +3,7 @@
 //   node scripts/sync-web.mjs --check  exit 1 when web/ differs from what dashboard/web produces
 // web/panel.js, panel.css and source.js are the plugin's own and are never touched.
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -12,18 +12,34 @@ export const OUT = join(here, '..', 'web')
 const ENTRY = 'js/dash.js' // the module the panel boots
 const GENERATED_DIRS = ['css', 'js']
 
-/** ENTRY plus every module it imports, transitively ("./x.js" relative or "/js/x.js" absolute), plus the stylesheet. */
+/** Code without block comments and whole-line comments, so a commented-out import is not a dependency. */
+const code = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '')
+const IMPORTS = [
+  /^\s*(?:import|export)\b[^'"`;]*?\bfrom\s*["']([^"']+)["']/gm, // import x from "m" / export * from "m" (lists may span lines)
+  /^\s*import\s*["']([^"']+)["']/gm, // import "m"
+  /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g // import("m")
+]
+
+/**
+ * ENTRY plus every module it imports, transitively, plus the stylesheet. Imports must be relative and land
+ * inside js/ of the dashboard tree: that is what is copied, scanned for stale files and loadable after the copy
+ * (a root-relative "/js/x.js" would resolve against Orca's frame origin, not the plugin).
+ */
 export function sources(src = SRC) {
   const seen = new Set(), queue = [ENTRY]
   while (queue.length) {
     const file = queue.pop()
     if (seen.has(file)) continue
     seen.add(file)
-    const text = readFileSync(join(src, file), 'utf8')
-    for (const [, spec] of text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+\.js)["']/g)) {
-      const target = spec.startsWith('/') ? spec.slice(1) : relative(src, resolve(src, dirname(file), spec))
-      if (!existsSync(join(src, target))) throw new Error(`${file} imports ${spec}, which is not in dashboard/web`)
-      queue.push(target)
+    const text = code(readFileSync(join(src, file), 'utf8'))
+    for (const pattern of IMPORTS) {
+      for (const [, spec] of text.matchAll(pattern)) {
+        if (!spec.startsWith('./') && !spec.startsWith('../')) throw new Error(`${file} imports "${spec}": only relative imports inside js/ are supported by the panel`)
+        const target = relative(src, resolve(src, dirname(file), spec))
+        if (!target.startsWith('js' + sep) || target.split(sep).includes('..')) throw new Error(`${file} imports "${spec}", which resolves outside dashboard/web/js`)
+        if (!existsSync(join(src, target))) throw new Error(`${file} imports "${spec}", which is not in dashboard/web`)
+        queue.push(target.split(sep).join('/'))
+      }
     }
   }
   return ['css/app.css', ...[...seen].sort()]

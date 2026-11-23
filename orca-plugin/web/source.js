@@ -34,3 +34,29 @@ export function barView(bar, msg) {
     fail(text, hadCharts) { bar.classList.add('error'); bar.classList.toggle('empty', !hadCharts); bar.hidden = false; msg.textContent = text }
   }
 }
+
+/**
+ * Reads one snapshot as chunks. `request(name, input)` calls the worker. The ids are unique per worker
+ * lifetime, so a restart answers `expired` instead of another snapshot's data; the requested range is then
+ * opened again, once. Every piece is checked against the open it came from.
+ */
+export function makeAsk(request) {
+  return async function ask(days) {
+    for (let attempt = 0; ; attempt++) {
+      const open = await request('tasks.open', { days })
+      if (open.days !== undefined && open.days !== days) throw new Error(`worker opened ${open.days} days, not ${days}`)
+      try {
+        let text = ''
+        for (let index = 0; index < open.chunks; index++) {
+          const reply = await request('tasks.chunk', { id: open.id, index })
+          if (reply.id !== undefined && reply.id !== open.id) throw Object.assign(new Error('chunk from another snapshot'), { code: 'expired' })
+          text += reply.chunk
+        }
+        return JSON.parse(text)
+      } catch (e) {
+        if (e.code === 'expired' && attempt < 2) continue // the worker restarted or moved on: open the requested range again
+        throw e
+      }
+    }
+  }
+}

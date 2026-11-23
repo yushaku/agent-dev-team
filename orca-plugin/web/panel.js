@@ -2,7 +2,7 @@
 // so dash.js's fetch("/api/data?days=N") is answered by the plugin worker through plugin.request.
 import { show } from './js/dash.js'
 import { state } from './js/lib/charts.js'
-import { barView, makeFetch } from './source.js'
+import { barView, makeAsk, makeFetch } from './source.js'
 
 const DASHBOARD = 'http://127.0.0.1:4747'
 const VIEW = 'tk-theo-repo' // the Tasks tab
@@ -21,19 +21,7 @@ bar.querySelector('#plugin-open').addEventListener('click', () => orca.shell.ope
 /* ---- /api/data goes through the worker, in chunks (one reply may not pass 1 MiB) ---- */
 const unwrap = (out) => (out && Object.keys(out).length === 1 && 'output' in out ? out.output : out)
 const request = async (name, input) => unwrap(await orca.plugin.request(name, input, { timeoutMs: 40000 }))
-const ask = async (days) => {
-  for (let attempt = 0; ; attempt++) {
-    const open = await request('tasks.open', { days })
-    try {
-      let text = ''
-      for (let index = 0; index < open.chunks; index++) text += (await request('tasks.chunk', { id: open.id, index })).chunk
-      return JSON.parse(text)
-    } catch (e) {
-      if (e.code === 'expired' && attempt === 0) continue // the worker restarted between the calls: open again
-      throw e
-    }
-  }
-}
+const ask = makeAsk(request)
 
 /* Stale while revalidate: the last snapshot paints at once (a worker round trip lands after the
    page has loaded), then the worker's answer replaces it. localStorage may be missing: then no cache. */
