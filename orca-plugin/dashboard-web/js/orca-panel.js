@@ -2,7 +2,7 @@
 // so dash.js's fetch("/api/data?days=N") is answered by the plugin worker through plugin.request.
 import { show } from './dash.js'
 import { state } from './lib/charts.js'
-import { barView, makeAsk, makeFetch } from './orca-source.js'
+import { barView, makeAsk, makeFetch, viewHasCharts } from './orca-source.js'
 
 const DASHBOARD = 'http://127.0.0.1:4747'
 /* One page, two panels: `index.html` opens the Tasks view, `agents-tools.html` loads this page into its own document
@@ -36,7 +36,7 @@ const firstFromCache = !!cached(state.days)
 window.fetch = makeFetch({
   real: window.fetch.bind(window), base: DASHBOARD, ask, cached, remember, firstDays: state.days,
   extra: { '/api/team/skill': (url) => request('team.skill', { name: url.searchParams.get('name') || '' }) }, // the skill sheet
-  hasCharts: () => !!document.querySelector('#c-tree svg'),
+  hasCharts: () => viewHasCharts(document, VIEW), // this panel's own view, not the Tasks treemap
   ok: () => view.ok(),
   fail: (e, hadCharts) => view.fail(e.code === 'offline' ? e.message + ' Bấm Thử lại sau ít giây.' : `Không tải được dữ liệu (${e.code || 'error'}: ${e.message}).`, hadCharts)
 })

@@ -22,9 +22,14 @@ test('the plugin has a Tasks panel and an Agents tools panel, both HTML pages in
 test('each panel opens the view it is named for, and the page has those views', () => {
   const page = text('dashboard-web/index.html'), boot = text('dashboard-web/js/orca-panel.js')
   const launcher = text(panels['agents-tools'].entry)
-  assert.match(launcher, /window\.__orcaView = 'tk-agents-tools'/)
-  assert.match(launcher, /fetch\('index\.html'\)/)
-  assert.doesNotMatch(launcher, /location\.replace|location\.href|location\.assign/, 'navigating away would lose window.orca')
+  const module = text('dashboard-web/js/orca-launcher.js')
+  assert.match(launcher, /view: 'tk-agents-tools'/)
+  assert.match(launcher, /id="state"/, 'the launcher shows a loading or failure message')
+  assert.match(launcher, /id="retry"/)
+  assert.match(launcher, /\.\/js\/orca-launcher\.js/)
+  assert.match(module, /fetch\(page/)
+  assert.match(module, /target\.__orcaView = view/)
+  for (const source of [launcher, module]) assert.doesNotMatch(source, /location\.replace|location\.href|location\.assign/, 'navigating away would lose window.orca')
   assert.match(boot, /window\.__orcaView/)
   assert.ok(existsSync(join(root, 'dashboard-web/index.html')))
   for (const id of ['tk-theo-repo', 'tk-agents-tools']) {
