@@ -1,0 +1,54 @@
+import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+export const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
+
+export class Store {
+  db: DatabaseSync;
+  private version: ReturnType<DatabaseSync['prepare']>;
+  private blob: ReturnType<DatabaseSync['prepare']>;
+  private log: ReturnType<DatabaseSync['prepare']>;
+  constructor(home: string) {
+    mkdirSync(home, { recursive: true, mode: 0o700 });
+    this.db = new DatabaseSync(join(home, 'ledger.sqlite'));
+    this.db.prepare('ATTACH ? AS archive').run(join(home, 'archive.sqlite'));
+    // Rollback journals give attached databases a single atomic commit.
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS sources (
+        id INTEGER PRIMARY KEY, kind TEXT NOT NULL, path TEXT NOT NULL,
+        source_gone_at TEXT, UNIQUE(kind,path));
+      CREATE TABLE IF NOT EXISTS cursors (
+        source INTEGER PRIMARY KEY, identity TEXT, generation INTEGER NOT NULL DEFAULT 0,
+        signature TEXT, size INTEGER DEFAULT 0, offset INTEGER DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS versions (
+        source INTEGER, generation INTEGER, item TEXT, hash TEXT,
+        PRIMARY KEY(source,generation,item));
+      CREATE TABLE IF NOT EXISTS ingest_log (
+        id INTEGER PRIMARY KEY, source INTEGER, generation INTEGER, item TEXT, hash TEXT,
+        recorded_at TEXT DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS archive.blobs (hash TEXT PRIMARY KEY, bytes BLOB NOT NULL);
+    `);
+    this.version = this.db.prepare(`INSERT INTO versions VALUES(?,?,?,?) ON CONFLICT DO UPDATE
+      SET hash=excluded.hash WHERE hash<>excluded.hash`);
+    this.blob = this.db.prepare('INSERT OR IGNORE INTO archive.blobs VALUES(?,?)');
+    this.log = this.db.prepare('INSERT INTO ingest_log(source,generation,item,hash) VALUES(?,?,?,?)');
+  }
+
+  source(kind: string, path: string) {
+    const row = this.db.prepare('SELECT * FROM sources WHERE kind=? AND path=?').get(kind, path);
+    if (row) return Number(row.id);
+    const id = Number(this.db.prepare('INSERT INTO sources(kind,path) VALUES(?,?)').run(kind,path).lastInsertRowid);
+    this.db.prepare('INSERT INTO cursors(source) VALUES(?)').run(id);
+    return id;
+  }
+
+  record(source: number, generation: number, item: string, bytes: Buffer) {
+    const digest = hash(bytes);
+    const changed = this.version.run(source, generation, item, digest).changes;
+    if (!changed) return;
+    this.blob.run(digest, bytes);
+    this.log.run(source, generation, item, digest);
+  }
+}
