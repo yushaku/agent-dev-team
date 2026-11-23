@@ -28,7 +28,7 @@ Paths below are relative to the team root; workers receive their Task and role c
 | Production tickets | `skills/orchestrator/references/tickets.md` |
 | Project schema/defaults | `skills/init-team/references/config-schema.md`; model routing and skill slots `skills/orchestrator/references/routing.md` |
 | Write or review documentation | Relevant sections of `docs-policy.md` |
-| Role-specific responsibilities | `roles/<role>.md` |
+| Role-specific responsibilities | `roles/<role>.md` (workers), `checks/<check>.md` (checks run inside a worker); groups defined in `README.md` "Roles, checks and commands" |
 
 ## Locations
 

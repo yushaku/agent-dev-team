@@ -86,10 +86,17 @@ No `missing:` lines means every skill is in place.
 2. Run `/init-team`: it reads the repo, asks a few questions one at a time and writes `.team/config.yaml` (local, never committed).
 3. Run `/orchestrator <job>`, for example `/orchestrator add CSV export to the reports page`.
 
+## Roles, checks and commands
+
+- **Workers** (`roles/`: tech-lead, builder, reviewer, designer, support): the Orchestrator dispatches each as its own worker session and Task.
+- **Checks** (`checks/`: security, perf-a11y, anti-ai): checklists a worker runs inside its own session, never as a separate worker.
+- **Commands** (`skills/`: `/orchestrator`, `/researcher`, `/solution-architect`, `/init-team`): sessions the PO starts and chats with directly; the Orchestrator never dispatches them.
+
 ## Layout
 
 - `workflow.md`: short overview, decision boundaries and reading index
-- `roles/`: one card per worker role
+- `roles/`: worker cards (see "Roles, checks and commands" below)
+- `checks/`: check cards
 - `skills/orchestrator/`: the Orchestrator skill; `references/` holds its step files, coding agents and ticket mode; Orca commands come from the version-matched skills
 - `skills/init-team/references/config-schema.md`: project config schema and defaults; platform and model presets live beside it
 - `skills/orchestrator/references/routing.md`: model routing and skill slots

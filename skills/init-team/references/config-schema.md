@@ -103,7 +103,7 @@ models:
 
 - `catalog.<alias>`: required `agent`; `model` and `effort` are strings or null. Null/omitted means omit that launch flag and use the agent's setting, not a guessed model. Optional `enabled: false` removes the entry from routing. Provider/account configuration and secrets stay in the agent; `provider` describes the intended backend without switching it.
 - `tiers`: ordered alias lists, cheapest/preferred first as chosen by the PO. Every alias must exist in `catalog`; supported tier names are `fast`, `work`, `top`. Use separate aliases for different effort settings. Model names and provider names do not establish quality, price or availability.
-- `roles`: optional role-id mappings. `tier` overrides the role's default; `prefer` reorders eligible entries within that tier. Missing keys retain the role default and tier order. A referenced alias must belong to the selected tier.
+- `roles`: optional role-id mappings; ids are the worker cards in `roles/` (`tech-lead`, `builder`, `reviewer`, `designer`, `support`). A check in `checks/` runs inside its host worker's Task and takes that Task's tier. `tier` overrides the role's default; `prefer` reorders eligible entries within that tier. Missing keys retain the role default and tier order. A referenced alias must belong to the selected tier.
 - Existing `models.agents` and per-agent tier maps are legacy inputs to the interview, not dispatch settings. Show their proposed translation for PO agreement; preserve explicit disabled-agent choices. Missing old model/effort values remain unanswered rather than being filled from a deleted registry.
 
 ## Code search setup

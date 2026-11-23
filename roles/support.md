@@ -1,4 +1,4 @@
-# Investigator
+# Support Engineer
 
 - **Runs on:** tier work. Ticket mode and read-only questions (`skills/orchestrator/references/tickets.md`).
 - **Skills:** `diagnosing-bugs`, `source-driven-development`, `browser-testing-with-devtools`.

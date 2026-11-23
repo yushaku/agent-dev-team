@@ -23,7 +23,7 @@ models:
   tiers:
     fast: [codex, claude]
     work: [codex, claude]
-    top:  [claude, codex]   # Reviewer, Tech Lead, Security on the other provider
+    top:  [claude, codex]   # Reviewer, Tech Lead on the other provider
 ```
 
 ## B. One agent, tiers by model and effort
@@ -44,7 +44,7 @@ models:
 
 ## C. Two agents, cross-provider review
 
-Work tier (Builder, Designer, Investigator) on one provider, top tier (Reviewer, Tech Lead, Security) on the other; every tier falls back to the other agent on a launch failure (rate limit, auth). Codex ids are examples: replace them with discovered ids the PO places.
+Work tier (Builder, Designer, Support Engineer) on one provider, top tier (Reviewer, Tech Lead) on the other; every tier falls back to the other agent on a launch failure (rate limit, auth). Codex ids are examples: replace them with discovered ids the PO places.
 
 ```yaml
 models:

@@ -6,7 +6,7 @@
 2. Read the relevant request/ticket, `todo.md`, carry-over and research notes it names. Choose the team below; resolve only its role skills and project slots. Report missing required skills once.
 3. Select agents/models from project `models` via `skills/orchestrator/references/routing.md` "Model routing"; complete Run selection below before creating Tasks or dispatching workers.
 4. For code changes, use a feature worktree from the configured base or PO-named branch. Link `.team` and each `worktree_links` path to its main-checkout counterpart (one shared `.team/` per repo); follow install/verify commands and `serial`. Keep baseline failures distinct from regressions.
-5. With `codegraph: on` (`skills/init-team/references/config-schema.md` "Code search setup"), check the worktree has `.codegraph/`; if missing, run `codegraph init .` in it before dispatch. Read-only Investigators without a worktree use the main checkout's index.
+5. With `codegraph: on` (`skills/init-team/references/config-schema.md` "Code search setup"), check the worktree has `.codegraph/`; if missing, run `codegraph init .` in it before dispatch. Read-only Support Engineers without a worktree use the main checkout's index.
 
 ## Run selection
 
@@ -22,7 +22,7 @@
 - New or changed business rules need a spec and Gate 1. The Builder can author it; add a Tech Lead for unresolved requirements or design. New screens follow G-UI and `ui_rules`; delivery and tickets keep their gates (`gates.md`).
 - Architecture impact without an accepted ADR (external vendor/system, data store, deployment topology, load target or personal-data boundary): ask the PO for a Solution Architect session before planning.
 - **Parallel Builders:** when the plan has two or more slices without `after:` (`roles/tech-lead.md` "Parallel slices") and `flow.max_concurrent_agents` allows, dispatch one Builder per independent slice group, each in a child worktree of the feature branch (preflight steps 4 and 5 apply), naming its slice IDs in the Task. A slice with `after:` starts once those slices are merged. The first-dispatched Builder is the integration owner: it integrates finished child branches in plan order (`delivery.md`), reruns `commands.verify` on the feature branch and prepares delivery evidence. One Reviewer reviews the integrated feature branch. Keep one Builder when every slice depends on another, the plan has fewer than three slices, or `serial: true`.
-- Read-only questions may use one Investigator without a worktree. Respect `flow.max_concurrent_agents`; parallel work needs disjoint ownership or isolated workspaces and an integration owner.
+- Read-only questions may use one Support Engineer without a worktree. Respect `flow.max_concurrent_agents`; parallel work needs disjoint ownership or isolated workspaces and an integration owner.
 - PO roster overrides apply. Ignore legacy `flow.default_size` and `flow.max_size`.
 
 ## Dispatch and follow-ups
