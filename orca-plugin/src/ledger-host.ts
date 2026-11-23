@@ -165,7 +165,10 @@ export function run(orca: Api): Promise<void> {
           port, retryMs,
           onError: (e) => {
             const code = e.code ?? String(e)
-            if (code === 'EADDRINUSE') { if (!mynet.busy.includes(port)) mynet.busy.push(port) } else mynet.error = `${port} ${code}`
+            if (code === 'EADDRINUSE') {
+              if (mynet.busy.includes(port)) return // still held: the retry every 5 s is not news
+              mynet.busy.push(port)
+            } else mynet.error = `${port} ${code}`
             orca.log(`listener ${port} ${code}`); show()
           },
           onListening: () => { mynet.busy = mynet.busy.filter((p) => p !== port); if (!mynet.bound.includes(port)) mynet.bound.push(port); show() }
