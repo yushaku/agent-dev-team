@@ -1,23 +1,30 @@
 # Team dashboard (Orca plugin)
 
-The dashboard's **Tasks** tab (`#tk-theo-repo`) as an Orca right-sidebar panel, with live data from the Python dashboard on `http://127.0.0.1:4747`.
+The dashboard's **Tasks** tab (`#tk-theo-repo`) as an Orca right-sidebar panel, with live data from the ledger API that this plugin's worker hosts itself.
 
 Open it: `orca plugin open local.team-dashboard --panel tasks`
 
 ## How it works
 
-- `web/` is generated from `dashboard/web` by `scripts/sync-web.mjs`: the dashboard's own `dash.js`, `lib/charts.js`, every `tabs/*.js` and `css/app.css` byte for byte, and `panel.html` made from `index.html` (top bar and `main.js` removed). Never edit those by hand. The copied set is `dash.js` plus every module it imports, so a new shared module follows automatically. After changing `dashboard/web`, run `node orca-plugin/scripts/sync-web.mjs` (it also deletes generated files the dashboard no longer has; imports must be relative and stay inside `js/`, otherwise the sync stops with an explanation); `orca plugin test` fails (`src/web-sync.test.ts`) while the two differ.
+- Three folders are generated from the repository by `scripts/sync-web.mjs`, so the plugin folder is self-contained and imports nothing from `../ledger` or `../dashboard` at run time: `ledger/` (a copy of `ledger/*.ts`), `dashboard-web/` (the full dashboard web bundle the API serves) and `web/` (the panel). `web/` is made from `dashboard/web`: the dashboard's own `dash.js`, `lib/charts.js`, every `tabs/*.js` and `css/app.css` byte for byte, and `panel.html` made from `index.html` (top bar and `main.js` removed). Never edit those by hand. The copied set is `dash.js` plus every module it imports, so a new shared module follows automatically. After changing `dashboard/web`, run `node orca-plugin/scripts/sync-web.mjs` (it also deletes generated files the dashboard no longer has; imports must be relative and stay inside `js/`, otherwise the sync stops with an explanation); `orca plugin test` fails (`src/web-sync.test.ts`) while the two differ.
 - `web/panel.js` and `web/panel.css` are this plugin's own. `panel.js` answers dash.js's `fetch("/api/data?days=N")` through `plugin.request('tasks.open')` and `tasks.chunk` (see the next point), shows a bar with a message and retry when 4747 is down, and keeps the last snapshot in `localStorage` so the panel paints at once and refreshes after. `panel.css` adds a light palette (Orca's `html.light`) and a narrow-sidebar gutter.
-- `src/worker.ts` fetches `/api/data` and `src/trim.ts` cuts it to what the Tasks tab reads (message bodies to 600 characters, repo names kept for the filter). A 30-day snapshot is still over 1 MiB, so the worker holds it as numbered chunks (`tasks.open`, then `tasks.chunk` per piece, each reply under 900 KB; ids are unique per worker lifetime, so a restart answers `expired` and the panel reopens the range it asked for) and `web/panel.js` joins them; `src/protocol.ts` types both calls. `web/source.js` is the panel's fetch shim and status bar logic (tested in `scripts/source.test.mjs`).
+- `src/worker.ts` reads the snapshot from the in-process API (`dashboardData` in `src/ledger-host.ts`, no network hop) and `src/trim.ts` cuts it to what the Tasks tab reads (message bodies to 600 characters, repo names kept for the filter). A 30-day snapshot is still over 1 MiB, so the worker holds it as numbered chunks (`tasks.open`, then `tasks.chunk` per piece, each reply under 900 KB; ids are unique per worker lifetime, so a restart answers `expired` and the panel reopens the range it asked for) and `web/panel.js` joins them; `src/protocol.ts` types both calls. `web/source.js` is the panel's fetch shim and status bar logic (tested in `scripts/source.test.mjs`).
 
-## Ledger host
+## Ledger host and dashboard server
 
-The worker also hosts the agent history ledger (`ledger/`, step 2a): `src/ledger-host.ts` starts ingest into `~/.agents/ledger` (or `AGENT_LEDGER_HOME`) at once and every 60 s, runs a debounced pass on `agent.status.changed` and `workspace.created/removed`, shows "Ledger HH:MM ✓" in the status bar, and serves `GET http://127.0.0.1:4748/health`. The worker imports `../../ledger/*.ts` by relative path, so it works from this repository's dev folder; shipping the plugin elsewhere needs `ledger/` copied in. Tests set `TEAM_DASHBOARD_NO_LEDGER=1` so they never ingest or bind 4748. A failed startup shows as "Ledger ✗ not started" in the status bar, and a `/health` listener that cannot bind adds a ⚠ with the reason.
+The worker hosts the agent history ledger and the dashboard (`src/ledger-host.ts`):
+
+- ingest into `~/.agents/ledger` (or `AGENT_LEDGER_HOME`) at once and every 60 s, plus a debounced pass on `agent.status.changed` and `workspace.created/removed`;
+- the dashboard API and web UI (`createApi` from the packaged `ledger/`, assets from `dashboard-web/`) and `GET /health`, on **127.0.0.1:4747** and **127.0.0.1:4748**. 4747 keeps retrying every 5 s while another server (the Python dashboard) holds it; 4748 stays until step 4. Every route answers only to a loopback `Host` header (403 otherwise);
+- a status bar item such as `Ledger 12:04 ✓ 4747·4748` (or `4748 (4747 busy)` before the cutover; ⚠ means a listener or the API failed, the tooltip says why);
+- shutdown order: listeners, the API's worker, then ingest.
+
+Environment: `AGENT_DASHBOARD_WEB` defaults to the plugin's `dashboard-web/`; `AGENT_TEAM_HOME` (the team checkout with `skills/`) defaults to `~/.agents/teams`. `TEAM_DASHBOARD_PORT` and `TEAM_DASHBOARD_HEALTH_PORT` override the ports (tests use them). Tests set `TEAM_DASHBOARD_NO_LEDGER=1` so they never ingest or bind ports. A failed startup shows as "Ledger ✗ not started"; an API that cannot start leaves ingest and `/health` running.
 
 ## Develop
 
 ```sh
-node orca-plugin/scripts/sync-web.mjs --check   # fails when web/ drifted from dashboard/web
+node orca-plugin/scripts/sync-web.mjs --check   # fails when web/, ledger/ or dashboard-web/ drifted from the repository
 orca plugin test orca-plugin && orca plugin check orca-plugin
 npx -p typescript@5 tsc -p orca-plugin
 orca plugin dev watch ./orca-plugin --check --shot ./orca-plugin/.orca/shots
