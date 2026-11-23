@@ -589,6 +589,7 @@ test("issues section renders severity rows with filter hints and an empty state"
 
 
 test("feature Runs compare variants, preserve unknowns and escape branch and skill names", () => {
+  C.state.repo = "";
   const feature = { repo: "sample", branch: "feat/<example>", variant: "direct", tokens: 100,
     first_activity: 10, last_activity: 20, lead_seconds: 10, session_count: 2, agents: ["codex"],
     loaded_skills: { "<skill>": 1 }, run_ids: [], fix_rounds: { count: 0, source: "code-review" },
@@ -618,6 +619,7 @@ test("feature Runs compare variants, preserve unknowns and escape branch and ski
 });
 
 test("feature charts preserve fractional medians, round buckets and delivery mark states", () => {
+  C.state.repo = "";
   const rows = [0, 1, 2, 3, 7].map((count, i) => ({
     repo: "r", branch: "feat/<" + i + ">", variant: i < 2 ? "direct" : "orca", tokens: (i + 1) * 100,
     last_activity: 1795265470 + i * 86400, fix_rounds: { count, source: "reports" }, gate2_findings: i,
@@ -641,4 +643,14 @@ test("feature charts preserve fractional medians, round buckets and delivery mar
   assert.match(time, /Lỗi Gate 2: 4/);
   assert.doesNotMatch(time, /NaN|undefined|Infinity/);
   assert.doesNotMatch(featureTimeline([{ ...rows[0], tokens: 0 }], 280), /NaN|Infinity/);
+  renderFeatures([{ repo: "r", branch: "main", feature_segments: [rows[1]] }]);
+  assert.match(element("#feature-runs").innerHTML, /feat\/&lt;1&gt;/);
+  assert.doesNotMatch(element("#feature-runs").innerHTML, /feat\/&lt;2&gt;/);
+  C.state.data.sessions = [{ repo: "original", feature_segments: [rows[1]] }];
+  Object.assign(C.state, { repo: "r", agent: "", role: "", wt: "", runF: "", taskF: "" });
+  assert.equal(C.sessionsF().length, 0);
+  assert.equal(C.sessionsF(true).length, 1);
+  renderFeatures(C.sessionsF(true));
+  assert.match(element("#feature-runs").innerHTML, /feat\/&lt;1&gt;/);
+  C.state.repo = "";
 });

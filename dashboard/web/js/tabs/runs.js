@@ -138,8 +138,8 @@ export function featureTimeline(rows, W) {
 
 export function renderFeatures(S) {
   const features = C.state.data.features?.runs || [];
-  const keys = new Set(S.map(s => JSON.stringify([s.repo, s.branch])));
-  const rows = features.filter(f => keys.has(JSON.stringify([f.repo, f.branch])));
+  const keys = new Set(S.flatMap(s => (s.feature_segments || [s]).map(p => JSON.stringify([p.repo, p.branch]))));
+  const rows = features.filter(f => (!C.state.repo || f.repo === C.state.repo) && keys.has(JSON.stringify([f.repo, f.branch])));
   const value = v => v == null ? "Chưa rõ" : C.fmt(v);
   const median = values => {
     const sorted = [...values].sort((a, b) => a - b), n = sorted.length;

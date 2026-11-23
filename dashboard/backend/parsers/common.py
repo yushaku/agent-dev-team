@@ -246,6 +246,29 @@ def parse_rtk(start_date=None):
         return {"available": False}
 
 
+def note_branch(s, ts, cwd=None, branch=None, source="message_context"):
+    segments = s.setdefault("branch_segments", [])
+    previous = segments[-1] if segments else dict(cwd=None, branch=None, branch_source="unavailable")
+    context = dict(cwd=cwd or previous["cwd"], branch=previous["branch"], branch_source=previous["branch_source"])
+    if cwd and cwd != previous["cwd"]:
+        context["branch"] = None
+        context["branch_source"] = "unavailable"
+    if branch is not None:
+        context["branch"] = branch
+        context["branch_source"] = source
+    if not segments or any(context[k] != previous[k] for k in context):
+        segments.append(dict(context, at=ts))
+    return context
+
+
+def branch_at(s, ts):
+    segments = s.get("branch_segments")
+    if segments is None:
+        return dict(cwd=s.get("cwd"), branch=s.get("branch"))
+    return next((x for x in reversed(segments) if x["at"] is None or (ts is not None and x["at"] <= ts)),
+                dict(cwd=s.get("cwd"), branch=None))
+
+
 def loaded_skills(s):
     """Agent loads plus hook-injected skills (once per session unless also loaded). name -> count."""
     out = {k: v[0] for k, v in (s.get("skills") or {}).items()}

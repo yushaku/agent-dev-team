@@ -114,7 +114,8 @@ def build_features(sessions, runs):
                        agents=sorted({s["agent"] for s in rows}), loaded_skills=skills,
                        fix_rounds=dict(count=rounds, source=source), gate2_findings=gate_findings(directory),
                        delivered=delivered(checkout, branch, refs))
-        feature["sources"] = dict(checkout=checkout_source, tokens="session_usage", activity="session_bounds",
+        feature["sources"] = dict(checkout=checkout_source, tokens="session_usage", activity="branch_activity_bounds",
+                                  branch=sorted({s.get("branch_source", "session") for s in rows}),
                                   loaded_skills="session_skill_loads_and_hooks",
                                   gate2_findings="decisions" if feature["gate2_findings"] is not None else "unavailable",
                                   delivered="local_git_ancestry")

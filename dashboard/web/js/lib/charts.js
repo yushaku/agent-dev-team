@@ -59,8 +59,9 @@ export function splitWhy(s) { // Hermes stores one aggregate call, so ctx_* only
   if (s.calls > 1 && s.ctx_med >= SPLIT_CTX) r.push(`Context trung vị ${Math.round(s.ctx_med / 1e3)}k`);
   return r.join(", ");
 }
-export function sessionsF() {
-  return state.data.sessions.filter(s => (!state.repo || s.repo === state.repo) && (!state.agent || s.agent === state.agent)
+export function sessionsF(featureBranches = false) {
+  return state.data.sessions.filter(s => (!state.repo || s.repo === state.repo ||
+    (featureBranches && (s.feature_segments || []).some(p => p.repo === state.repo))) && (!state.agent || s.agent === state.agent)
     && (!state.role || s.role === state.role) && (!state.wt || s.worktree === state.wt)
     && (!state.runF || s.run_id === state.runF) && (!state.taskF || s.task_id === state.taskF));
 }
