@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { ensurePrivateHome, tightenFiles } from './private.ts';
 
 export const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 
@@ -11,7 +11,7 @@ export class Store {
   private blob: ReturnType<DatabaseSync['prepare']>;
   private log: ReturnType<DatabaseSync['prepare']>;
   constructor(home: string) {
-    mkdirSync(home, { recursive: true, mode: 0o700 });
+    ensurePrivateHome(home);
     this.db = new DatabaseSync(join(home, 'ledger.sqlite'));
     this.db.exec('PRAGMA busy_timeout=30000');
     this.db.prepare('ATTACH ? AS archive').run(join(home, 'archive.sqlite'));
@@ -53,6 +53,7 @@ export class Store {
       }
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    tightenFiles(home);
     this.version = this.db.prepare(`INSERT INTO versions VALUES(?,?,?,?) ON CONFLICT DO UPDATE
       SET hash=excluded.hash WHERE hash<>excluded.hash`);
     this.blob = this.db.prepare('INSERT OR IGNORE INTO archive.blobs VALUES(?,?)');

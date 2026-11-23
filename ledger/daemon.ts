@@ -22,7 +22,8 @@ if (import.meta.main) {
       onPass: pass => { for (const message of pass.errors) console.error(message); },
       onState: s => { if (s.lock === 'waiting' && s.lockedBy) console.error(`waiting: ingest is held by ${s.lockedBy}`); },
     });
-    const quit = async () => { await stop(); process.exit(0); };
+    let quitting: Promise<void> | undefined;
+    const quit = () => (quitting ??= stop().then(() => process.exit(0))); // a second signal waits for the same drain
     process.on('SIGTERM', quit);
     process.on('SIGINT', quit);
     // Keeps the process alive between passes; state.lock stays referenced for debugging.

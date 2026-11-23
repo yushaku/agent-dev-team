@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { utimesSync, appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { spawn, execFile } from 'node:child_process';
 import { once } from 'node:events';
 import { promisify } from 'node:util';
@@ -452,46 +452,167 @@ test('round-one ledger migrates in place and checks the archived cursor tail', a
   assert.ok(f.db.prepare('SELECT last_polled_at FROM orca_runs').get()?.last_polled_at);
 });
 
-test('start() ingests under a lock, trigger() debounces to one pass, stop() releases', async t => {
+const here = new URL('.',import.meta.url).pathname;
+const nodeBin = process.execPath;
+async function holder(home: string) {
+  const child = spawn(nodeBin,[join(here,'lock-child.ts'),home],{stdio:['pipe','pipe','inherit']});
+  const [line] = await once(child.stdout,'data');
+  return { child, said: String(line).trim(), stopped: once(child,'exit') };
+}
+
+test('start() ingests under a lock, trigger() coalesces to one pass, stop() releases', async t => {
   const f = fixture(t);
   const home = join(f.root,'host');
   const passes: string[] = [];
   const { start, stop, trigger, status } = await import('../ingest.ts');
-  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:60_000,debounceMs:50,host:'test',onPass:p=>passes.push(p.reason)});
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:60_000,debounceMs:50,minGapMs:0,host:'test',onPass:p=>passes.push(p.reason)});
   try {
     for (let i=0;i<200 && passes.length<1;i++) await sleep(25);
     assert.deepEqual(passes,['start']);
     assert.equal(status()?.lock,'held');
-    assert.ok(existsSync(join(home,'ingest.lock')));
+    assert.ok(existsSync(join(home,'ingest.lock.db')));
     assert.ok(Object.keys(status()?.counts?.sources ?? {}).length);
     for (let i=0;i<5;i++) trigger('event');
     for (let i=0;i<200 && passes.length<2;i++) await sleep(25);
     await sleep(300);
     assert.deepEqual(passes,['start','event']);
   } finally { await stop(); }
-  assert.equal(existsSync(join(home,'ingest.lock')),false);
+  const { acquire } = await import('../lock.ts');
+  const again = acquire(home,'after');
+  assert.ok('held' in again);
+  again.held.release();
 });
 
-test('a second host waits for the lock, takes it when the holder is gone, and a dead holder is stale', async t => {
+test('lock: simultaneous acquisition by several processes has exactly one winner', async t => {
   const f = fixture(t);
-  const home = join(f.root,'host2');
-  const { acquire } = await import('../ingest.ts');
-  mkdirSync(home,{recursive:true});
-  const first = acquire(home,'a');
-  assert.ok('held' in first);
-  // The same process holding it counts as the holder only for the original taker; another pid is refused.
-  writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:process.ppid,host:'other',token:'x'}));
-  assert.ok('by' in acquire(home,'b'));
-  writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:2147483646,host:'dead',token:'x'}));
-  assert.ok('held' in acquire(home,'b'));
+  const home = join(f.root,'race');
+  mkdirSync(home);
+  const racers = await Promise.all(Array.from({length:6},() => holder(home)));
+  try {
+    assert.equal(racers.filter(r => r.said.startsWith('held')).length,1);
+    assert.equal(racers.filter(r => r.said.startsWith('refused')).length,5);
+  } finally { for (const r of racers) r.child.kill('SIGKILL'); await Promise.all(racers.map(r => r.stopped)); }
 });
 
-test('start() repeats a pass every interval when nothing else asks', async t => {
+test('lock: a crashed holder (SIGKILL) frees it at once; a live holder keeps it past the old five-minute threshold', async t => {
   const f = fixture(t);
-  const home = join(f.root,'host3');
-  const passes: string[] = [];
+  const home = join(f.root,'crash');
+  mkdirSync(home);
+  const { acquire } = await import('../lock.ts');
+  const first = await holder(home);
+  assert.match(first.said,/^held/);
+  // Make every file look ten minutes idle: the old design would have evicted the live holder here.
+  const old = new Date(Date.now()-10*60_000);
+  for (const name of ['ingest.lock.db','ingest.lock.info']) utimesSync(join(home,name),old,old);
+  const refused = acquire(home,'second');
+  assert.ok('by' in refused);
+  assert.match((refused as {by:string}).by,/child-\d+ pid \d+/);
+  first.child.kill('SIGKILL');
+  await first.stopped;
+  const taken = acquire(home,'second');
+  assert.ok('held' in taken, 'the OS drops the lock with the dead process');
+  // A second acquisition inside this same process (a reload) is refused too.
+  assert.ok('by' in acquire(home,'third'));
+  (taken as {held:{release():void}}).held.release();
+  assert.ok('held' in acquire(home,'fourth'));
+});
+
+test('--once exits 75 with the holder named, then runs once the holder is gone', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'once');
+  mkdirSync(home);
+  const first = await holder(home);
+  const env = {...process.env,...f.env,AGENT_LEDGER_HOME:home};
+  const script = join(here,'..','daemon.ts');
+  await assert.rejects(promisify(execFile)(nodeBin,[script,'--once'],{env}),(e:{code?:number,stderr?:string}) => e.code === 75 && /held by child-\d+ pid \d+/.test(String(e.stderr)));
+  first.child.stdin.end();
+  await first.stopped;
+  const ok = await promisify(execFile)(nodeBin,[script,'--once'],{env});
+  assert.match(ok.stdout,/wall_ms/);
+});
+
+test('private: an existing group-readable home and its files are tightened before use', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'shared');
+  mkdirSync(home,{mode:0o755});
+  chmodSync(home,0o755);
+  for (const name of ['ledger.sqlite','archive.sqlite']) { writeFileSync(join(home,name),''); chmodSync(join(home,name),0o644); }
+  const store = new Store(home);
+  store.db.close();
+  assert.equal(statSync(home).mode & 0o777,0o700);
+  for (const name of ['ledger.sqlite','archive.sqlite']) assert.equal(statSync(join(home,name)).mode & 0o777,0o600);
+  const { acquire } = await import('../lock.ts');
+  const got = acquire(home,'p');
+  assert.ok('held' in got);
+  assert.equal(statSync(join(home,'ingest.lock.db')).mode & 0o077,0);
+  (got as {held:{release():void}}).held.release();
+});
+
+test('scheduler: the periodic pass keeps its deadline under a stream of events, and event passes keep their spacing', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'sched');
+  const passes: {reason:string,at:number}[] = [];
+  const { start, stop, trigger } = await import('../ingest.ts');
+  const t0 = Date.now();
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:700,debounceMs:20,minGapMs:150,host:'test',onPass:p=>passes.push({reason:p.reason,at:Date.now()-t0})});
+  try {
+    const burst = setInterval(() => trigger('event'),10); // a continuous stream below the debounce
+    await sleep(2300);
+    clearInterval(burst);
+    await sleep(100);
+  } finally { await stop(); }
+  assert.ok(passes.filter(p => p.reason === 'interval').length >= 2, 'interval passes keep running: '+JSON.stringify(passes));
+  const events = passes.filter(p => p.reason === 'event');
+  assert.ok(events.length >= 3, 'a stream of events still gets event passes: '+JSON.stringify(passes));
+  assert.ok(events.length <= 2300/150+1, 'event passes are rate limited: '+events.length);
+});
+
+test('stop() twice during a delayed Orca call drains once, releases the lock last, and a stopped runner cannot be restarted early', async t => {
+  const f = fixture(t);
+  const cli = join(f.root,'orca');
+  const gate = join(f.root,'gate');
+  writeFileSync(cli,readFileSync(cli,'utf8').replace('case "$2"',`if [ "$2" = task-list ]; then
+    touch "$GATE"
+    while [ -f "$GATE" ]; do sleep 0.05; done
+  fi
+  case "$2"`));
+  const home = join(f.root,'drain');
   const { start, stop } = await import('../ingest.ts');
-  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:150,host:'test',onPass:p=>passes.push(p.reason)});
-  try { for (let i=0;i<200 && passes.length<3;i++) await sleep(25); } finally { await stop(); }
-  assert.deepEqual(passes.slice(0,3),['start','interval','interval']);
+  const { acquire } = await import('../lock.ts');
+  process.env.GATE = gate; // the Orca CLI child inherits the test process's environment
+  t.after(() => { delete process.env.GATE; });
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},host:'test'});
+  for (let i=0;i<200 && !existsSync(gate);i++) await sleep(25);
+  assert.ok(existsSync(gate));
+  let done = 0;
+  const a = stop().then(() => done++), b = stop().then(() => done++);
+  await sleep(150);
+  assert.equal(done,0,'both callers wait for the drain');
+  assert.ok('by' in acquire(home,'x'),'the lock is still held while the pass drains');
+  assert.throws(() => start({home,host:'again'}),/still stopping/);
+  unlinkSync(gate);
+  await Promise.all([a,b]);
+  assert.equal(done,2);
+  const got = acquire(home,'x');
+  assert.ok('held' in got);
+  (got as {held:{release():void}}).held.release();
+});
+
+test('http: bad URL is 400, inherited names are 404, a failing route is 500, POST is 405', async t => {
+  const { serve } = await import('../http.ts');
+  const hits: string[] = [];
+  const srv = serve({'/ok':() => ({ok:true}),'/boom':() => { throw new Error('nope'); }},{port:0,onListening:() => hits.push('up')});
+  t.after(() => srv.close());
+  for (let i=0;i<100 && !srv.server.listening;i++) await sleep(10);
+  const { port } = srv.server.address() as {port:number};
+  const get = (path: string, method = 'GET') => new Promise<{status:number,body:string}>(resolve => {
+    import('node:http').then(({request}) => { const r = request({port,host:'127.0.0.1',path,method},res => { let b=''; res.on('data',d=>b+=d); res.on('end',()=>resolve({status:res.statusCode!,body:b})); }); r.end(); });
+  });
+  assert.equal((await get('/ok')).status,200);
+  assert.equal((await get('/boom')).status,500);
+  assert.equal((await get('/constructor')).status,404);
+  assert.equal((await get('/__proto__')).status,404);
+  assert.equal((await get('/ok','POST')).status,405);
+  assert.equal((await get('/nothing')).status,404);
+  assert.ok([200,400,404].includes((await get('//[bad')).status)); // never hangs or crashes
 });

@@ -1,87 +1,48 @@
 // Host-independent ingest loop: the launchd daemon (daemon.ts) and the Orca plugin worker both
-// call start()/stop(). One host at a time ingests into a ledger directory (ingest.lock).
-import { closeSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, utimesSync, writeSync } from 'node:fs';
-import { homedir, hostname } from 'node:os';
+// call start()/stop(). One host at a time ingests into a ledger directory (lock.ts).
+import { statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Store } from './store.ts';
 import { cycle } from './cycle.ts';
+import { acquire, type Held } from './lock.ts';
+import type { IngestApi, Options, Pass, Status } from './types.ts';
 
-export type Pass = { reason: string, startedAt: string, finishedAt: string, ms: number, timings: Record<string, number>, errors: string[] };
-export type Options = {
-  /** Ledger directory; default AGENT_LEDGER_HOME or ~/.agents/ledger. */
-  home?: string,
-  env?: NodeJS.ProcessEnv,
-  intervalMs?: number,
-  /** Debounce for trigger(), ms. */
-  debounceMs?: number,
-  /** Label written into the lock file and /health, e.g. "orca-plugin" or "launchd". */
-  host?: string,
-  onPass?: (pass: Pass) => void,
-  onState?: (state: Status) => void,
-};
-export type Status = {
-  host: string, home: string, pid: number, node: string, startedAt: string,
-  lock: 'held' | 'waiting' | 'stopped', lockedBy?: string,
-  running: boolean, passes: number, lastPass?: Pass, lastError?: string,
-  counts?: { sources: Record<string, number>, blobs: number, bytes: { ledger: number, archive: number } },
-};
+export type { IngestApi, Options, Pass, Status } from './types.ts';
+export { acquire } from './lock.ts';
 
-const STALE_MS = 5 * 60_000;
-type Held = { path: string, token: string };
-
-function alive(pid: number) {
-  try { process.kill(pid, 0); return true; } catch (error) { return (error as NodeJS.ErrnoException).code === 'EPERM'; }
-}
-/** Takes ingest.lock, or says who holds it. A lock whose process is gone, or untouched for 5 minutes, is taken over. */
-export function acquire(home: string, host: string): { held: Held } | { by: string } {
-  mkdirSync(home, { recursive: true, mode: 0o700 });
-  const path = join(home, 'ingest.lock');
-  const token = `${process.pid}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const fd = openSync(path, 'wx', 0o600);
-      writeSync(fd, JSON.stringify({ pid: process.pid, host, token, since: new Date().toISOString() }));
-      closeSync(fd);
-      return { held: { path, token } };
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-    }
-    let info: { pid?: number, host?: string } = {};
-    try { info = JSON.parse(readFileSync(path, 'utf8')); } catch { /* unreadable: treat as stale below */ }
-    let age = Infinity;
-    try { age = Date.now() - statSync(path).mtimeMs; } catch { continue; }
-    if (info.pid && info.pid !== process.pid && alive(info.pid) && age < STALE_MS) return { by: `${info.host ?? '?'} pid ${info.pid}` };
-    try { unlinkSync(path); } catch { /* raced with another taker: retry */ }
-  }
-  return { by: 'unknown' };
-}
-function release(lock: Held) {
-  try {
-    if (JSON.parse(readFileSync(lock.path, 'utf8')).token === lock.token) unlinkSync(lock.path);
-  } catch { /* already gone */ }
-}
-
+type Settings = Required<Pick<Options, 'home' | 'env' | 'intervalMs' | 'debounceMs' | 'minGapMs' | 'host'>> & Options;
 let current: Runner | undefined;
+let stopping: Promise<void> | undefined;
+
 class Runner {
+  o: Settings;
   store?: Store;
   lock?: Held;
   timer?: NodeJS.Timeout;
   debounce?: NodeJS.Timeout;
   inflight?: Promise<void>;
+  periodicAt = 0;
+  lastStart = 0;
   again = false;
   stopped = false;
   status: Status;
-  o: Required<Pick<Options, 'home' | 'env' | 'intervalMs' | 'debounceMs' | 'host'>> & Options;
-  constructor(o: Required<Pick<Options, 'home' | 'env' | 'intervalMs' | 'debounceMs' | 'host'>> & Options) {
+  constructor(o: Settings) {
     this.o = o;
     this.status = { host: o.host, home: o.home, pid: process.pid, node: process.version, startedAt: new Date().toISOString(),
       lock: 'waiting', running: false, passes: 0 };
   }
   emit() { this.o.onState?.(this.status); }
-  schedule(delay: number) {
+  /** The periodic pass keeps its own fixed deadlines: event passes neither move nor replace it. */
+  armPeriodic() {
     if (this.stopped) return;
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => { void this.pass('interval'); }, Math.max(0, delay));
+    this.timer = setTimeout(() => {
+      this.periodicAt += this.o.intervalMs;
+      if (this.periodicAt <= Date.now()) this.periodicAt = Date.now() + this.o.intervalMs; // slept or stalled past several periods
+      this.armPeriodic();
+      void this.pass('interval');
+    }, Math.max(0, this.periodicAt - Date.now()));
     this.timer.unref?.();
   }
   /** One pass at most in flight; a request during a pass queues exactly one more. */
@@ -96,6 +57,7 @@ class Runner {
   }
   async run(reason: string) {
     const started = performance.now(), startedAt = new Date().toISOString();
+    this.lastStart = Date.now();
     try {
       if (!this.lock) {
         const got = acquire(this.o.home, this.o.host);
@@ -106,7 +68,6 @@ class Runner {
         }
         this.lock = got.held; this.status.lock = 'held'; delete this.status.lockedBy;
       }
-      try { const now = new Date(); utimesSync(this.lock.path, now, now); } catch { /* lock heartbeat */ }
       this.store ??= new Store(this.o.home);
       this.status.running = true; this.emit();
       const timings: Record<string, number> = {};
@@ -121,7 +82,6 @@ class Runner {
       this.o.onPass?.(this.status.lastPass);
     } finally {
       this.status.running = false; this.emit();
-      this.schedule(this.o.intervalMs - (performance.now() - started));
     }
   }
   counts(): NonNullable<Status['counts']> {
@@ -133,46 +93,56 @@ class Runner {
   }
 }
 
-/** Starts ingesting: an immediate pass, then one every intervalMs. Waits (retrying each interval) while another host holds the lock. */
+/** Starts ingesting: an immediate pass, then one every intervalMs on a fixed schedule. Waits (retrying each interval) while another host holds the lock. */
 export function start(options: Options = {}): Status {
+  if (stopping) throw new Error('ingest is still stopping; await stop() first');
   if (current) return current.status;
   const env = options.env ?? process.env;
-  const runner = new Runner({ ...options, env, host: options.host ?? 'node', intervalMs: options.intervalMs ?? 60_000, debounceMs: options.debounceMs ?? 1_500,
+  const runner = new Runner({ ...options, env, host: options.host ?? 'node', intervalMs: options.intervalMs ?? 60_000,
+    debounceMs: options.debounceMs ?? 1_500, minGapMs: options.minGapMs ?? 5_000,
     home: options.home ?? env.AGENT_LEDGER_HOME ?? join(homedir(), '.agents/ledger') });
   current = runner;
+  runner.periodicAt = Date.now() + runner.o.intervalMs;
+  runner.armPeriodic();
   void runner.pass('start');
   return runner.status;
 }
-/** Asks for a pass soon (debounced); a burst of calls makes one pass. */
+/** Asks for a pass soon. Calls inside the wait coalesce into one pass, and event passes start at least minGapMs apart. */
 export function trigger(reason = 'trigger') {
   const r = current;
-  if (!r || r.stopped) return;
-  clearTimeout(r.debounce);
-  r.debounce = setTimeout(() => { void r.pass(reason); }, r.o.debounceMs);
+  if (!r || r.stopped || r.debounce) return;
+  const at = Math.max(Date.now() + r.o.debounceMs, r.lastStart + r.o.minGapMs);
+  r.debounce = setTimeout(() => { r.debounce = undefined; void r.pass(reason); }, at - Date.now());
   r.debounce.unref?.();
 }
 export function status(): Status | undefined { return current?.status; }
-/** Stops the loop, waits for a pass in flight, closes the store and releases the lock. */
-export async function stop() {
+/** Stops the loop, waits for a pass in flight, closes the store, then releases the lock. Every caller gets the same promise. */
+export function stop(): Promise<void> {
+  if (stopping) return stopping;
   const r = current;
-  if (!r) return;
-  current = undefined;
+  if (!r) return Promise.resolve();
   r.stopped = true;
   clearTimeout(r.timer); clearTimeout(r.debounce);
-  await r.inflight?.catch(() => {});
-  r.store?.db.close();
-  if (r.lock) release(r.lock);
-  r.status.lock = 'stopped'; r.emit();
+  stopping = (async () => {
+    await r.inflight?.catch(() => {});
+    try { r.store?.db.close(); } finally { r.lock?.release(); }
+    r.status.lock = 'stopped'; r.emit();
+  })().finally(() => { current = undefined; stopping = undefined; });
+  return stopping;
 }
 /** One pass under the lock; resolves {by} instead of running when another host holds it. */
 export async function once(options: Options = {}) {
   const env = options.env ?? process.env, home = options.home ?? env.AGENT_LEDGER_HOME ?? join(homedir(), '.agents/ledger');
   const got = acquire(home, options.host ?? 'node-once');
   if ('by' in got) return { by: got.by };
-  const store = new Store(home);
+  let store: Store | undefined;
   try {
+    store = new Store(home);
     const timings: Record<string, number> = {};
     const errors = await cycle(store, env, timings);
     return { timings, errors };
-  } finally { store.db.close(); release(got.held); }
+  } finally { try { store?.db.close(); } finally { got.held.release(); } }
 }
+
+const _shape: IngestApi = { start, stop, status, trigger };
+void _shape;
