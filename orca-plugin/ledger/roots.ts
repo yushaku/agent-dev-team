@@ -1,4 +1,4 @@
-import { realpathSync, statSync } from 'node:fs';
+import { lstatSync, realpathSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,7 +12,8 @@ export function webRoot() {
   const root = resolve(
     process.env.AGENT_DASHBOARD_WEB || fileURLToPath(new URL('../dashboard-web', import.meta.url)),
   );
-  if (!statSync(join(root, 'index.html'), { throwIfNoEntry: false })?.isFile())
+  // lstat, not stat: a linked index.html is not an approved page
+  if (!lstatSync(join(root, 'index.html'), { throwIfNoEntry: false })?.isFile())
     throw new Error('AGENT_DASHBOARD_WEB must contain index.html (' + root + ')');
   return root;
 }

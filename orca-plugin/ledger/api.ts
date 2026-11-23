@@ -1,35 +1,11 @@
 import { Worker } from 'node:worker_threads';
 import { teamRoot, webRoot } from './roots.ts';
-import { dirname, extname, join } from 'node:path';
-import { readFile } from 'node:fs/promises';
-import { readdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { readAsset, scanBundle } from './assets.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { hostAllowed, sendResponse, type Routes } from './http.ts';
 import type { Store } from './store.ts';
 
-const mime: Record<string, string> = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2',
-};
-/** Every regular file of the web bundle becomes a route, so a new asset needs no list to update (links and dot files are skipped). */
-function bundleRoutes(root: string) {
-  const routes = new Map<string, string>([['/', 'text/html']]);
-  const walk = (dir: string, prefix: string) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name.startsWith('.') || entry.isSymbolicLink()) continue;
-      if (entry.isDirectory()) walk(join(dir, entry.name), prefix + entry.name + '/');
-      else if (mime[extname(entry.name)]) routes.set('/' + prefix + entry.name, mime[extname(entry.name)]);
-    }
-  };
-  walk(root, '');
-  return routes;
-}
 const apiPaths = new Set([
   '/api/data',
   '/api/agent/summary',
@@ -41,7 +17,7 @@ type WorkerReply = [number, string, string | Buffer];
 const loading: WorkerReply = [503, 'application/json', JSON.stringify({ loading: true })];
 export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
   const assets = webRoot();
-  const staticFiles = bundleRoutes(assets);
+  const staticFiles = scanBundle(assets);
   teamRoot();
   const home =
     typeof ledger === 'string'
@@ -102,11 +78,8 @@ export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
   async function route(req: { method?: string; headers?: IncomingMessage['headers'] }, url: URL) {
     if (req.method !== 'GET') return response([405, 'text/plain', 'method not allowed']);
     try {
-      const type = staticFiles.get(url.pathname);
-      if (type) {
-        const path = url.pathname === '/' ? '/index.html' : url.pathname;
-        return response([200, type + '; charset=utf-8', await readFile(join(assets, path))]);
-      }
+      const asset = staticFiles.get(url.pathname);
+      if (asset) return response([200, asset.type + '; charset=utf-8', await readAsset(assets, asset)]);
       if (!apiPaths.has(url.pathname)) return response([404, 'text/plain', 'not found']);
       return response(await dispatch(url.pathname + url.search));
     } catch {
