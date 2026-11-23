@@ -390,7 +390,7 @@ test('unreadable subtree keeps prior sources present and siblings ingest', async
   } finally { chmodSync(dir,0o700); }
 });
 
-test('--once completes while the daemon waits for an Orca response', async t => {
+test('--once is refused by the lock while the daemon waits for an Orca response', async t => {
   const f = fixture(t);
   const cli = join(f.root,'orca');
   const gate = join(f.root,'waiting');
@@ -407,12 +407,11 @@ test('--once completes while the daemon waits for an Orca response', async t => 
     for (let i=0;i<200 && !existsSync(gate);i++) await sleep(25);
     assert.ok(existsSync(gate));
     f.db.exec('PRAGMA busy_timeout=100; BEGIN IMMEDIATE; COMMIT');
-    await promisify(execFile)(process.execPath,[script,'--once'],{env,timeout:5000});
-    const before = f.history('orca');
-    assert.ok(before.length);
+    // The daemon holds ingest.lock, so a second host exits cleanly (75) without touching the ledger.
+    await assert.rejects(promisify(execFile)(process.execPath,[script,'--once'],{env,timeout:5000}),
+      (error: {code?:number,stderr?:string}) => error.code === 75 && /held by launchd pid \d+/.test(String(error.stderr)));
+    assert.deepEqual(f.history('orca'),[]);
     unlinkSync(gate);
-    await sleep(200);
-    assert.deepEqual(f.history('orca'),before);
   } finally {
     rmSync(gate,{force:true});
     child.kill();
@@ -451,4 +450,38 @@ test('round-one ledger migrates in place and checks the archived cursor tail', a
     {gen:1,item:'0',text:'original\n'},{gen:2,item:'0',text:'replacement line\n'},
   ]);
   assert.ok(f.db.prepare('SELECT last_polled_at FROM orca_runs').get()?.last_polled_at);
+});
+
+test('start() ingests under a lock, trigger() debounces to one pass, stop() releases', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'host');
+  const passes: string[] = [];
+  const { start, stop, trigger, status } = await import('../ingest.ts');
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:60_000,debounceMs:50,host:'test',onPass:p=>passes.push(p.reason)});
+  try {
+    for (let i=0;i<200 && passes.length<1;i++) await sleep(25);
+    assert.deepEqual(passes,['start']);
+    assert.equal(status()?.lock,'held');
+    assert.ok(existsSync(join(home,'ingest.lock')));
+    assert.ok(Object.keys(status()?.counts?.sources ?? {}).length);
+    for (let i=0;i<5;i++) trigger('event');
+    for (let i=0;i<200 && passes.length<2;i++) await sleep(25);
+    await sleep(300);
+    assert.deepEqual(passes,['start','event']);
+  } finally { await stop(); }
+  assert.equal(existsSync(join(home,'ingest.lock')),false);
+});
+
+test('a second host waits for the lock, takes it when the holder is gone, and a dead holder is stale', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'host2');
+  const { acquire } = await import('../ingest.ts');
+  mkdirSync(home,{recursive:true});
+  const first = acquire(home,'a');
+  assert.ok('held' in first);
+  // The same process holding it counts as the holder only for the original taker; another pid is refused.
+  writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:process.ppid,host:'other',token:'x'}));
+  assert.ok('by' in acquire(home,'b'));
+  writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:2147483646,host:'dead',token:'x'}));
+  assert.ok('held' in acquire(home,'b'));
 });
