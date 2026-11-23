@@ -158,7 +158,9 @@ td:first-child { font-weight: 600; }
 figure { margin: 0 0 16px; }
 figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
 .frame { border-radius: var(--radius); overflow: hidden; }
-.frame { background: var(--ctp-base); padding: 8px; }
+.frame { container-type: inline-size; }
+/* Archify embed mode: 8px padding around an SVG scaled to the frame width; --w/--h are the diagram viewBox. */
+.frame iframe { display: block; width: 100%; border: 0; background: var(--ctp-base); height: calc((100cqw - 16px) * var(--h) / var(--w) + 16px); }
 
 /* Blocks */
 .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 0 0 16px; }
