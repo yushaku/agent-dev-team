@@ -1,11 +1,11 @@
 # Agent history ledger
 
-Run `node ledger/daemon.ts` with Node 26. The first pass backfills available
+Run `node orca-plugin/ledger/daemon.ts` with Node 24 or 26 (from the repository root; paths below are relative to `orca-plugin/ledger/` unless they start with `orca-plugin/`). The first pass backfills available
 history. Subsequent passes start at 60-second intervals. A slow pass finishes
-before the next begins. Use `node ledger/daemon.ts --once` for one pass. It
+before the next begins. Use `node orca-plugin/ledger/daemon.ts --once` for one pass. It
 prints wall time in milliseconds for each source kind to stdout, writes source errors to stderr and exits nonzero if a source read failed.
 Ingest lives in `ingest.ts` (`start(options)`, `trigger()`, `stop()`, `once()`); `daemon.ts` is the launchd entry and the Orca plugin worker (`orca-plugin/src/ledger-host.ts`) is the other host. Only one host ingests into a ledger directory: the lock is an exclusive SQLite lock on `ingest.lock.db` that the OS drops when the holder dies (a second connection in the same process is refused too, so a reload cannot overlap), held from before the databases open until after they close; `ingest.lock.info` only names the holder. A second host waits and retries each interval; `--once` exits 75 with a message. The periodic pass keeps a fixed 60 s schedule; passes asked for by events are coalesced (1.5 s) and start at least 5 s apart. An existing ledger directory is tightened to 0700 and its files to 0600 (a directory owned by someone else is refused). `http.ts` is a small loopback route server (the plugin mounts the API next to `/health` on 4747; `serve()` answers 403 to a non-loopback `Host` on every route). Code runs on Node 24 (Orca's worker) and Node 26.
-Run the fixture suite with `node --test ledger/tests/*.test.ts`.
+Run the tests as the plugin README says ("Verify").
 
 | Environment variable | Default | Input |
 | --- | --- | --- |
@@ -23,7 +23,7 @@ the inputs. Raw archives contain complete conversations and command lines.
 
 ## Dashboard API
 
-With an ingested ledger, run `node ledger/serve.ts --port 4748` on Node 24 or 26.
+With an ingested ledger, run `node orca-plugin/ledger/serve.ts --port 4748` on Node 24 or 26 (a standalone server for the same API; the plugin's worker normally serves it on 4747).
 The server binds to 127.0.0.1. For IPv6 loopback use `--host ::1`.
 The standalone API and the daemon share `AGENT_LEDGER_HOME`.
 
@@ -35,7 +35,7 @@ import { createApi } from './api.ts';
 import { serve } from './http.ts';
 
 const api = createApi(store);
-const http = serve({ '/health': health, ...api.routes }, { port: 4748 });
+const http = serve({ '/health': health, ...api.routes }, { port: 4747 });
 ```
 
 During deactivation, call `await http.close()` and `await api.close()`.
@@ -45,7 +45,7 @@ the plugin. Wire types for dashboard JSON responses are in `ledger/protocol.ts`.
 
 Set `AGENT_DASHBOARD_WEB` to a directory containing `index.html` for an
 installed frontend. Set `AGENT_TEAM_HOME` to the team checkout containing
-`skills/`. The defaults are `dashboard/web` and the repository root.
+`skills/`. The defaults are the plugin's `dashboard-web/` and the repository root (two levels above `ledger/`). Every file of the web directory is served; there is no list to update.
 Startup errors name the missing root or the occupied listen address.
 
 The query worker checks the ingest log every second. During catch-up it
@@ -99,10 +99,7 @@ serialized date windows, refreshing them on projection or Git changes or
 after 30 seconds. If the query worker takes over 10 seconds to answer, the
 listener returns HTTP 503 with `{"loading":true}`.
 
-To compare an input directory with the Python parsers, run
-`node ledger/scripts/parity.ts DIRECTORY`. It builds a temporary ledger and
-reports differing fields. For arbitrary transcript names, use agent-named
-subdirectories such as `claude/` and `codex/`.
+The parsers' expected output for the fixtures is frozen in `tests/golden/` (recorded once from the retired Python dashboard; see `tests/golden.ts`), and `tests/fixtures.test.ts` compares each fixture's projection with it.
 
 ## Reading the archive
 
@@ -152,12 +149,12 @@ stays in the archive when a source disappears.
 
 ## Install as a macOS LaunchAgent after review
 
-1. Choose a stable checkout and an installed Node 26 binary. Check
+1. Choose a stable checkout and an installed Node 24 or 26 binary. Check
    `/absolute/path/to/node --version` and `command -v orca`.
 2. Copy `agent-ledger.plist` to
    `~/Library/LaunchAgents/<label>.plist`. Replace every placeholder,
    using the same label in the filename and plist. Use absolute paths for
-   Node, the checkout's ledger/daemon.ts, Orca, and the stderr log in an
+   Node, the checkout's orca-plugin/ledger/daemon.ts, Orca, and the stderr log in an
    existing private directory. launchd does not expand shell variables or ~.
 3. Run `plutil -lint "$HOME/Library/LaunchAgents/<label>.plist"`, then
    `launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/<label>.plist"`.

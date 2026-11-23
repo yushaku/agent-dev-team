@@ -3,8 +3,8 @@
 in a repo indexed by codegraph (`.codegraph/` at or above cwd), add one line of context pointing
 to `codegraph explore`/`callers`. Never blocks; any error exits 0 silently.
 
-`symbol_searches(cmd)` is also imported by the dashboard (backend/parsers/common.py), so the
-definition of a symbol search lives only here.
+`symbol_searches(cmd)` defines what a symbol search is. The dashboard's ledger counts such searches
+in `orca-plugin/ledger/session.ts` (`symbolSearch`), a TypeScript port of this definition: change both together.
 """
 import json
 import os
