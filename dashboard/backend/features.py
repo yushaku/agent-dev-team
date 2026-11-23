@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import statistics
@@ -80,10 +81,13 @@ def build_features(sessions, runs):
     features = []
     for (repo, branch), rows in groups.items():
         checkout = next((p for s in rows if (p := main_checkout(s.get("cwd")))), None)
+        checkout_source = "git" if checkout else "unavailable"
         if not checkout:
             # shortcut: removed Orca worktrees resolve through the project name until stable repo IDs are available.
             candidate = os.path.expanduser("~/orca/projects/" + repo)
             checkout = candidate if os.path.isdir(candidate) else None
+            if checkout:
+                checkout_source = "orca_project"
         directory = feature_dir(checkout, branch)
         ids = sorted({s["run_id"] for s in rows if s.get("run_id")})
         linked = [run_map[rid] for rid in ids if rid in run_map]
@@ -102,13 +106,23 @@ def build_features(sessions, runs):
         last = max((s["end"] or s["start"] for s in rows if s.get("end") or s.get("start")), default=None)
         total = sum(s["total"] for s in rows)
         orch = sum(s["total"] for s in rows if s.get("run_id") and s.get("role") == "orchestrator")
-        feature = dict(repo=repo, branch=branch, variant="orca" if ids else "direct", run_ids=ids,
+        feature = dict(id=json.dumps([repo, branch], separators=(",", ":")),
+                       repo=repo, branch=branch, variant="orca" if ids else "direct", run_ids=ids,
                        first_activity=first, last_activity=last, lead_seconds=last - first if first and last else None,
                        tokens=total, orchestrator_tokens=orch if ids else None, worker_tokens=total - orch if ids else None,
                        session_count=len({(s["agent"], s.get("session_id", s["id"])) for s in rows}),
                        agents=sorted({s["agent"] for s in rows}), loaded_skills=skills,
                        fix_rounds=dict(count=rounds, source=source), gate2_findings=gate_findings(directory),
                        delivered=delivered(checkout, branch, refs))
+        feature["sources"] = dict(checkout=checkout_source, tokens="session_usage", activity="session_bounds",
+                                  loaded_skills="session_skill_loads_and_hooks",
+                                  gate2_findings="decisions" if feature["gate2_findings"] is not None else "unavailable",
+                                  delivered="local_git_ancestry")
+        feature["heuristics"] = ["repo_basename_identity", "branch_last_segment"]
+        if checkout_source == "orca_project":
+            feature["heuristics"].append("orca_project_path")
+        if source == "code-review":
+            feature["heuristics"].append("code_review_loads_minus_one")
         features.append(feature)
     for r in runs:
         linked = [f for f in features if r["id"] in f["run_ids"]]

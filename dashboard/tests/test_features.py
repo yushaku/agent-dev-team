@@ -41,6 +41,10 @@ class FeatureTests(unittest.TestCase):
         feature = data["runs"][0]
         self.assertEqual(len(data["runs"]), 1)
         self.assertEqual(feature["variant"], "orca")
+        self.assertEqual(feature["id"], '["project","feat/example"]')
+        self.assertEqual(feature["sources"]["checkout"], "git")
+        self.assertEqual(feature["sources"]["delivered"], "local_git_ancestry")
+        self.assertIn("repo_basename_identity", feature["heuristics"])
         self.assertEqual(feature["run_ids"], ["run_one"])
         self.assertEqual(feature["tokens"], 150)
         self.assertEqual(feature["session_count"], 1)

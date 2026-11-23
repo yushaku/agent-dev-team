@@ -26,7 +26,7 @@ const C = await import("../web/js/lib/charts.js");
 const { repoTree } = await import("../web/js/tabs/repos.js");
 const { renderRoles, roleStats } = await import("../web/js/tabs/roles.js");
 const { renderRoleSkills } = await import("../web/js/tabs/role-skills.js");
-const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures } = await import("../web/js/tabs/runs.js");
+const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures, featureTimeline } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
 const { renderCliTools, showCliTools } = await import("../web/js/tabs/cli-tools.js");
 const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../web/js/tabs/search.js");
@@ -597,9 +597,10 @@ test("feature Runs compare variants, preserve unknowns and escape branch and ski
     tokens: 300, gate2_findings: 0, delivered: false, orchestrator_tokens: 50, worker_tokens: 250 }] } };
   const sessions = C.state.data.features.runs.map(f => ({ repo: f.repo, branch: f.branch }));
   renderFeatures(sessions);
-  assert.match(element("#feature-comparison").innerHTML, /Trực tiếp/);
-  assert.match(element("#feature-comparison").innerHTML, /Có Orca/);
-  assert.match(element("#feature-comparison").innerHTML, /Chưa rõ \(0\/1 Run\)/);
+  assert.match(element("#feature-tokens").innerHTML, /Trực tiếp/);
+  assert.match(element("#feature-tokens").innerHTML, /Có Orca/);
+  assert.match(element("#feature-findings").innerHTML, /Chưa rõ/);
+  assert.match(element("#feature-findings").innerHTML, /Trực tiếp: 0\/1 Run có dữ liệu/);
   const html = element("#feature-runs").innerHTML;
   assert.match(html, /feat\/&lt;example&gt;/);
   assert.match(html, /&lt;skill&gt;/);
@@ -610,4 +611,34 @@ test("feature Runs compare variants, preserve unknowns and escape branch and ski
   assert.doesNotMatch(element("#feature-runs").innerHTML, /feat\/orca/);
   renderFeatures([]);
   assert.match(element("#feature-runs").innerHTML, /Không có Run/);
+  for (const id of ["tokens", "fixes", "findings", "distribution", "time"]) {
+    assert.doesNotMatch(element("#feature-" + id).innerHTML, /<svg/);
+    assert.match(element("#feature-" + id).innerHTML, /Không có dữ liệu/);
+  }
+});
+
+test("feature charts preserve fractional medians, round buckets and delivery mark states", () => {
+  const rows = [0, 1, 2, 3, 7].map((count, i) => ({
+    repo: "r", branch: "feat/<" + i + ">", variant: i < 2 ? "direct" : "orca", tokens: (i + 1) * 100,
+    last_activity: 1795265470 + i * 86400, fix_rounds: { count, source: "reports" }, gate2_findings: i,
+    delivered: [true, false, null, false, true][i], loaded_skills: {}, run_ids: [], agents: [], session_count: 1,
+  }));
+  C.state.data = { features: { runs: rows } };
+  renderFeatures(rows);
+  assert.match(element("#feature-fixes").innerHTML, />0\.5<\/text>/);
+  assert.match(element("#feature-tokens").innerHTML, /Trực tiếp: 2 Run · Có Orca: 3 Run/);
+  const distribution = element("#feature-distribution").innerHTML;
+  assert.match(distribution, /3\+ vòng sửa/);
+  assert.match(distribution, /Có Orca: 2 Run/);
+  assert.equal((distribution.match(/<rect /g) || []).length, 4);
+  const time = featureTimeline(rows, 500);
+  assert.equal((time.match(/class="feature-point"/g) || []).length, 5);
+  assert.equal((time.match(/tabindex="0"/g) || []).length, 5);
+  assert.equal((time.match(/fill:var\(--mantle\)/g) || []).length, 3);
+  assert.equal((time.match(/stroke-dasharray:2 2/g) || []).length, 1);
+  assert.match(time, /feat\/&lt;0&gt;/);
+  assert.match(time, /Vòng sửa: 7 · report Builder/);
+  assert.match(time, /Lỗi Gate 2: 4/);
+  assert.doesNotMatch(time, /NaN|undefined|Infinity/);
+  assert.doesNotMatch(featureTimeline([{ ...rows[0], tokens: 0 }], 280), /NaN|Infinity/);
 });

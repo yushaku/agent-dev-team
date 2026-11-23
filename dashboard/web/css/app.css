@@ -428,7 +428,6 @@ details.tbl[open] > summary { margin-bottom: var(--s-3); }
 #feature-runs tr > :not(:first-child) { padding-left: var(--s-2); }
 #feature-runs tr > :not(:last-child) { padding-right: var(--s-2); }
 #tk-features td { font-variant-numeric: tabular-nums; }
-#feature-comparison td, #feature-comparison th:not(:first-child),
 #feature-runs td:nth-child(n+4) { text-align: right; }
 #feature-runs th[scope="row"] { min-width: 220px; }
 #feature-runs details { max-width: 320px; }
@@ -436,6 +435,12 @@ details.tbl[open] > summary { margin-bottom: var(--s-3); }
 #tk-features > div { min-width: 0; }
 #tk-features .table-wrap { max-width: 100%; }
 #feature-runs td:nth-child(3) { white-space: nowrap; }
+.feature-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); }
+.feature-details { min-width: 0; }
+.feature-details > summary { cursor: pointer; margin-bottom: var(--s-4); }
+@media (max-width: 900px) {
+  .feature-comparison { grid-template-columns: 1fr; }
+}
 @media (max-width: 640px) {
   #tk-features table tr > :first-child { position: sticky; left: 0; background: var(--base); }
 }
