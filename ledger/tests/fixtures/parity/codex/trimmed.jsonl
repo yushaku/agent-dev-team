@@ -1,0 +1,4 @@
+{"type":"session_meta","timestamp":"2026-11-13T17:00:00.012345Z","payload":{"id":"codex-example","session_id":"codex-example","cwd":"/example/project","originator":"example","git":{"branch":"main"}}}
+{"type":"world_state","timestamp":"2026-11-13T17:00:01.012345Z","payload":{"full":true,"state":{}}}
+{"type":"turn_context","timestamp":"2026-11-13T17:00:02.012345Z","payload":{"turn_id":"t1","cwd":"/example/project","model":"example-model","effort":"high"}}
+{"type":"token_usage_record","timestamp":"2026-11-13T17:00:03.012345Z","payload":{"turn_id":"t1","usage":{"input_tokens":12,"cached_input_tokens":3,"output_tokens":4,"reasoning_output_tokens":2,"total_tokens":16}}}
