@@ -25,6 +25,11 @@ export class Store {
       CREATE TABLE IF NOT EXISTS versions (
         source INTEGER, generation INTEGER, item TEXT, hash TEXT,
         PRIMARY KEY(source,generation,item));
+      CREATE TABLE IF NOT EXISTS watermarks (
+        source INTEGER, generation INTEGER, tbl TEXT, last_id TEXT NOT NULL,
+        PRIMARY KEY(source,generation,tbl));
+      CREATE TABLE IF NOT EXISTS orca_runs (
+        id TEXT PRIMARY KEY, entry_hash TEXT, terminal INTEGER, paths TEXT);
       CREATE TABLE IF NOT EXISTS ingest_log (
         id INTEGER PRIMARY KEY, source INTEGER, generation INTEGER, item TEXT, hash TEXT,
         recorded_at TEXT DEFAULT CURRENT_TIMESTAMP);

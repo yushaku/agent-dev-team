@@ -33,16 +33,30 @@ function rows(store: Store, source: number, generation: number, path: string, ta
     for (const table of tables) {
       const query = input.prepare(`SELECT rowid AS _rowid,* FROM ${table} WHERE rowid > ? ORDER BY rowid LIMIT 128`);
       query.setReadBigInts(true);
-      let last = -9223372036854775808n;
+      const prior = store.db.prepare('SELECT last_id FROM watermarks WHERE source=? AND generation=? AND tbl=?')
+        .get(source,generation,table);
+      // Recent Hermes messages can be edited, compacted or rewound after insertion.
+      const minimum = -9223372036854775808n;
+      let last = minimum;
+      if (prior && table !== 'sessions') {
+        last = BigInt(String(prior.last_id)) - (table === 'messages' ? 256n : 0n);
+        if (last < minimum) last = minimum;
+      }
+      let high = prior ? BigInt(String(prior.last_id)) : minimum;
       while (true) {
         const page = query.all(last);
         if (!page.length) break;
         for (const { _rowid, ...row } of page) {
           last = _rowid as bigint;
+          if (last > high) high = last;
           const data = JSON.stringify(row, (_, v) => typeof v === 'bigint' ? JSON.rawJSON(v.toString()) :
             v instanceof Uint8Array ? { base64: Buffer.from(v).toString('base64') } : v);
           store.record(source,generation,`${table}/${last}`,Buffer.from(data));
         }
+      }
+      if (table !== 'sessions') {
+        store.db.prepare('INSERT OR REPLACE INTO watermarks VALUES(?,?,?,?)')
+          .run(source,generation,table,String(high));
       }
     }
   } finally { input.close(); }

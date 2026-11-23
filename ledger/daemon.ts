@@ -5,13 +5,14 @@ import { Store } from './store.ts';
 import { files, ingestFile, missing } from './files.ts';
 import { snapshot } from './orca.ts';
 
-export function cycle(store: Store, env = process.env) {
+export async function cycle(store: Store, env = process.env, timings?: Record<string, number>) {
   const errors: string[] = [];
   const paths = {
     claude: '.claude/projects', codex: '.codex/sessions', copilot: '.copilot/session-state',
     jcode: '.jcode/sessions', hermes: '.hermes/state.db', rtk: 'Library/Application Support/rtk/history.db',
   };
   for (const [kind, fallback] of Object.entries(paths)) {
+    const started = performance.now();
     const root = resolve(env['AGENT_LEDGER_'+kind.toUpperCase()] || join(homedir(),fallback));
     const seen = new Set<string>();
     store.db.exec('BEGIN IMMEDIATE');
@@ -32,12 +33,15 @@ export function cycle(store: Store, env = process.env) {
       }
       store.db.exec('COMMIT');
     } catch (error) { store.db.exec('ROLLBACK'); errors.push(kind+': '+error); }
+    if (timings) timings[kind] = Math.round(performance.now() - started);
   }
+  const started = performance.now();
   store.db.exec('BEGIN IMMEDIATE');
   try {
-    snapshot(store,env.AGENT_LEDGER_ORCA || 'orca',errors);
+    await snapshot(store,env.AGENT_LEDGER_ORCA || 'orca',errors);
     store.db.exec('COMMIT');
   } catch (error) { store.db.exec('ROLLBACK'); errors.push('orca: '+error); }
+  if (timings) timings.orca = Math.round(performance.now()-started);
   return errors;
 }
 
@@ -49,7 +53,9 @@ if (import.meta.main) {
     do {
       const started = performance.now();
       try {
-        const errors = cycle(store);
+        const timings = once ? {} : undefined;
+        const errors = await cycle(store, process.env, timings);
+        if (once) console.log(JSON.stringify({wall_ms: timings}));
         for (const message of errors) console.error(message);
         if (once && errors.length) process.exitCode = 1;
       } catch (error) {
