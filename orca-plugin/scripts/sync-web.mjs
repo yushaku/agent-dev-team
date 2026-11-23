@@ -38,6 +38,7 @@ const native = (key) => key.split('/').join(sep) // keys of the file maps are wr
  * Returns the path, or the first missing path on the way (nothing exists below it).
  */
 export function plain(root, rel = '', boundary = REPO) {
+  if (root.split(sep).includes('..')) throw new Error(`${root}: parent components (..) are not allowed in a root`)
   const base = resolve(boundary), target = resolve(root)
   const inside = relative(base, target)
   if (inside === '..' || inside.startsWith('..' + sep) || isAbsolute(inside)) throw new Error(`${target} is outside the trusted boundary ${base}`)
@@ -52,6 +53,7 @@ export function plain(root, rel = '', boundary = REPO) {
   return join(base, ...all)
 }
 const readSource = (src, file, o) => readFileSync(plain(src, native(file), o.boundary), 'utf8')
+const readBytes = (src, file, o) => readFileSync(plain(src, native(file), o.boundary))
 
 /** Code without block comments and whole-line comments, so a commented-out import is not a dependency. */
 const code = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '')
@@ -106,23 +108,33 @@ function panelHtml(o) {
 
 /** Every regular file under `dir` (relative, "/"-separated), never following a link. */
 function walk(dir, boundary, base = dir) {
-  if (!existsSync(plain(dir, '', boundary))) return []
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name)
+  const safe = plain(dir, '', boundary) // validated; this is the path that is read, not the raw argument
+  if (!existsSync(safe)) return []
+  return readdirSync(safe, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(safe, entry.name)
     if (entry.isSymbolicLink()) plain(path, '', boundary) // throws, naming the link
     return entry.isDirectory() ? walk(path, boundary, base) : [relative(base, path).split(sep).join('/')]
   })
 }
 
+/** What the sources must contain before anything is written or pruned: a missing tree must not look like an empty one. */
+function requireInputs(o) {
+  const ledgerSrc = o.ledgerSrc ?? LEDGER_SRC
+  const need = [[o.src, 'index.html'], [o.src, ENTRY], [o.src, 'css/app.css'], [ledgerSrc, 'ingest.ts'], [ledgerSrc, 'http.ts'], [ledgerSrc, 'api.ts'], [ledgerSrc, 'lock.ts']]
+  const missing = need.filter(([root, file]) => !existsSync(plain(root, native(file), o.boundary))).map(([root, file]) => join(root, native(file)))
+  if (missing.length) throw new Error(`the sources are incomplete, nothing was written or removed. Missing:\n  ${missing.join('\n  ')}`)
+}
+
 /** The three generated trees: { out, files: Map(rel -> text), scanned: where stale files are looked for }. */
 function targets(o) {
+  requireInputs(o)
   const web = new Map(sources(o.src, o.boundary).map((f) => [f, readSource(o.src, f, o)]))
   web.set('panel.html', panelHtml(o))
   const ledgerSrc = o.ledgerSrc ?? LEDGER_SRC
   const ledger = new Map(
-    walk(ledgerSrc, o.boundary).filter((f) => !f.includes('/') && f.endsWith('.ts')).map((f) => [f, readSource(ledgerSrc, f, o)])
+    walk(ledgerSrc, o.boundary).filter((f) => !f.includes('/') && f.endsWith('.ts')).map((f) => [f, readBytes(ledgerSrc, f, o)])
   )
-  const bundle = new Map(walk(o.src, o.boundary).map((f) => [f, readSource(o.src, f, o)]))
+  const bundle = new Map(walk(o.src, o.boundary).map((f) => [f, readBytes(o.src, f, o)])) // straight copies are bytes, never decoded
   return [
     { name: 'web', out: o.out, files: web, scanned: GENERATED_DIRS },
     { name: 'ledger', out: o.ledgerOut ?? LEDGER_OUT, files: ledger, scanned: [''] },
@@ -147,7 +159,7 @@ export function drift(options) {
     for (const [f, text] of t.files) {
       const p = plain(t.out, native(f), o.boundary)
       if (!existsSync(p)) problems.push(`missing ${label}${f}`)
-      else if (readFileSync(p, 'utf8') !== text) problems.push(`changed ${label}${f}`)
+      else if (Buffer.compare(readFileSync(p), Buffer.from(text)) !== 0) problems.push(`changed ${label}${f}`)
     }
     for (const f of stale(t, o)) problems.push(`stale ${label}${f}`)
   }

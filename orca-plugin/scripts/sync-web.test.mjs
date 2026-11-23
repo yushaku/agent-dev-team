@@ -10,7 +10,7 @@ const scratch = () => {
   const src = join(root, 'src'), out = join(root, 'out'), ledgerSrc = join(root, 'ledger-src')
   cpSync(SRC, src, { recursive: true })
   mkdirSync(ledgerSrc)
-  for (const f of ['ingest.ts', 'lock.ts']) cpSync(join(LEDGER_SRC, f), join(ledgerSrc, f))
+  for (const f of ['ingest.ts', 'lock.ts', 'http.ts', 'api.ts']) cpSync(join(LEDGER_SRC, f), join(ledgerSrc, f))
   const o = { src, out, boundary: root, ledgerSrc, ledgerOut: join(root, 'ledger-out'), bundleOut: join(root, 'bundle-out') }
   return { root, src, out, o }
 }
@@ -192,5 +192,52 @@ test('plain() splits with the platform separator and refuses parent components',
     assert.throws(() => plain(root, '..' + sep + 'x', root), /parent components/)
     assert.equal(plain(root, ['a', 'b'].join(sep), root), join(root, 'a', 'b'), 'a missing tail is fine; it is returned whole')
     assert.equal(plain(root, '.' + sep + 'a' + sep + sep + 'b', root), join(root, 'a', 'b'))
+  } finally { rmSync(root, { recursive: true }) }
+})
+
+test('missing source trees are an error, not an empty tree: nothing is written or pruned', () => {
+  const { root, o } = scratch()
+  try {
+    sync(o)
+    const before = readdirSync(o.ledgerOut).sort()
+    assert.ok(before.length >= 4)
+    rmSync(o.ledgerSrc, { recursive: true }) // the canonical ledger directory is gone
+    assert.throws(() => sync(o), /sources are incomplete[\s\S]*ingest\.ts/)
+    assert.throws(() => drift(o), /sources are incomplete/)
+    assert.deepEqual(readdirSync(o.ledgerOut).sort(), before, 'the packaged ledger modules were not deleted')
+    // The same when only the entry module of the web sources is missing.
+    const { root: root2, o: o2 } = scratch()
+    try {
+      sync(o2)
+      rmSync(join(o2.src, 'js/dash.js'))
+      assert.throws(() => sync(o2), /sources are incomplete[\s\S]*dash\.js/)
+      assert.ok(existsSync(join(o2.out, 'js/dash.js')), 'the generated entry module was not pruned')
+    } finally { rmSync(root2, { recursive: true }) }
+  } finally { rmSync(root, { recursive: true }) }
+})
+
+test('a custom root containing parent components is rejected before anything is read, and the validated path is what is walked', () => {
+  const { root, o } = scratch()
+  try {
+    const viaParent = join(root, 'src', 'js', '..') // join() would hide the ..; build the raw string
+    const raw = root + '/src/js/../'.replace(/\//g, sep)
+    assert.throws(() => sync({ ...o, src: raw + '.' }), /parent components/)
+    assert.throws(() => drift({ ...o, ledgerSrc: root + sep + 'ledger-src' + sep + '..' + sep + 'ledger-src' }), /parent components/)
+    assert.throws(() => plain(root, '', root) && plain(root + sep + 'a' + sep + '..' + sep + 'b', '', root), /parent components/)
+    void viaParent
+  } finally { rmSync(root, { recursive: true }) }
+})
+
+test('straight copies are byte for byte: a binary asset in the bundle survives the sync and drift sees a change in it', () => {
+  const { root, o } = scratch()
+  try {
+    const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff, 0xfe, 0x00, 0xc3, 0x28, 0x80, 0x0a])
+    mkdirSync(join(o.src, 'img'))
+    writeFileSync(join(o.src, 'img/logo.png'), bytes)
+    sync(o)
+    assert.equal(Buffer.compare(readFileSync(join(o.bundleOut, 'img/logo.png')), bytes), 0, 'not decoded as UTF-8')
+    assert.deepEqual(drift(o), [])
+    writeFileSync(join(o.bundleOut, 'img/logo.png'), Buffer.from([0x89, 0x50]))
+    assert.deepEqual(drift(o), ['changed dashboard-web/img/logo.png'])
   } finally { rmSync(root, { recursive: true }) }
 })
