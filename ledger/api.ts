@@ -3,7 +3,7 @@ import { teamRoot, webRoot } from './roots.ts';
 import { dirname, join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { sendResponse, type Routes } from './http.ts';
+import { hostAllowed, sendResponse, type Routes } from './http.ts';
 import type { Store } from './store.ts';
 
 const staticFiles = new Map([
@@ -101,8 +101,6 @@ export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
     });
   }
   async function route(req: { method?: string; headers?: IncomingMessage['headers'] }, url: URL) {
-    if (!/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(req.headers?.host || ''))
-      return response([403, 'text/plain', 'forbidden']);
     if (req.method !== 'GET') return response([405, 'text/plain', 'method not allowed']);
     try {
       const type = staticFiles.get(url.pathname);
@@ -126,6 +124,8 @@ export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
     } catch {
       return sendResponse(res, response([400, 'text/plain', 'invalid URL']));
     }
+    // serve() checks the Host for every route it mounts; this handler is the standalone entry (serve.ts).
+    if (!hostAllowed(req)) return sendResponse(res, response([403, 'text/plain', 'forbidden']));
     await sendResponse(res, await route(req, url));
   }
   return Object.assign(handler, {

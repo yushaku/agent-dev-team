@@ -662,6 +662,24 @@ test("feature comparison waits for Orca's first load", () => {
   assert.doesNotMatch(element("#feature-tokens").innerHTML, /<svg/);
 });
 
+test("post-merge metrics say a repository's Git history is still being analysed", () => {
+  C.state.repo = "";
+  const run = { repo: "slow-repo", branch: "feat/x", variant: "direct", tokens: 10, fix_rounds: { count: 0, source: "reports" },
+    loaded_skills: {}, run_ids: [], agents: [], session_count: 1, escaped_defects: null, median_days_to_surface: null, fix_commits: [] };
+  const done = { ...run, repo: "ready-repo", branch: "feat/y", escaped_defects: 0 };
+  C.state.data = { features: { runs: [run, done], repositories: { "slow-repo": { loading: true }, "ready-repo": { loading: false } } } };
+  renderFeatures(C.state.data.features.runs);
+  assert.match(element("#feature-escaped").innerHTML, /Đang phân tích Git \(slow-repo\)/);
+  assert.doesNotMatch(element("#feature-escaped").innerHTML, /ready-repo\)/);
+  assert.match(element("#feature-surface").innerHTML, /Đang phân tích Git \(slow-repo\)/);
+  assert.match(element("#feature-runs").innerHTML, /Đang phân tích Git…/);
+  assert.equal((element("#feature-runs").innerHTML.match(/Đang phân tích Git…/g) || []).length, 1, "only the repository still loading");
+  C.state.data = { features: { runs: [run], repositories: { "slow-repo": { loading: false } } } };
+  renderFeatures(C.state.data.features.runs);
+  assert.doesNotMatch(element("#feature-escaped").innerHTML, /Đang phân tích Git/);
+  assert.match(element("#feature-runs").innerHTML, /Chưa rõ/);
+});
+
 test("escaped defect charts preserve unknowns and escape fix subjects", () => {
   C.state.repo = "";
   const known = { repo: "r", branch: "feat/test", variant: "direct", tokens: 10,

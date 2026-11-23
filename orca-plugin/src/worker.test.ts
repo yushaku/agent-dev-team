@@ -1,15 +1,14 @@
 import { assert, mountWorker, test } from 'orca/testing'
 import * as main from './worker'
+import { setDataSource } from './ledger-host'
 
-// The ledger host (real ingest, port 4748) stays off in tests.
+// The ledger host (real ingest, port 4747) stays off in tests.
 ;(globalThis as any).process.env.TEAM_DASHBOARD_NO_LEDGER = '1'
 
 const CAP = 1_048_576
 const size = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length
-const realFetch = globalThis.fetch
-const dashboard = (res: () => Response) => {
-  globalThis.fetch = (async () => res()) as typeof fetch
-}
+/** The Tasks snapshot comes from the in-process API; tests stand in for it. */
+const dashboard = (res: () => Response) => setDataSource(async () => (await res().json()) as Record<string, unknown>)
 
 async function read(worker: Awaited<ReturnType<typeof mountWorker>>, days = 7) {
   const open = (await worker.request('tasks.open', { days })) as { id: string; chunks: number; bytes: number }
@@ -31,7 +30,7 @@ test('hands the trimmed dashboard snapshot over in chunks', async () => {
   assert.equal(data.rtk, undefined)
   assert.deepEqual(worker.refusals, [])
   await worker.deactivate()
-  globalThis.fetch = realFetch
+  setDataSource()
 })
 
 test('a 30-day sized snapshot arrives whole, every reply under the cap', async () => {
@@ -44,7 +43,7 @@ test('a 30-day sized snapshot arrives whole, every reply under the cap', async (
   assert.equal(data.sessions.length, 4000)
   assert.equal(data.orca.runs.length, 150)
   await worker.deactivate()
-  globalThis.fetch = realFetch
+  setDataSource()
 })
 
 test('an unknown or old snapshot id says expired', async () => {
@@ -54,13 +53,13 @@ test('an unknown or old snapshot id says expired', async () => {
 })
 
 test('says so when the dashboard on 4747 is down', async () => {
-  globalThis.fetch = (async () => {
-    throw new TypeError('fetch failed')
-  }) as typeof fetch
+  setDataSource(async () => {
+    throw Object.assign(new Error('Dashboard API chưa sẵn sàng (HTTP 503, đang tải).'), { code: 'offline' })
+  })
   const worker = await mountWorker(main)
-  await assert.rejects(worker.request('tasks.open', { days: 7 }), /offline|127\.0\.0\.1:4747/)
+  await assert.rejects(worker.request('tasks.open', { days: 7 }), /offline|chưa sẵn sàng/)
   await worker.deactivate()
-  globalThis.fetch = realFetch
+  setDataSource()
 })
 
 test('snapshot ids are unique across worker lifetimes: an old id never resolves to a newer snapshot', async () => {
@@ -76,5 +75,5 @@ test('snapshot ids are unique across worker lifetimes: an old id never resolves 
   const piece = (await second.request('tasks.chunk', { id: fresh.id, index: 0 })) as { id: string }
   assert.equal(piece.id, fresh.id)
   await second.deactivate()
-  globalThis.fetch = realFetch
+  setDataSource()
 })

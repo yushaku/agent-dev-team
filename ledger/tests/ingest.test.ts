@@ -622,7 +622,7 @@ test('plugin host: deactivating during activation starts nothing; a later activa
   const home = join(f.root,'plugin-host');
   const port = 20000 + Math.floor(Math.random()*20000);
   const saved = {...process.env};
-  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_PORT:String(port)});
   t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
   const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
   const bars: string[] = [], listeners: Record<string,()=>void> = {};
@@ -654,7 +654,7 @@ test('plugin host: a failed startup shows in the status bar', async t => {
   const f = fixture(t);
   const saved = {...process.env};
   // An unwritable home makes the ledger refuse to start its pass; a missing ledger module would fail the same way.
-  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:'/proc/definitely/not/writable',TEAM_DASHBOARD_HEALTH_PORT:String(20000+Math.floor(Math.random()*20000))});
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:'/proc/definitely/not/writable',TEAM_DASHBOARD_PORT:String(20000+Math.floor(Math.random()*20000))});
   t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
   const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
   const bars: string[] = [];
@@ -763,10 +763,10 @@ test('plugin host: a second activation without a shutdown replaces the first cle
   const home = join(f.root,'twice');
   const port = 20000 + Math.floor(Math.random()*20000);
   const saved = {...process.env};
-  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_PORT:String(port)});
   t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
   const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
-  const { status } = await import('../ingest.ts');
+  const { status } = await import('../../orca-plugin/ledger/ingest.ts'); // the packaged copy the host runs
   const make = () => { const handlers: Record<string,()=>void> = {}; return { handlers, orca: { log() {}, host: { call: async () => {} }, events: { on: (e: string, h: () => void) => { handlers[e] = h; } } } }; };
   const one = make(), two = make();
   const probe = () => fetch(`http://127.0.0.1:${port}/health`,{signal:AbortSignal.timeout(500)}).then(r => r.json(),() => null);
@@ -803,7 +803,7 @@ function hostFixture(t: import('node:test').TestContext, f: ReturnType<typeof fi
   const home = join(f.root,name);
   const port = 20000 + Math.floor(Math.random()*20000);
   const saved = {...process.env};
-  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_PORT:String(port)});
   t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
   const bars: string[] = [];
   const make = () => ({ log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on() {} } });
@@ -860,4 +860,221 @@ test('plugin host: two overlapping shutdowns both wait for the drain, in order',
   const got = acquire(h.home,'after');
   assert.ok('held' in got,'the lock is free');
   (got as {held:{release():void}}).held.release();
+});
+
+test('http: a non-loopback Host is 403 on every route, /health and unknown paths included', async t => {
+  const { serve } = await import('../http.ts');
+  const { request } = await import('node:http');
+  const srv = serve({'/health':() => ({ok:true})},{port:0});
+  t.after(() => srv.close());
+  for (let i=0;i<100 && !srv.server.listening;i++) await sleep(10);
+  const { port } = srv.server.address() as {port:number};
+  const status = (path: string, host: string) => new Promise<number>(resolve => { request({port,host:'127.0.0.1',path,headers:{Host:host}},res => { res.resume(); resolve(res.statusCode!); }).end(); });
+  assert.equal(await status('/health','example.com'),403);
+  assert.equal(await status('/health','evil.test:4748'),403);
+  assert.equal(await status('/nothing','example.com'),403);
+  assert.equal(await status('/health',`localhost:${port}`),200);
+  assert.equal(await status('/health',`127.0.0.1:${port}`),200);
+  assert.equal(await status('/health','[::1]:4748'),200);
+  assert.equal(await status('/health','127.0.0.1.evil.test'),403);
+});
+
+test('lock: only a missing ingest.lock is ignored; any other failure to remove it fails the acquire and frees the connection', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'stuck');
+  mkdirSync(join(home,'ingest.lock'),{recursive:true});
+  writeFileSync(join(home,'ingest.lock','inside'),'x'); // a non-empty directory cannot be unlinked
+  const { acquire } = await import('../lock.ts');
+  assert.throws(() => acquire(home,'x'),(e: NodeJS.ErrnoException) => ['EISDIR','EPERM','ENOTEMPTY','EACCES'].includes(String(e.code)));
+  rmSync(join(home,'ingest.lock'),{recursive:true});
+  const got = acquire(home,'x'); // the failed attempt left no open connection behind
+  assert.ok('held' in got);
+  (got as {held:{release():void}}).held.release();
+});
+
+/** The environment a host test needs: its own ledger home and port, the repo as team root, restored afterwards. */
+function hostEnv(t: import('node:test').TestContext, f: ReturnType<typeof fixture>, extra: Record<string,string> = {}) {
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const saved = {...process.env};
+  const repo = new URL('../..',import.meta.url).pathname.replace(/\/$/,'');
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:join(f.root,'ledger-host'),TEAM_DASHBOARD_PORT:String(port),AGENT_TEAM_HOME:repo,TEAM_DASHBOARD_RETRY_MS:'200'},extra);
+  delete process.env.AGENT_DASHBOARD_WEB; // the host must point it at its own bundle
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const bars: string[] = [];
+  const orca = { log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on() {} } };
+  const get = (path: string) => fetch(`http://127.0.0.1:${port}${path}`,{signal:AbortSignal.timeout(15000)});
+  const up = () => get('/health').then(r => r.ok,() => false);
+  const withHost = async (path: string, host: string) => { // fetch may not set Host; http.request can
+    const { request } = await import('node:http');
+    return new Promise<number>((resolve,reject) => { request({port,host:'127.0.0.1',path,headers:{Host:host}},res => { res.resume(); resolve(res.statusCode!); }).on('error',reject).end(); });
+  };
+  return { port, bars, orca, get, up, withHost, repo };
+}
+
+test('plugin host: one listener serves the dashboard, waits for a busy port, and shuts down in order', async t => {
+  const f = fixture(t);
+  const h = hostEnv(t,f);
+  // Another server holds the port first.
+  const { createServer } = await import('node:http');
+  const squatter = createServer((_,res) => res.end('other')).listen(h.port,'127.0.0.1');
+  await once(squatter,'listening');
+  t.after(() => { squatter.close(); });
+  const { run, shutdown, dashboardData } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.orca);
+  try {
+    for (let i=0;i<100 && !h.bars.some(b => b.includes(`${h.port} busy`));i++) await sleep(25);
+    assert.ok(h.bars.some(b => b.includes(`${h.port} busy`)),h.bars.join(' | '));
+    assert.equal(await (await h.get('/')).text(),'other','the port still belongs to the other server');
+    squatter.close();
+    await once(squatter,'close');
+    for (let i=0;i<300 && !(await h.up());i++) await sleep(50);
+    assert.equal((await h.get('/health')).status,200,'the port is taken over once it is free');
+    const health = await (await h.get('/health')).json() as {listening:{bound:number[],waiting:number[]}};
+    assert.deepEqual(health.listening.bound,[h.port]);
+    assert.deepEqual(health.listening.waiting,[]);
+    assert.ok(h.bars.some(b => /✓ \d+$/.test(b) && b.endsWith(String(h.port))),h.bars.join(' | '));
+    // Every dashboard route answers on the one port: index.html equals the packaged bundle byte for byte.
+    const index = await h.get('/');
+    assert.equal(index.status,200);
+    assert.equal(Buffer.compare(Buffer.from(await index.arrayBuffer()),readFileSync(join(here,'../../orca-plugin/dashboard-web/index.html'))),0);
+    for (const path of ['/js/dash.js','/vendor/marked.min.js','/css/app.css']) assert.equal((await h.get(path)).status,200,path);
+    let data = await h.get('/api/data?days=7');
+    for (let i=0;i<100 && data.status === 503;i++) { await sleep(100); data = await h.get('/api/data?days=7'); }
+    assert.equal(data.status,200);
+    const body = await data.json() as {sessions:unknown[],days:number};
+    assert.equal(body.days,7);
+    assert.ok(Array.isArray(body.sessions));
+    assert.equal((await h.get('/api/team/skill?name=team-builder')).status,200);
+    assert.equal(await h.withHost('/health','example.com'),403,'the Host check covers /health');
+    assert.equal(await h.withHost('/api/data','example.com'),403);
+    assert.equal((await dashboardData(7)).days,7,'the Tasks panel reads the same data in process');
+  } finally { await shutdown(); }
+  await assert.rejects(h.get('/health'),undefined,'listener closed');
+  await assert.rejects(dashboardData(7),/chưa sẵn sàng/);
+  const { acquire } = await import('../lock.ts');
+  const got = acquire(process.env.AGENT_LEDGER_HOME!,'after');
+  assert.ok('held' in got,'ingest released the lock after the API stopped');
+  (got as {held:{release():void}}).held.release();
+});
+
+test('plugin host: an invalid port override fails before anything starts, and says so', async t => {
+  const f = fixture(t);
+  const h = hostEnv(t,f,{TEAM_DASHBOARD_PORT:'not-a-port'});
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.orca);
+  try {
+    assert.ok(h.bars.some(b => b.includes('✗ not started')),h.bars.join(' | '));
+    assert.equal(existsSync(join(process.env.AGENT_LEDGER_HOME!,'ingest.lock.db')),false,'no ledger resource was touched');
+  } finally { await shutdown(); }
+  for (const bad of ['0','70000','80.5']) {
+    process.env.TEAM_DASHBOARD_PORT = bad;
+    const bars: string[] = [];
+    await run({...h.orca,host:{call: async (_: string, p: {text:string}) => { bars.push(p.text); }}});
+    assert.ok(bars.some(b => b.includes('✗ not started')),`${bad}: ${bars.join(' | ')}`);
+    await shutdown();
+  }
+});
+
+test('plugin host: a listener that fails to start rolls everything back (no ingest, API worker or port left)', async t => {
+  const f = fixture(t);
+  const h = hostEnv(t,f);
+  const { run, shutdown, setModuleLoader } = await import('../../orca-plugin/src/ledger-host.ts');
+  // A http module whose serve() throws right away, as listen() does for an unusable address.
+  setModuleLoader(async (file: string) => {
+    const real = await import(new URL('../../orca-plugin/ledger/'+file,import.meta.url).href);
+    return file === 'http.ts' ? {...real,serve: () => { throw new RangeError('options.port should be >= 0 and < 65536'); }} : real;
+  });
+  t.after(() => setModuleLoader());
+  await run(h.orca);
+  try {
+    assert.ok(h.bars.some(b => b.includes('✗ not started')),h.bars.join(' | '));
+    const { acquire } = await import('../lock.ts');
+    const got = acquire(process.env.AGENT_LEDGER_HOME!,'after'); // ingest was stopped by the rollback
+    assert.ok('held' in got,'the failed start released the ledger lock');
+    (got as {held:{release():void}}).held.release();
+  } finally { await shutdown(); }
+});
+
+test('plugin host: shutdown while the listener is still retrying a busy port leaves nothing to bind later', async t => {
+  const f = fixture(t);
+  const h = hostEnv(t,f);
+  const { createServer } = await import('node:http');
+  const squatter = createServer((_,res) => res.end('other')).listen(h.port,'127.0.0.1');
+  await once(squatter,'listening');
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.orca);
+  for (let i=0;i<100 && !h.bars.some(b => b.includes(`${h.port} busy`));i++) await sleep(25);
+  assert.ok(h.bars.some(b => b.includes(`${h.port} busy`)),'the retry is pending');
+  await shutdown();
+  squatter.close();
+  await once(squatter,'close');
+  await sleep(700); // several retry intervals (200 ms): a leaked retry would bind the freed port now
+  await assert.rejects(h.get('/health'),undefined,'no retry timer is still alive');
+});
+
+test('plugin host: an API request in flight during shutdown does not hang the shutdown, and the port closes', async t => {
+  const f = fixture(t);
+  const h = hostEnv(t,f);
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.orca);
+  for (let i=0;i<200 && !(await h.up());i++) await sleep(25);
+  assert.ok(await h.up());
+  const inflight = h.get('/api/cli-tools').then(r => r.status,() => 'reset'); // takes a moment: it scans PATH in a worker
+  await sleep(20);
+  const started = Date.now();
+  await shutdown();
+  assert.ok(Date.now()-started < 8000,'shutdown completed promptly');
+  const outcome = await Promise.race([inflight,sleep(5000).then(() => 'hung')]);
+  assert.notEqual(outcome,'hung','the in-flight request settled (a reset, or a 200/503 answer)');
+  await assert.rejects(h.get('/health'),undefined,'the port is closed');
+});
+
+test('plugin host: an API module that cannot be imported leaves ingest and /health running and says so', async t => {
+  const f = fixture(t);
+  const h = hostEnv(t,f);
+  const { run, shutdown, setModuleLoader } = await import('../../orca-plugin/src/ledger-host.ts');
+  setModuleLoader(async (file: string) => {
+    if (file === 'api.ts') throw new SyntaxError('Unexpected token in api.ts');
+    return import(new URL('../../orca-plugin/ledger/'+file,import.meta.url).href);
+  });
+  t.after(() => setModuleLoader());
+  await run(h.orca);
+  try {
+    let health: {ok:boolean,listening:{apiError?:string}} | null = null;
+    for (let i=0;i<200 && !health?.ok;i++) { await sleep(25); health = await h.get('/health').then(r => r.json(),() => null); }
+    assert.equal(health?.ok,true,'ingest and /health run');
+    assert.match(health?.listening.apiError ?? '',/Unexpected token in api\.ts/);
+    assert.ok(h.bars.some(b => b.endsWith('⚠')),h.bars.join(' | '));
+    assert.equal((await h.get('/api/data')).status,404,'no dashboard routes without the API');
+  } finally { await shutdown(); }
+});
+
+test('plugin host: an API that cannot start (bad team root) leaves ingest and /health running and says so', async t => {
+  const f = fixture(t);
+  const h = hostEnv(t,f,{AGENT_TEAM_HOME:join(f.root,'no-team-here')});
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.orca);
+  try {
+    let health: {ok:boolean,listening:{apiError?:string}} | null = null;
+    for (let i=0;i<200 && !health?.ok;i++) { await sleep(25); health = await h.get('/health').then(r => r.json(),() => null); }
+    assert.equal(health?.ok,true);
+    assert.match(health?.listening.apiError ?? '',/AGENT_TEAM_HOME/);
+    assert.ok(h.bars.some(b => b.endsWith('⚠')),h.bars.join(' | '));
+  } finally { await shutdown(); }
+});
+
+test('the API route map covers every file of the shipped dashboard bundle', async t => {
+  const f = fixture(t);
+  const { createApi } = await import('../api.ts');
+  const bundle = join(here,'../../orca-plugin/dashboard-web');
+  const files: string[] = [];
+  const walk = (dir: string) => { for (const e of readdirSync(dir,{withFileTypes:true})) e.isDirectory() ? walk(join(dir,e.name)) : files.push(join(dir,e.name).slice(bundle.length)); };
+  walk(bundle);
+  assert.ok(files.length > 15,'the bundle was found');
+  process.env.AGENT_DASHBOARD_WEB = bundle; process.env.AGENT_TEAM_HOME = new URL('../..',import.meta.url).pathname;
+  t.after(() => { delete process.env.AGENT_DASHBOARD_WEB; delete process.env.AGENT_TEAM_HOME; });
+  const api = createApi(join(f.root,'api-routes'));
+  t.after(() => api.close());
+  const missing = files.filter(file => !(file in api.routes) && !(file === '/index.html'));
+  assert.deepEqual(missing,[],'a file was shipped that the HTTP route map would answer 404 for: update the static list in ledger/api.ts');
 });
