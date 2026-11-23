@@ -2,15 +2,15 @@
 
 The plugin is the single home of the team dashboard: the agent history ledger, the dashboard API, the web UI and the Orca sidebar panel. Its worker keeps the ledger up to date and serves the dashboard on **http://127.0.0.1:4747** while Orca runs.
 
-Open the panel: `orca plugin open local.team-dashboard --panel tasks`. Open the full dashboard in a browser: http://127.0.0.1:4747.
+Open a panel: `orca plugin open local.team-dashboard --panel tasks` (the Tasks tab) or `--panel agents-tools` (the Agents tools tab: skills used, Codegraph vs rg/grep/find by agent, role and worktree, RTK by command). Open the full dashboard in a browser: http://127.0.0.1:4747.
 
 ## Layout
 
 | Path | What it is |
 | --- | --- |
-| `orca-plugin.json` | Manifest: a trusted worker (`src/worker.ts`), the `tasks` HTML panel (`dashboard-web/index.html`), a status bar item |
+| `orca-plugin.json` | Manifest: a trusted worker (`src/worker.ts`), two HTML panels, `tasks` (`dashboard-web/index.html`) and `agents-tools` (`dashboard-web/agents-tools.html`), and a status bar item |
 | `ledger/` | The ledger: ingest of agent histories into SQLite, projections, the dashboard API (`api.ts`), the small HTTP server (`http.ts`). Own README: `ledger/README.md`. Also the launchd fallback entry `ledger/daemon.ts` and `ledger/agent-ledger.plist` |
-| `dashboard-web/` | The web UI, one set of files for both uses: `index.html` plus `js/`, `css/`, `vendor/`. The API serves every regular file of this directory with a supported extension (`.html .js .css .json .svg .png .ico .woff2`) under its percent-encoded URL (names with spaces or non-ASCII characters work); dot files, links and other file types are never served, and `/` is an alias of `index.html` only when that is a regular file. Inside Orca's panel `js/main.js` loads `js/orca-panel.js` (data from the worker, status bar; `js/orca-source.js` is its fetch shim) and `css/orca-panel.css` styles it (scoped to `html.orca` and Orca's `html.light`) |
+| `dashboard-web/` | The web UI, one set of files for both uses: `index.html` plus `js/`, `css/`, `vendor/`. The API serves every regular file of this directory with a supported extension (`.html .js .css .json .svg .png .ico .woff2`) under its percent-encoded URL (names with spaces or non-ASCII characters work); dot files, links and other file types are never served, and `/` is an alias of `index.html` only when that is a regular file. Inside Orca's panels `js/main.js` loads `js/orca-panel.js` (data from the worker, status bar, the skill sheet; `js/orca-source.js` is its fetch shim). One page serves both panels: `agents-tools.html` is a six-line launcher (a panel entry cannot carry a query, and navigating away would lose `window.orca`) that loads `index.html` into its own document and sets `window.__orcaView`; each panel shows its one view and `css/orca-panel.css` styles it (scoped to `html.orca` and Orca's `html.light`) |
 | `src/` | The worker: `ledger-host.ts` (ingest, API, listener, status bar), `worker.ts` (the panel's `tasks.open`/`tasks.chunk`), `trim.ts`, `protocol.ts` |
 | `tests/` | Frontend tests (`frontend.impl.mjs` under a wrapper) and the panel's fetch shim tests |
 
