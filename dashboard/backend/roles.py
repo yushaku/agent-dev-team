@@ -6,9 +6,11 @@ import re
 from .config import TEAMS
 
 ROLE_LINE_RE = re.compile(r"^\s*role\s*:\s*(.+)$", re.I | re.M)
-ROLE_DIRS = ("roles", "checks")  # worker cards, in-session check cards
+TEAM_PREFIX = "team-"  # worker skills: skills/team-<role>/SKILL.md, role id = name without the prefix
+OLD_CHECK_ROLES = ("security", "perf-a11y", "anti-ai")  # former checks/*.md, kept so old sessions still resolve
 COMMAND_ROLES = ("researcher", "solution-architect")  # slash-command skills the PO chats with directly
-ROLE_FILE_RE = re.compile(r"(?:roles|checks)/([a-z0-9-]+)\.md|skills/(researcher|solution-architect)/SKILL\.md")
+# old roles/<x>.md and checks/<x>.md paths still map for old sessions
+ROLE_FILE_RE = re.compile(r"(?:roles|checks)/([a-z0-9-]+)\.md|skills/(researcher|solution-architect)/SKILL\.md|skills/team-([a-z0-9-]+)/")
 DISCUSSION_ROLE_PATTERNS = (
     ("researcher", re.compile(
         r"\blàm\s+researcher\b|\b(?:act|work)\s+as\s+(?:the\s+)?researcher\b|"
@@ -25,16 +27,18 @@ ROLE_ALIAS = {
     "design": "designer", "perf": "perf-a11y", "a11y": "perf-a11y", "close": "orchestrator",
     "product": "tech-lead", "research": "researcher", "verify": "reviewer", "ux": "designer",
     "qa": "builder", "qa-tests": "builder", "delivery": "builder", "deliver": "builder",
-    "spec": "tech-lead", "pm": "tech-lead", "tidy": "tech-lead", "plan": "tech-lead", "arch": "tech-lead", "architect": "tech-lead", "investigate": "support",
+    "spec": "tech-lead", "pm": "tech-lead", "tidy": "tech-lead", "plan": "tech-lead", "arch": "tech-lead", "architect": "tech-lead", "investigate": "support-engineer",
     "solution": "solution-architect", "sa": "solution-architect", "solution-architect": "solution-architect",
     "arch-review": "solution-architect", "poc": "builder",
-    "investigator": "support",  # retired id: old sessions and Tasks
+    "investigator": "support-engineer", "support": "support-engineer",  # retired ids: old sessions and Tasks
 }
 DIRECT_ROLE = "chat trực tiếp"  # no team role: a direct chat with the user
 WORKER_ROLE = "worker"  # Orca worker whose task title names no role
 
 def known_roles():
-    names = {os.path.basename(f)[:-3] for d in ROLE_DIRS for f in glob.glob(os.path.join(TEAMS, d, "*.md"))}
+    names = {os.path.basename(os.path.dirname(f))[len(TEAM_PREFIX):]
+             for f in glob.glob(os.path.join(TEAMS, "skills", TEAM_PREFIX + "*", "SKILL.md"))}
+    names.update(OLD_CHECK_ROLES)
     names.update(n for n in COMMAND_ROLES if os.path.isfile(os.path.join(TEAMS, "skills", n, "SKILL.md")))
     if os.path.isfile(os.path.join(TEAMS, "skills", "orchestrator", "SKILL.md")):
         names.add("orchestrator")
@@ -65,7 +69,7 @@ def role_from_text(text, roles):
     v = m.group(1)
     m2 = ROLE_FILE_RE.search(v)
     if m2:
-        name = m2.group(1) or m2.group(2)
+        name = m2.group(1) or m2.group(2) or m2.group(3)
         return norm_role(name, roles) or name
     m3 = re.match(r"\s*([A-Za-z][\w+-]*)", v)
     return norm_role(m3.group(1), roles) if m3 else None
@@ -106,6 +110,9 @@ def assign_role(task, session):
         return "orchestrator", "title"
     elif any(name == "orchestrator" for name, _ in session.get("skills", [])):
         return "orchestrator", "skill"
+    elif any(name.startswith(TEAM_PREFIX) for name, _ in session.get("skills", [])):
+        name = next(n for n, _ in session["skills"] if n.startswith(TEAM_PREFIX))
+        return ROLE_ALIAS.get(name[len(TEAM_PREFIX):], name[len(TEAM_PREFIX):]), "skill"
     elif not task and any(name in COMMAND_ROLES for name, _ in session.get("skills", [])):
         return next(name for name, _ in session["skills"] if name in COMMAND_ROLES), "skill"
     elif not task and session.get("discussion"):

@@ -18,21 +18,36 @@ class RoleTests(unittest.TestCase):
 
     def test_known_roles_span_workers_checks_and_sessions(self):
         roles = set(known_roles())
-        self.assertTrue({"builder", "reviewer", "tech-lead", "designer", "support"}.issubset(roles))
+        self.assertTrue({"builder", "reviewer", "tech-lead", "designer", "support-engineer"}.issubset(roles))
         self.assertTrue({"security", "perf-a11y", "anti-ai"}.issubset(roles))
         self.assertTrue({"researcher", "solution-architect"}.issubset(roles))
         self.assertNotIn("investigator", roles)
+        self.assertNotIn("support", roles)
 
-    def test_investigator_maps_to_support(self):
-        self.assertEqual(role_from_title("investigator: read the thread", ROLES), "support")
-        self.assertEqual(role_from_title("support: read the thread", ROLES | {"support"}), "support")
-        self.assertEqual(role_from_text("Role: roles/investigator.md", ROLES), "support")
-        self.assertEqual(role_from_text("Role: roles/support.md", ROLES | {"support"}), "support")
-        self.assertEqual(assign_role({"role": "investigator"}, {"role_line": None}), ("support", "orca"))
+    def test_investigator_and_support_map_to_support_engineer(self):
+        for title in ("investigator: read the thread", "support: read the thread", "investigate: why", "support-engineer: x"):
+            with self.subTest(title=title):
+                self.assertEqual(role_from_title(title, ROLES | {"support-engineer"}), "support-engineer")
+        self.assertEqual(role_from_text("Role: roles/investigator.md", ROLES), "support-engineer")
+        self.assertEqual(role_from_text("Role: roles/support.md", ROLES), "support-engineer")
+        self.assertEqual(role_from_text("Role: support-engineer", ROLES | {"support-engineer"}), "support-engineer")
+        self.assertEqual(role_from_text("Role: skills/team-support-engineer/SKILL.md", ROLES), "support-engineer")
+        self.assertEqual(assign_role({"role": "investigator"}, {"role_line": None}), ("support-engineer", "orca"))
+        self.assertEqual(assign_role({"role": "support"}, {"role_line": None}), ("support-engineer", "orca"))
+
+    def test_team_skill_load_gives_role_without_orca_role(self):
+        self.assertEqual(assign_role(None, {"role_line": None, "skills": [["team-builder", 1]]}), ("builder", "skill"))
+        self.assertEqual(assign_role({"role": None}, {"role_line": None, "skills": [["team-reviewer", 1]]}), ("reviewer", "skill"))
+        self.assertEqual(assign_role({"role": "reviewer"}, {"role_line": None, "skills": [["team-builder", 1]]}), ("reviewer", "orca"))
+        self.assertEqual(assign_role(None, {"role_line": None, "skills": [["team-support-engineer", 1]]}),
+                         ("support-engineer", "skill"))
+        self.assertEqual(assign_role(None, {"role_line": None, "skills": [["orchestrator", 1], ["team-builder", 1]]}),
+                         ("orchestrator", "skill"))
 
     def test_role_file_paths_in_any_group_dir(self):
         cases = (("roles/builder.md", "builder"), ("checks/security.md", "security"),
-                 ("skills/researcher/SKILL.md", "researcher"))
+                 ("skills/researcher/SKILL.md", "researcher"), ("skills/team-builder/SKILL.md", "builder"),
+                 ("/x/skills/team-tech-lead/references/plan.md", "tech-lead"))
         for path, want in cases:
             with self.subTest(path=path):
                 self.assertEqual(role_from_text("Role: " + path, ROLES | {"security"}), want)

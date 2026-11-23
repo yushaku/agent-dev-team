@@ -12,7 +12,7 @@ Sources (read only): ~/.claude/projects/**/*.jsonl, ~/.codex/sessions/**/*.jsonl
 ~/.copilot/session-state/<uuid>/{workspace.yaml,events.jsonl} (GitHub Copilot CLI),
 ~/.hermes/state.db (Hermes sessions, read only),
 `orca orchestration ... --json` (refreshed in a background thread every 60 s),
-Task Routing metadata/logs + roles/*.md under the team root (selected settings and role defaults), the skills dir (installed skills).
+Task Routing metadata/logs + skills/team-*/SKILL.md under the team root (selected settings and role defaults), the skills dir (installed skills).
 Parsed files are cached in .cache/cache.json keyed by path + size + mtime.
 Python 3.9 stdlib only.
 """

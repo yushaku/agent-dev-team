@@ -98,19 +98,24 @@ class CheckTests(unittest.TestCase):
 
     def test_parse_role_skills_skips_placeholders_and_conditionals(self):
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "builder.md"), "w", encoding="utf-8") as f:
-                f.write("- **Skills:** `tdd`, `ponytail`; `diagnosing-bugs` when fixing; `{build.ui}` for UI.\n")
-            with open(os.path.join(d, "delivery.md"), "w", encoding="utf-8") as f:
-                f.write("- **Skills:** load `ci` or `docs` only when the work touches that domain.\n")
+            for name, line in (("team-builder", "- **Skills:** `tdd`, `ponytail`; `diagnosing-bugs` when fixing; `{build.ui}` for UI.\n"),
+                               ("team-delivery", "- **Skills:** load `ci` or `docs` only when the work touches that domain.\n"),
+                               ("researcher", "- **Skills:** `idea-refine`.\n")):
+                os.makedirs(os.path.join(d, name))
+                with open(os.path.join(d, name, "SKILL.md"), "w", encoding="utf-8") as f:
+                    f.write("---\nname: %s\n---\n%s" % (name, line))
             cards = I.parse_role_skills(d)
         self.assertEqual(cards["builder"], {"required": ["tdd", "ponytail"], "conditional": ["diagnosing-bugs"]})
         self.assertEqual(cards["delivery"]["required"], [])
+        self.assertEqual(cards["researcher"]["required"], ["idea-refine"])
 
     def test_real_role_cards_have_required_skills(self):
         cards = I.parse_role_skills()
-        for stem in ("security", "anti-ai", "researcher", "solution-architect", "support"):
+        for stem in ("tech-lead", "builder", "reviewer", "designer", "support-engineer", "researcher", "solution-architect"):
             self.assertIn(stem, cards)
+        self.assertNotIn("support", cards)
         self.assertIn("ponytail-review", cards["reviewer"]["required"])
+        self.assertEqual(I.card_ref(I.role_card_paths(), "builder"), "skills/team-builder/SKILL.md")
         self.assertNotIn("diagnosing-bugs", cards["builder"]["required"])
 
     def test_fix_rounds(self):

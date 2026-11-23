@@ -9,12 +9,12 @@ from . import orca as orca_mod
 from .parsers import hermes
 from .config import COPILOT_GLOB, HOME, SKILLS_DIR, TEAMS
 from .parsers.common import local_date, parse_rtk, repo_of
-from .roles import assign_role, known_roles
+from .roles import TEAM_PREFIX, assign_role, known_roles
 
 
 def read_tiers():
     roles = {}
-    for f in glob.glob(os.path.join(TEAMS, "roles", "*.md")):
+    for f in glob.glob(os.path.join(TEAMS, "skills", TEAM_PREFIX + "*", "SKILL.md")):
         try:
             with open(f, encoding="utf-8") as source:
                 txt = source.read()
@@ -25,7 +25,7 @@ def read_tiers():
             continue
         line = m.group(1)
         tm = re.search(r"tier (top|work|fast)", line)
-        roles[os.path.basename(f)[:-3]] = {"agent": None,
+        roles[os.path.basename(os.path.dirname(f))[len(TEAM_PREFIX):]] = {"agent": None,
                                            "tier": tm.group(1) if tm else None, "text": line.strip()[:200]}
     return {"tiers": {}, "order": ["fast", "work", "top"], "roles": roles}
 
