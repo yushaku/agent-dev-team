@@ -96,3 +96,18 @@ test('a loading API and a failing API give the panel different messages', async 
     await worker.deactivate()
   }
 })
+
+test('the skill sheet reads a skill document through the worker, and a refusal keeps its HTTP status', async () => {
+  const doc = { name: 'team-builder', body: '# Builder', origin: 'own' }
+  const worker = await mountWorker(main)
+  try {
+    setApiRoutes({ '/api/team/skill': async (_req, url) => (url.searchParams.get('name') === 'team-builder' ? Response.json(doc) : new Response('bad name', { status: 400 })) })
+    assert.deepEqual(await worker.request('team.skill', { name: 'team-builder' }), doc)
+    await assert.rejects(worker.request('team.skill', { name: '..' }), (e: unknown) => /bad name/.test(String((e as Error).message)))
+    setApiRoutes()
+    await assert.rejects(worker.request('team.skill', { name: 'team-builder' }), /chưa sẵn sàng/)
+  } finally {
+    setApiRoutes()
+    await worker.deactivate()
+  }
+})

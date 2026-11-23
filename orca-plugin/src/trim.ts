@@ -3,10 +3,12 @@
 
 type Json = Record<string, unknown>
 
-/** Top-level keys the Tasks view reads (dash.js, charts.js, tabs/{overall,roles,role-skills,repos,search,sessions}.js). */
+/** Top-level keys the Tasks and Agents tools views read (dash.js, charts.js, tabs/{overall,roles,role-skills,repos,search,sessions,skills,tokens}.js). */
 const KEEP = [
   'generated_at', 'days', 'range_start', 'dates', 'sessions', 'orca', 'roles_cfg', 'known_roles',
-  'attribution', 'copilot_dirs'
+  'attribution', 'copilot_dirs',
+  // the Agents tools view: RTK by command and the installed skills (a few KB, sessions carry the rest)
+  'rtk', 'skills_installed'
 ]
 /** Per-session fields only the Runs tab or nothing reads. */
 const SESSION_DROP = ['feature_segments', 'ctx', 'cwd', 'models']

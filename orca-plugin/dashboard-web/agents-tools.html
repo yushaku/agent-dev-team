@@ -1,0 +1,10 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Agents tools</title>
+<!-- The Agents tools panel's entry. A panel entry cannot carry a query or hash, and navigating away from this
+     document would lose Orca's bridge (window.orca), so this page loads the shared dashboard page into this very
+     document and names the view to show (js/orca-panel.js reads window.__orcaView). -->
+<script>
+window.__orcaView = 'tk-agents-tools'
+fetch('index.html').then((r) => r.text()).then((html) => { document.open(); document.write(html); document.close() })
+</script>

@@ -2,7 +2,7 @@
 // the in-process dashboard API (ledger-host.ts) and sends back only what the Tasks tab reads, in chunks.
 import type { OrcaWorkerApi } from 'orca/worker'
 import { chunks, prepare } from './trim'
-import { dashboardData, run as hostLedger, shutdown } from './ledger-host'
+import { dashboardData, run as hostLedger, shutdown, skillDoc } from './ledger-host'
 
 const KEEP_SNAPSHOTS = 3
 /** Unique per worker lifetime, so an id from before a restart can never match a snapshot opened after it. */
@@ -24,6 +24,7 @@ export default function activate(orca: OrcaWorkerApi): void {
     orca.log(`tasks.open days=${n} ${bytes} bytes in ${pieces.length} chunks, message bodies cut to ${bodyCap}`)
     return { id, days: n, chunks: pieces.length, bytes }
   })
+  orca.panels.handle('team.skill', async ({ name }) => skillDoc(String(name ?? '')))
   orca.panels.handle('tasks.chunk', async ({ id, index }) => {
     const chunk = snapshots.get(id)?.pieces[index]
     if (chunk === undefined) throw Object.assign(new Error('snapshot expired'), { code: 'expired' })

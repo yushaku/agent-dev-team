@@ -20,14 +20,14 @@ const busy = (sessions: number, runs: number) => ({
 test('keeps what the Tasks tab reads, drops the rest, keeps repo names of feature runs', () => {
   const out = trim(
     {
-      generated_at: 1, days: 7, dates: ['d'], roles_cfg: {}, known_roles: [], rtk: { big: 1 }, skills_installed: [],
+      generated_at: 1, days: 7, dates: ['d'], roles_cfg: {}, known_roles: [], rtk: { available: true }, skills_installed: ['tdd'], skills_available: ['x'],
       features: { runs: [{ repo: 'a', big: 1 }, { repo: 'a' }, { repo: 'b' }] },
       sessions: [{ id: 's', run_id: 'r1', feature_segments: [1], ctx: [1], cwd: '/x', models: {} }],
       orca: { available: true, runs: [run(1)] }
     },
     100
   ) as any
-  assert.deepEqual(Object.keys(out).sort(), ['dates', 'days', 'features', 'generated_at', 'known_roles', 'orca', 'roles_cfg', 'sessions'])
+  assert.deepEqual(Object.keys(out).sort(), ['dates', 'days', 'features', 'generated_at', 'known_roles', 'orca', 'roles_cfg', 'rtk', 'sessions', 'skills_installed'])
   assert.deepEqual(out.features, { runs: [{ repo: 'a' }, { repo: 'b' }] })
   assert.deepEqual(out.sessions, [{ id: 's', run_id: 'r1' }])
   assert.equal(out.orca.runs[0].events[0].body.length, 101)

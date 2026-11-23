@@ -98,15 +98,27 @@ export function describeFailure(status: number, body: string): string {
   return `HTTP ${status}${text ? `: ${text}` : ''}`
 }
 
-/** The dashboard snapshot for the Tasks panel, read from the in-process API (no network hop). */
+/** One GET of the in-process API (no network hop): the status and the body text. */
+async function callApi(pathWithQuery: string): Promise<{ status: number; body: string }> {
+  const route = apiRoutes?.[pathWithQuery.split('?')[0]]
+  if (!route) return { status: 0, body: net.apiError ?? 'chưa khởi động' }
+  const res = (await route({ method: 'GET', headers: { host: '127.0.0.1' } }, new URL('http://127.0.0.1' + pathWithQuery))) as Response
+  return { status: res.status, body: await res.text() }
+}
+
+/** The dashboard snapshot for the panels, read from the in-process API. */
 export async function dashboardData(days: number): Promise<Record<string, unknown>> {
   if (override) return override(days)
-  const route = apiRoutes?.['/api/data']
-  const offline = (why: string) => Object.assign(new Error(`Dashboard API chưa sẵn sàng (${why}).`), { code: 'offline' })
-  if (!route) throw offline(net.apiError ?? 'chưa khởi động')
-  const res = (await route({ method: 'GET', headers: { host: '127.0.0.1' } }, new URL(`http://127.0.0.1/api/data?days=${days}`))) as Response
-  if (!res.ok) throw offline(describeFailure(res.status, await res.text()))
-  return (await res.json()) as Record<string, unknown>
+  const { status, body } = await callApi(`/api/data?days=${days}`)
+  if (status !== 200) throw Object.assign(new Error(`Dashboard API chưa sẵn sàng (${status ? describeFailure(status, body) : body}).`), { code: 'offline' })
+  return JSON.parse(body) as Record<string, unknown>
+}
+
+/** A skill's document for the panel's skill sheet (`/api/team/skill?name=`); a refusal keeps its HTTP status in the error code. */
+export async function skillDoc(name: string): Promise<Record<string, unknown>> {
+  const { status, body } = await callApi('/api/team/skill?name=' + encodeURIComponent(name))
+  if (status !== 200) throw Object.assign(new Error(status ? body : `Dashboard API chưa sẵn sàng (${body}).`), { code: status ? 'http_' + status : 'offline' })
+  return JSON.parse(body) as Record<string, unknown>
 }
 
 /** Activation and shutdown run one after another on this chain, so neither can start while the other drains. */

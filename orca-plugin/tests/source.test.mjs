@@ -103,3 +103,20 @@ test('an API error reaches the panel message unchanged: the loading wording and 
     assert.doesNotMatch(shown, wording.source === 'đang tải' ? /temporarily/ : /đang tải/)
   }
 })
+
+test('extra routes (the skill sheet) are answered by their own handler and a refusal keeps its status', async () => {
+  const { fetchLike } = setup(async () => ({}))
+  const asked = []
+  const withExtra = makeFetch({
+    real: async () => 'real', base: 'http://127.0.0.1:4747', ask: async () => ({}), cached: () => null, remember: () => {}, firstDays: 7, hasCharts: () => false, ok: () => {}, fail: () => {},
+    extra: { '/api/team/skill': async (url) => { asked.push(url.searchParams.get('name')); if (url.searchParams.get('name') === '..') throw Object.assign(new Error('bad name'), { code: 'http_400' }); if (url.searchParams.get('name') === 'x') throw new Error('worker gone'); return { name: 'ok' } } }
+  })
+  const ok = await withExtra('/api/team/skill?name=team-builder')
+  assert.equal(ok.ok, true)
+  assert.deepEqual(await ok.json(), { name: 'ok' })
+  assert.equal((await withExtra('/api/team/skill?name=..')).status, 400)
+  assert.equal((await withExtra('/api/team/skill?name=x')).status, 503)
+  assert.equal(await withExtra('/api/cli-tools'), 'real')
+  assert.deepEqual(asked, ['team-builder', '..', 'x'])
+  void fetchLike
+})

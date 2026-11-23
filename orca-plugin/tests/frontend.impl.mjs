@@ -30,6 +30,9 @@ const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures, feat
 const { renderOverall } = await import("../dashboard-web/js/tabs/overall.js");
 const { renderCliTools, showCliTools } = await import("../dashboard-web/js/tabs/cli-tools.js");
 const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../dashboard-web/js/tabs/search.js");
+const { renderSkills } = await import("../dashboard-web/js/tabs/skills.js");
+const { renderRtkCommands } = await import("../dashboard-web/js/tabs/tokens.js");
+const { trim } = await import("../src/trim.ts");
 
 test("CLI inventory groups actual sources, filters and escapes machine filenames", () => {
   const data = { warnings: [], tools: [
@@ -559,6 +562,33 @@ test("Tools legend toggles code-search chart categories", () => {
   assert.doesNotMatch(html, /style="fill:var\(--blue\)"/);
   assert.equal(toggleSearchKind("not-a-kind"), false);
   C.state.searchHidden = [];
+});
+
+test("the Agents tools view renders the same from the worker's trimmed snapshot as from the full data", () => {
+  const session = (agent, role, worktree, extra) => ({ id: agent + role, agent, role, repo: "r", worktree, total: 100, start: 100, skills: {}, hooks: {}, search: {},
+    cwd: "/x", ctx: [1, 2], models: { m: 1 }, feature_segments: [{ tokens: 1 }], ...extra });
+  const full = {
+    sessions: [
+      session("claude", "builder", "w1", { skills: { tdd: [3, 500], "code-review": [1, 400] }, search: { codegraph: 4, rg_symbol: 2, read_full: 9 } }),
+      session("codex", "reviewer", "w2", { skills: { tdd: [1, 450] }, hooks: { ponytail: [100, "lite"] }, search: { rg: 5, find: 1 } }),
+    ],
+    skills_installed: ["tdd", "code-review", "unused-skill"],
+    rtk: { available: true, by_cmd: [{ cmd: "git", n: 7, saved: 5000, pct: 70 }, { cmd: "rg", n: 3, saved: 900, pct: 40 }] },
+    features: { repositories: {}, runs: [] }, orca: { runs: [] }, roles_cfg: { roles: {} },
+  };
+  const draw = (data) => {
+    C.state.data = data; C.state.searchHidden = [];
+    renderSkills(data.sessions); renderSearch(data.sessions); renderRtkCommands();
+    return ["#c-skills", "#c-search-agent", "#c-search-role", "#c-search-wt", "#c-rtk-cmd"].map((id) => element(id).innerHTML);
+  };
+  const fromFull = draw(full);
+  const trimmed = trim(full, 600);
+  assert.ok(trimmed.rtk && trimmed.skills_installed, "rtk and skills_installed survive the trim");
+  const fromTrimmed = draw(JSON.parse(JSON.stringify(trimmed)));
+  assert.deepEqual(fromTrimmed, fromFull);
+  assert.match(fromTrimmed[0], /unused-skill/);
+  assert.match(fromTrimmed[4], /git/);
+  assert.ok(fromTrimmed.every((html) => html.length > 50 && !/NaN|undefined/.test(html)));
 });
 
 test("Codegraph percentage ignores file reads", () => {

@@ -18,6 +18,13 @@
         "icon": "bar-chart-3",
         "entry": "dashboard-web/index.html",
         "ui": "html"
+      },
+      {
+        "id": "agents-tools",
+        "title": "Agents tools",
+        "icon": "wrench",
+        "entry": "dashboard-web/agents-tools.html",
+        "ui": "html"
       }
     ],
     "statusBarItems": [
