@@ -77,15 +77,14 @@ from backend.parsers.codex import parse_codex
 from backend.parsers.claude import parse_claude
 from backend import orca
 orca.orca_state.update(available=False,loaded=False)
-with patch('time.time',return_value=float(sys.argv[3])),patch.object(usage.cache,'load_files',return_value=[parse_claude(sys.argv[1]),parse_codex(sys.argv[2])]),patch.object(usage.hermes,'parse_hermes',return_value=[]),patch.object(usage,'parse_rtk',return_value={'available':False}),patch.object(usage.glob,'glob',wraps=usage.glob.glob):
+with patch('time.time',return_value=float(sys.argv[3])),patch.object(usage.cache,'load_files',return_value=[parse_claude(sys.argv[1]),parse_codex(sys.argv[2])]),patch.object(usage.hermes,'parse_hermes',return_value=[]),patch.object(usage,'parse_rtk',return_value={'available':False}),patch.object(usage,'HOME',sys.argv[4]):
  d=usage.build(7)
  s=insights.summary(d)
  print(json.dumps([d,s,insights.summary_md(s)]))`,
-    [...files, String(now)],
+    [...files, String(now), root],
   );
   const actual = build(store, 7, now);
   delete actual.build_ms;
-  expected[0].copilot_dirs = 0;
   assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected[0]);
   const result = summary(actual, new URLSearchParams());
   assert.deepEqual(JSON.parse(JSON.stringify(result)), expected[1]);
