@@ -13,7 +13,7 @@ Run the fixture suite with `node --test ledger/tests/*.test.ts`.
 | AGENT_LEDGER_CODEX | ~/.codex/sessions | Recursive *.jsonl |
 | AGENT_LEDGER_COPILOT | ~/.copilot/session-state | */events.jsonl |
 | AGENT_LEDGER_JCODE | ~/.jcode/sessions | *.json |
-| AGENT_LEDGER_HERMES | ~/.hermes/state.db | sessions and messages |
+| AGENT_LEDGER_HERMES | ~/.hermes/state.db | sessions, messages, system_prompts and session_model_usage |
 | AGENT_LEDGER_RTK | ~/Library/Application Support/rtk/history.db | commands |
 | AGENT_LEDGER_ORCA | orca on PATH | CLI executable |
 
@@ -39,22 +39,30 @@ ORDER BY path,generation,CAST(item AS INTEGER);
 ```
 
 An unfinished JSONL line stays at the cursor until a newline arrives.
-Rotation, observed shrinkage and reappearance start a new generation.
+A new file identity, observed shrinkage or a changed checksum in the 64 bytes
+before the committed offset starts a new JSONL generation. A file that returns
+with the same identity and matching tail resumes at its saved offset.
 Whole JSON files retain their original bytes. Database rows use JSON objects
 with column names, decimal integer literals and base64 objects for BLOBs.
 On a database or WAL change, the ledger checks rtk commands above the last
-archived rowid. It rehashes the small Hermes sessions table, including closed
-sessions, and reads new messages plus the previous 256 rowid positions.
-An edit to an older message or a previously archived rtk command can be missed.
-Each page releases its source read transaction.
+archived rowid. A VACUUM that shrinks a database preserves its generation.
+Hermes prompts are read by increasing rowid. Sessions and per-model usage
+totals can change in place, so the ledger rehashes both small tables. For
+messages it tracks count, active and compacted sums, and maximum rowid by
+session. A changed fingerprint triggers a session rescan. The newest 256
+rowid positions are also revisited. Older content-only edits that leave the
+fingerprint unchanged can be missed.
 
-Orca polls the paginated run list every cycle. New runs, changes to list
-entries and open runs trigger detail reads for tasks, gates, the latest 500
-inbox messages, workers and dispatches. A completed run reuses its archive
-until its list entry changes. When Orca omits run status, the daemon checks
-task, gate and worker states. Empty runs stay open for polling. A complete
-host-wide worker inventory can serve as a shared change check for several
-open runs. Changed worker lists still get a full per-run snapshot.
+Orca lists runs every minute and fetches details immediately for new or
+changed entries. A run with a live dispatch gets fresh details every minute.
+Other open runs are checked after five minutes of quiet, fifteen minutes
+later, then hourly. Settled runs are checked ten minutes, one hour and six
+hours after settling, then daily. Detail changes restart the backoff. When
+run status is absent, the daemon uses tasks, gates and workers to decide
+whether a run has settled. Each snapshot covers tasks, gates, up to 500 inbox
+messages, workers and dispatches. The daemon collects responses before
+opening the write transaction. Concurrent readers and writers get a
+30-second SQLite busy timeout.
 An unavailable CLI is retried on the next pass. Previously observed data
 stays in the archive when a source disappears.
 
