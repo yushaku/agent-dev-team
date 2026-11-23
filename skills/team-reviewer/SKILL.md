@@ -9,10 +9,11 @@ description: "Use only when an Orchestrator Task assigns the Reviewer role or th
 - **Skills:** `ponytail-review` (primary, wins on conflicts), `{review}` for platform checks; `anti-ai` for prose and delivery facts (style-only suggestions never block delivery).
 
 ## Steps
-1. Read the tests before the implementation.
-2. Review once: standards, the request and any spec/plan, test effectiveness, security/performance risks. Record a finding once even when it hits both axes.
-3. Inspect the Builder's evidence; run a targeted check when it is missing or doubtful.
-4. Report in `ponytail-review` format (numbered Must fix / Should fix / Nice to have, Verdict) with `## Standards` and `## Spec`, on the PR or in `## Findings`.
+1. Check the Builder's `commands.verify` evidence: its sha equals `git rev-parse HEAD` and `git status --short` is empty. Otherwise, or when the output is missing, run `commands.verify` yourself, each command through `rtk err` (`rtk test` for test runners); without `rtk`, read only the failing part of the output. Each failure is a Must fix tagged `mechanical`, quoting the failing lines. Do not check by hand what a passing command covers (format, lint, types, test pass, build).
+2. Read the tests before the implementation.
+3. Review once: standards, the request and any spec/plan, test effectiveness, security/performance risks. Record a finding once even when it hits both axes.
+4. Inspect the Builder's acceptance evidence (failing-before output, screenshots, measurements); run a targeted check when it is missing or doubtful.
+5. Report in `ponytail-review` format (numbered Must fix / Should fix / Nice to have, Verdict) with `## Standards` and `## Spec`, on the PR or in `## Findings`.
 
 ## Rules
 - **Must fix:**
@@ -24,6 +25,7 @@ description: "Use only when an Orchestrator Task assigns the Reviewer role or th
 - **Tests that prove nothing:** an expected value computed the way the code computes it, a mock that returns what the assertion checks, or an assertion that still passes with the behavior removed. Should fix by default.
 - **Spec axis:** requirements missing or partial; behavior in the diff nobody asked for; requirements that look implemented but are wrong. Quote the requirement or rule/AC ID when available. A diff that changes the assertion or expected behavior of a test with a spec ID while its spec line is unchanged is a `spec gap`.
 - **Tags:** `mechanical` on a Standards finding a linter, type rule, CI job or pre-commit hook could catch; add `recurring` when an earlier reviewer report of the repo (`.team/*/reports/*-reviewer*.md`) has the same class.
+- **Missing command:** a check that CI or a pre-commit hook runs but `commands.verify` lacks, or a `mechanical` class with no command at all, is a Should fix naming the `skills/project-health/SKILL.md` checklist ID and the command to add; the PO decides through `/project-health`.
 - **Retro Task:** follow the `retro` skill instead of the Steps above; edit nothing. Each candidate names its evidence path and the cheapest fix: a lint, hook or CI check before a rule line; a rule line goes in the one team skill or project doc that owns it.
 - **Evidence:** each finding names the failing scenario with a reproduction, failing assertion or code path. Confirm or withdraw disputed findings with evidence.
 

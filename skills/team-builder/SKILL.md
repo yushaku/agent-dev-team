@@ -12,8 +12,8 @@ description: "Use only when an Orchestrator Task assigns the Builder role or the
 ## Steps
 1. Read the spec and code once, then the plan with its `Boundaries`; afterwards only each slice's rule and AC IDs and listed relevant code. Read outside it only when needed and say why in the report. No plan: choose the smallest implementation steps.
 2. Per slice, in order: write the test first (`tdd`), implement, run the fast check (typecheck plus touched tests), commit as `feat`. `/compact` only when context is close to full.
-3. After the last slice, run full `commands.verify` once.
-4. Update related docs (`docs-policy.md`, relevant sections only).
+3. Update related docs (`docs-policy.md`, relevant sections only).
+4. Commit, then run full `commands.verify` once on a clean tree, each command through `rtk err` (`rtk test` for test runners).
 5. Write the Task report with `## Evidence`; when the Task delivers, put the delivery text in `## Commit body` (`references/delivery.md`).
 
 ## Rules
@@ -21,7 +21,7 @@ description: "Use only when an Orchestrator Task assigns the Builder role or the
 - **Ask first:** an `Ask first` item of `Boundaries`, and any unresolved product or design decision, goes to the Orchestrator with `ask` before the change. Business-rule changes require Gate 1.
 - **Code search:** `codegraph_explore` (MCP) or `codegraph explore|callers|callees|impact <symbol>` for structure; `rg` for literal strings, config keys, unindexed files; `codegraph sync` after large edits.
 - **Test seam:** the plan's or spec's; none: the highest existing seam that proves the behavior, recorded in the report.
-- **Evidence:** keep the failing test output before the fix and passing output after, both in `## Evidence`; before/after measurements when the Task is about performance or size.
+- **Evidence:** keep the failing test output before the fix and passing output after, both in `## Evidence`; before/after measurements when the Task is about performance or size. `commands.verify` evidence names the sha it ran on (`git rev-parse HEAD`) and the per-command result; a later commit makes it stale, so rerun.
 - **Never:** `git add -A` (stage explicit paths from `git status --short`); merge, release, deploy, force-push a shared branch.
 
 ## Done when

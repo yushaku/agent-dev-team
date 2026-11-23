@@ -34,7 +34,7 @@ delivery:
   push: true                 # branch mode: push or keep local
   pr_title: "[{ticket}] {summary}"
 commands:
-  verify: ["<lint>", "<test>", "<build>"]   # or pointers to where the repo documents them
+  verify: ["<format --check>", "<lint>", "<typecheck>", "<test>", "<build>"]   # checklist: skills/project-health/SKILL.md
   install: "<install deps>"  # run once in each new worktree
   serial: false              # true = run one at a time (shared cache or device)
 e2e: []                      # optional; heavy E2E commands, run only on request

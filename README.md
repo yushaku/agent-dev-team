@@ -84,7 +84,8 @@ No `missing:` lines means every skill is in place.
 
 1. Open the project repo in Orca and start Claude Code or Codex in a terminal there.
 2. Run `/init-team`: it reads the repo, asks a few questions one at a time and writes `.team/config.yaml` (local, never committed).
-3. Run `/orchestrator <job>`, for example `/orchestrator add CSV export to the reports page`.
+3. Run `/project-health`: it checks `commands.verify` against the checklist and proposes the missing checks.
+4. Run `/orchestrator <job>`, for example `/orchestrator add CSV export to the reports page`.
 
 ## Workers and commands
 
@@ -94,7 +95,7 @@ No `missing:` lines means every skill is in place.
   - `team-reviewer`: independent review; security and perf/a11y checks are its references.
   - `team-designer`: flow and mockups.
   - `team-support-engineer`: read-only ticket and production investigation.
-- **Commands** (`/orchestrator`, `/researcher`, `/solution-architect`, `/init-team`): sessions the PO starts and chats with directly; the Orchestrator never dispatches them.
+- **Commands** (`/orchestrator`, `/researcher`, `/solution-architect`, `/init-team`, `/project-health`): sessions the PO starts and chats with directly; the Orchestrator never dispatches them.
 
 Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` skill; they run inside a worker's session, never as a separate worker. Role ids (Task title prefix, `models.roles`, dashboard): `tech-lead`, `builder`, `reviewer`, `designer`, `support-engineer`.
 
