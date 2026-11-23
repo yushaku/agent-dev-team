@@ -73,7 +73,7 @@ class Runner {
       const timings: Record<string, number> = {};
       const errors = await cycle(this.store, this.o.env, timings);
       const pass: Pass = { reason, startedAt, finishedAt: new Date().toISOString(), ms: Math.round(performance.now() - started), timings, errors };
-      this.status.passes++; this.status.lastPass = pass;
+      this.status.passes++; this.status.lastPass = pass; delete this.status.lastError;
       this.status.counts = this.counts();
       this.o.onPass?.(pass);
     } catch (error) {

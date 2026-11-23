@@ -22,20 +22,25 @@ export function serve(routes: Routes, { port = 4748, host = '127.0.0.1', retryMs
       try { reply(res, 500, { error: String(error) }); } catch { res.destroy(); }
     }
   });
-  let timer: NodeJS.Timeout | undefined, closed = false;
+  let timer: NodeJS.Timeout | undefined, closed = false, binding = true; // binding: listen() asked, neither 'listening' nor 'error' seen yet
   server.on('error', (error: NodeJS.ErrnoException) => {
+    binding = false;
     onError(error);
     // A previous host (a reload) may still hold the port: try again instead of staying dark.
-    if (error.code === 'EADDRINUSE' && retryMs && !closed) timer = setTimeout(() => server.listen(port, host), retryMs);
+    if (error.code === 'EADDRINUSE' && retryMs && !closed) timer = setTimeout(() => { binding = true; server.listen(port, host); }, retryMs);
   });
-  server.on('listening', onListening);
+  server.on('listening', () => { binding = false; onListening(); });
   server.listen(port, host);
   return {
     server,
     close: () => new Promise<void>((done) => {
       closed = true; clearTimeout(timer);
-      if (!server.listening) return done();
-      server.close(() => done()); server.closeAllConnections();
+      const shut = () => { server.close(() => done()); server.closeAllConnections(); };
+      if (server.listening) return shut();
+      if (!binding) return done();
+      // Closed before the socket finished binding: wait for the bind, then close it (or for its failure).
+      server.once('listening', shut);
+      server.once('error', () => done());
     }),
   };
 }

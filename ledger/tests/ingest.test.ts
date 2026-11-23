@@ -616,3 +616,62 @@ test('http: bad URL is 400, inherited names are 404, a failing route is 500, POS
   assert.equal((await get('/nothing')).status,404);
   assert.ok([200,400,404].includes((await get('//[bad')).status)); // never hangs or crashes
 });
+
+test('plugin host: deactivating during activation starts nothing; a later activation serves /health and shuts down clean', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'plugin-host');
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const saved = {...process.env};
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  const bars: string[] = [], listeners: Record<string,()=>void> = {};
+  const orca = { log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on: (e: string, h: () => void) => { listeners[e] = h; } } };
+  const probe = () => fetch(`http://127.0.0.1:${port}/health`,{signal:AbortSignal.timeout(500)}).then(r => r.json(),() => null);
+  // Deactivate while the modules are still loading.
+  const first = run(orca);
+  await shutdown();
+  await first;
+  assert.equal(await probe(),null,'the cancelled activation never bound the port');
+  assert.equal(existsSync(join(home,'ingest.lock.db')),false,'and never touched the ledger');
+  // A later activation works, and a reload (shutdown + run) hands the lock over.
+  await run(orca);
+  let health: {ok:boolean,host:string,node:string,lock:string} | null = null;
+  for (let i=0;i<200 && !health?.ok;i++) { await sleep(25); health = await probe(); }
+  assert.equal(health?.host,'orca-plugin');
+  assert.equal(health?.lock,'held');
+  assert.ok(bars.some(b => /^Ledger \d\d:\d\d ✓/.test(b)),'status bar: '+bars.join(' | '));
+  assert.ok(listeners['agent.status.changed'] && listeners['workspace.created'] && listeners['workspace.removed']);
+  await shutdown();
+  assert.equal(await probe(),null);
+  await run(orca);
+  for (let i=0;i<200 && !(await probe())?.ok;i++) await sleep(25);
+  assert.equal((await probe())?.lock,'held');
+  await shutdown();
+});
+
+test('plugin host: a failed startup shows in the status bar', async t => {
+  const f = fixture(t);
+  const saved = {...process.env};
+  // An unwritable home makes the ledger refuse to start its pass; a missing ledger module would fail the same way.
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:'/proc/definitely/not/writable',TEAM_DASHBOARD_HEALTH_PORT:String(20000+Math.floor(Math.random()*20000))});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  const bars: string[] = [];
+  const orca = { log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on() {} } };
+  await run(orca);
+  try {
+    for (let i=0;i<100 && !bars.some(b => b.includes('✗'));i++) await sleep(25);
+    assert.ok(bars.some(b => b.includes('✗')),'status bar: '+bars.join(' | '));
+  } finally { await shutdown(); }
+});
+
+test('http: close() right after serve() leaves no listener behind', async () => {
+  const { serve } = await import('../http.ts');
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const srv = serve({'/ok':() => 1},{port});
+  await srv.close();
+  await sleep(100);
+  assert.equal(srv.server.listening,false);
+  await assert.rejects(fetch(`http://127.0.0.1:${port}/ok`,{signal:AbortSignal.timeout(500)}));
+});
