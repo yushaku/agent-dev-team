@@ -66,7 +66,7 @@ def parse_claude(path):
                         continue
                     inp = c.get("input") or {}
                     note_discussion_tool(s, c.get("name"), inp)
-                    note_search(s, c.get("name"), inp, ts)
+                    note_search(s, c.get("name"), inp, ts, s.get("cwd"))
                     if c.get("name") == "Skill":
                         name = str(inp.get("skill") or inp.get("name") or inp.get("command") or "").split(":")[-1].strip("/ ")
                         if name:

@@ -19,6 +19,27 @@ class ParserTests(unittest.TestCase):
         note_orca(s, 'orca orchestration worker-start --run run_a', 5)
         self.assertEqual(s["runs"], [["run_a", 3], ["run_b", 4], ["run_a", 5]])
 
+    def test_rg_symbol_needs_symbol_pattern_and_codegraph_index(self):
+        import os, tempfile
+        from backend.parsers import common
+        from backend.parsers.common import search_kinds
+        if common.CG_NUDGE is None:
+            self.skipTest("cg_nudge not importable")
+        with tempfile.TemporaryDirectory() as d:
+            indexed, plain = os.path.join(d, "a"), os.path.join(d, "b")
+            os.makedirs(os.path.join(indexed, ".codegraph"))
+            os.makedirs(plain)
+            sym, lit = {"command": "rg -n 'parseCartHeaderDiscount' src"}, {"command": "rg -n 'no results found' src"}
+            self.assertEqual(search_kinds("Bash", sym, indexed), ["rg", "rg_symbol"])
+            self.assertEqual(search_kinds("Bash", {"command": "grep -rn parse_cart_header ."}, indexed), ["grep", "rg_symbol"])
+            self.assertEqual(search_kinds("Bash", lit, indexed), ["rg"])
+            self.assertEqual(search_kinds("Bash", sym, plain), ["rg"])
+            self.assertEqual(search_kinds("Bash", sym), ["rg"])
+            self.assertEqual(search_kinds("Bash", {"command": "cat src/a.py"}, indexed), ["read_full"])
+            s = {}
+            common.note_search(s, "Bash", sym, 5, indexed)
+            self.assertEqual([k for k, _ in s["search"]], ["rg", "rg_symbol"])
+
     def test_search_kinds_classify_codegraph_and_text_search(self):
         from backend.parsers.common import search_kinds
         self.assertEqual(search_kinds("mcp__codegraph__codegraph_explore", {}), ["codegraph"])

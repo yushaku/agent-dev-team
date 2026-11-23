@@ -81,6 +81,16 @@ test("Tasks shows code-search usage by role only after filtering a project", () 
   C.state.runF = "";
 });
 
+test("Tasks role chart tooltip shows symbol rg lookups without drawing or counting them", () => {
+  C.state.repo = "dashboard";
+  renderTaskRoleSearch([{ role: "builder", search: { rg: 1, rg_symbol: 4 } }, { role: "reviewer", search: { rg: 2 } }]);
+  const html = element("#c-task-search").innerHTML;
+  assert.match(html, /rg\/grep tìm symbol: 4/);
+  assert.equal((html.match(/rg\/grep tìm symbol/g) || []).length, 1);
+  assert.doesNotMatch(html, /rg_symbol/);
+  C.state.repo = "";
+});
+
 test("load distinguishes fetch failures from render failures and recovers", async () => {
   let renderError;
   const rendered = [];

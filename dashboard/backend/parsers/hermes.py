@@ -60,7 +60,7 @@ def parse_hermes(start):
                             fn = c.get("function") or {}
                             args = fn.get("arguments") or ""
                             note_discussion_tool(tool_state, fn.get("name"), args)
-                            note_search(tool_state, fn.get("name"), args, m["timestamp"])
+                            note_search(tool_state, fn.get("name"), args, m["timestamp"], r["cwd"])
                             note_orca(tool_state, cmd_text(args), m["timestamp"])
                     except (ValueError, AttributeError, TypeError):
                         pass

@@ -23,6 +23,7 @@ GATE_WAIT_SHARE = 0.5         # check 6: PO gate wait above this share of lead t
 GATE_WAIT_HIGH_SHARE = 0.8
 GATE_MIN_LEAD_SECONDS = 600   # check 6: ignore Runs shorter than this
 TOP_TIER_HIGH_TOKENS = 5_000_000  # check 1: severity high above this many top-tier tokens
+SYMBOL_RG_MIN = 3             # check 7: rg/grep symbol lookups in an indexed repo per Run + role
 SKILLS_SHOWN = 8              # markdown only; JSON lists all skills
 EVIDENCE_IDS = 3              # ids listed per evidence line
 EFFORT = ["minimal", "low", "medium", "high", "xhigh"]
@@ -117,6 +118,21 @@ def tokens_by_role(sessions):
                      "share": round(r["total"] / total, 4) if total else 0,
                      "mix": [{"key": k, "tokens": v} for k, v in mix if v]})
     return rows
+
+
+def search_by_role(sessions):
+    by = {}
+    for s in sessions:
+        r = by.setdefault(s.get("role"), {"role": s.get("role"), "codegraph": 0, "rg_grep": 0, "rg_symbol": 0})
+        r["codegraph"] += cnt(s, "codegraph")
+        r["rg_grep"] += cnt(s, "rg") + cnt(s, "grep")
+        r["rg_symbol"] += cnt(s, "rg_symbol")
+    rows = []
+    for r in by.values():
+        n = r["codegraph"] + r["rg_grep"]
+        if n:
+            rows.append(dict(r, codegraph_share=round(r["codegraph"] / n, 4)))
+    return sorted(rows, key=lambda r: (-r["rg_symbol"], -(r["codegraph"] + r["rg_grep"])))
 
 
 def skills_by_role(sessions):
@@ -258,6 +274,31 @@ def check_outliers(sessions):
     return out
 
 
+def cnt(s, kind):
+    return (s.get("search") or {}).get(kind) or 0
+
+
+def check_symbol_rg(sessions):
+    by = {}
+    for s in sessions:
+        by.setdefault((s.get("run_id") or "", s.get("role")), []).append(s)
+    out = []
+    for (run_id, role), X in by.items():
+        n = sum(cnt(s, "rg_symbol") for s in X)
+        if n < SYMBOL_RG_MIN:
+            continue
+        cg = sum(cnt(s, "codegraph") for s in X)
+        hit = [s for s in X if cnt(s, "rg_symbol")]
+        repo = next((s.get("repo") for s in hit if s.get("repo")), None)
+        out.append(issue("symbol-rg:%s:%s" % (run_id or "-", role), "medium",
+                         "Vai %s dùng rg tìm symbol thay vì codegraph" % role,
+                         "%d lần rg/grep tìm symbol trong repo đã index, codegraph %d lần; phiên: %s" % (
+                             n, cg, ids(sid(s) for s in hit)),
+                         "Tra symbol bằng `codegraph explore <symbol>`, còn quan hệ gọi bằng `codegraph callers|impact <symbol>`; chỉ dùng rg cho chuỗi thường.",
+                         run=run_id, role=role, repo=repo))
+    return out
+
+
 def same_model(selected, observed):
     """Selections may use aliases (`opus`) for the observed full name (`claude-opus-5-5`)."""
     selected, observed = selected.lower(), (observed or "").lower()
@@ -319,7 +360,8 @@ def find_issues(data, sessions, runs, cards=None):
     top_models = {s["model"] for s in all_s if (s.get("routing") or {}).get("tier") == "top" and s.get("model")}
     found = (check_top_reviewer_rereview(sessions, task_index(data), top_models)
              + check_missing_skills(sessions, cards) + check_fix_rounds(runs)
-             + check_outliers(sessions) + check_routing(sessions) + check_gate_wait(runs))
+             + check_outliers(sessions) + check_routing(sessions) + check_gate_wait(runs)
+             + check_symbol_rg(sessions))
     return sorted(found, key=lambda i: (SEVERITY[i["severity"]], i["id"]))
 
 
@@ -337,6 +379,7 @@ def summary(data, repo=None, run=None, role=None, agent=None, cards=None):
                        "in": sum(s.get("fin") or 0 for s in sessions), "cache_read": sum(s.get("cr") or 0 for s in sessions),
                        "cache_write": sum(s.get("cw") or 0 for s in sessions), "out": sum(s.get("out") or 0 for s in sessions)},
             "tokens_by_role": tokens_by_role(sessions),
+            "search_by_role": search_by_role(sessions),
             "skills_by_role": skills_by_role(sessions),
             "runs": [run_summary(r) for r in runs],
             "issues": find_issues(data, sessions, runs, cards)}
@@ -407,6 +450,10 @@ def summary_md(s):
                  [[r["role"], fmt(r["tokens"]), "%.1f%%" % (100 * r["share"]), r["sessions"],
                    ", ".join("%s %s" % (m["key"], fmt(m["tokens"])) for m in r["mix"][:2])]
                   for r in s["tokens_by_role"]]), "",
+           "## Code search by role", "",
+           table(["Role", "codegraph", "rg/grep", "rg_symbol", "codegraph share"],
+                 [[r["role"], r["codegraph"], r["rg_grep"], r["rg_symbol"], "%.0f%%" % (100 * r["codegraph_share"])]
+                  for r in s["search_by_role"]]) if s["search_by_role"] else "No code searches.", "",
            "## Skills by role", ""]
     out.append(table(["Role", "Skills (loads)"], [[role, ", ".join("%s %d" % (x["skill"], x["loads"]) for x in sk[:SKILLS_SHOWN])
                                                    + (" +%d more" % (len(sk) - SKILLS_SHOWN) if len(sk) > SKILLS_SHOWN else "")]

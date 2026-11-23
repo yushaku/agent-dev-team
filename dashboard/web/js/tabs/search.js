@@ -29,9 +29,10 @@ function group(S, key) {
   S.forEach(s => {
     const g = key(s);
     if (!g) return;
-    const r = by[g] || (by[g] = { search: {}, sessions: 0, cg: 0 });
+    const r = by[g] || (by[g] = { search: {}, sessions: 0, cg: 0, sym: 0 });
     r.sessions++;
     if (cnt(s.search, "codegraph")) r.cg++;
+    r.sym += cnt(s.search, "rg_symbol");  // not in KINDS: no bar segment, not in totals
     KINDS.forEach(([k]) => { r.search[k] = cnt(r.search, k) + cnt(s.search, k); });
   });
   return Object.entries(by).filter(([, r]) => total(r.search)).sort((a, b) => total(b[1].search) - total(a[1].search));
@@ -54,7 +55,7 @@ function bars(id, rows, title, caption, o = {}) {
           label, full: label, ...(o.roles ? { dot: roleCol(label), f: "role:" + label } : {}),
           segs: kinds.map(([k, name, color]) => ({ v: cnt(r.search, k), color, name })),
           right: [{ t: fmt(t) }].concat(shownCodegraph ? [{ t: "codegraph " + Math.round(searches ? 100 * cg / searches : 0) + "%", color: "var(--subtext0)" }] : []),
-          tip: [label, r.sessions + " phiên, " + r.cg + " phiên có codegraph"].concat(kinds.map(([k, n]) => n + ": " + cnt(r.search, k))),
+          tip: [label, r.sessions + " phiên, " + r.cg + " phiên có codegraph"].concat(kinds.map(([k, n]) => n + ": " + cnt(r.search, k)), o.roles && r.sym > 0 ? ["rg/grep tìm symbol: " + r.sym] : []),
         };
       }),
       fv: v => v + " lần", xTitle: "Số lần gọi", aria: title,

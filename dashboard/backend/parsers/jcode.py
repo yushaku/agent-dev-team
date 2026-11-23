@@ -38,7 +38,7 @@ def parse_jcode(path):
                 if isinstance(c, dict) and c.get("type") == "tool_use":
                     arg = c.get("input") or {}
                     note_discussion_tool(s, c.get("name"), arg)
-                    note_search(s, c.get("name"), arg, ts)
+                    note_search(s, c.get("name"), arg, ts, s.get("cwd"))
                     for name in skills_in(json.dumps(arg)):
                         s["skills"].append([name, ts])
                     note_orca(s, cmd_text(arg.get("command") if isinstance(arg, dict) else arg), ts)

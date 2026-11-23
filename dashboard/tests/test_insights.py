@@ -41,6 +41,30 @@ def ids_of(found, prefix):
     return [i for i in found if i["id"].startswith(prefix)]
 
 
+class SymbolRgTests(unittest.TestCase):
+    def test_threshold_per_run_and_role(self):
+        a = sess("a", search={"rg_symbol": 2, "codegraph": 1})
+        b = sess("b", search={"rg_symbol": 1, "rg": 4})
+        found = ids_of(issues(payload([a, b], [run()])), "symbol-rg")
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["severity"], "medium")
+        self.assertIn("3 lần", found[0]["evidence"])
+        self.assertIn("codegraph 1", found[0]["evidence"])
+        self.assertEqual(found[0]["filter"], {"run": "r1", "role": "builder", "repo": "app"})
+        self.assertEqual(ids_of(issues(payload([a], [run()])), "symbol-rg"), [])
+        other = sess("c", role="reviewer", search={"rg_symbol": 2})
+        self.assertEqual(ids_of(issues(payload([a, other], [run()])), "symbol-rg"), [])  # roles do not pool
+
+    def test_sessions_without_run_group_by_role_and_summary_table(self):
+        X = [sess("s%d" % i, run=None, search={"rg": 1, "rg_symbol": 1}) for i in range(4)]
+        d = I.summary(payload(X, []), cards={})
+        found = ids_of(d["issues"], "symbol-rg")
+        self.assertEqual(len(found), 1)
+        self.assertIn("+1", found[0]["evidence"])
+        self.assertEqual(d["search_by_role"][0]["rg_symbol"], 4)
+        self.assertIn("## Code search by role", I.summary_md(d))
+
+
 class CheckTests(unittest.TestCase):
     def test_top_tier_reviewer_on_rereview(self):
         t = task("t1", "re-review", role="reviewer")

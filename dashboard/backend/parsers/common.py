@@ -5,7 +5,16 @@ import shlex
 import time
 from datetime import datetime, timezone
 
-from ..config import HOME, RTK_DB
+from ..config import HOME, RTK_DB, TEAMS
+
+# bin/cg_nudge.py owns the definition of a symbol search; import it by path, disable detection if that fails.
+try:
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location("cg_nudge", os.path.join(TEAMS, "bin", "cg_nudge.py"))
+    CG_NUDGE = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(CG_NUDGE)
+except Exception:
+    CG_NUDGE = None
 
 # ---------------------------------------------------------------- helpers
 SKILL_RE = re.compile(r"/skills/([A-Za-z0-9._-]+)/SKILL\.md")
@@ -78,7 +87,7 @@ RANGE_KEYS = ("limit", "offset", "start_line", "end_line", "view_range", "line_r
 TOOL_KIND = {"grep": "grep", "glob": "find", "search_files": "grep", "agentgrep": "grep", "find_files": "find"}
 
 
-def search_kinds(name, args):
+def search_kinds(name, args, cwd=None):
     """Search kinds used by one tool call. Codegraph wins: MCP tool name or a `codegraph <query>` command."""
     name = str(name or "")
     if CG_TOOL_RE.search(name):
@@ -100,11 +109,18 @@ def search_kinds(name, args):
         return []
     if SEARCH_CMD_RE["codegraph"].search(cmd) or "codegraph_" in cmd:
         return ["codegraph"]
-    return [k for k in SEARCH_KINDS[1:] if SEARCH_CMD_RE[k].search(cmd)]
+    kinds = [k for k in SEARCH_KINDS[1:] if SEARCH_CMD_RE[k].search(cmd)]
+    if cwd and CG_NUDGE and ("rg" in kinds or "grep" in kinds):
+        try:  # extra kind, not a bar segment: rg/grep for a symbol in a repo that has .codegraph/
+            if CG_NUDGE.symbol_searches(cmd) and CG_NUDGE.indexed_root(cwd, cmd):
+                kinds.append("rg_symbol")
+        except Exception:
+            pass
+    return kinds
 
 
-def note_search(s, name, args, ts=None):
-    for k in search_kinds(name, args):
+def note_search(s, name, args, ts=None, cwd=None):
+    for k in search_kinds(name, args, cwd):
         s.setdefault("search", []).append([k, ts])
 
 
