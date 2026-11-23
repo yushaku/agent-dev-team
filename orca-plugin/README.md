@@ -1,14 +1,22 @@
-# Team dashboard
+# Team dashboard (Orca plugin)
 
-A right-sidebar panel (`src/panel.tsx`) and the plugin's own worker (`src/worker.ts`). The panel asks with `plugin.request`, the worker answers with `orca.panels.handle`, keeps the total in `orca.storage` and tells every open panel with `orca.panels.post`; `src/protocol.ts` types both sides. Orca transpiles both files when they load, so there is no build step: save and the panel or worker reloads (a worker reload drops its in-memory state, so keep what must last in storage). `orca plugin test .` runs `src/panel.test.tsx` and `src/worker.test.ts` in Node with `orca/testing`, and `orca plugin check .` renders the panel with the worker in each `src/panel.check.ts` scenario; `npx tsc -p .` type-checks against the typings `orca plugin types .` writes to `.orca/types/`. With the folder loaded, `orca plugin dev request . counter.add --data '{"by":1}'` calls the worker as the panel does.
+The dashboard's **Tasks** tab (`#tk-theo-repo`) as an Orca right-sidebar panel, with live data from the Python dashboard on `http://127.0.0.1:4747`.
+
+Open it: `orca plugin open local.team-dashboard --panel tasks`
+
+## How it works
+
+- `web/` is generated from `dashboard/web` by `scripts/sync-web.mjs`: the dashboard's own `dash.js`, `lib/charts.js`, every `tabs/*.js` and `css/app.css` byte for byte, and `panel.html` made from `index.html` (top bar and `main.js` removed). Never edit those by hand. After changing `dashboard/web`, run `node orca-plugin/scripts/sync-web.mjs`; `orca plugin test` fails (`src/web-sync.test.ts`) while the two differ.
+- `web/panel.js` and `web/panel.css` are this plugin's own. `panel.js` answers dash.js's `fetch("/api/data?days=N")` through `plugin.request('tasks.data')`, shows a bar with a message and retry when 4747 is down, and keeps the last snapshot in `localStorage` so the panel paints at once and refreshes after. `panel.css` adds a light palette (Orca's `html.light`) and a narrow-sidebar gutter.
+- `src/worker.ts` fetches `/api/data`, `src/trim.ts` cuts it to what the Tasks tab reads (about 0.85 MB of the 1.6 MB) so the answer fits the 1 MiB limit, `src/protocol.ts` types the request.
 
 ## Develop
 
 ```sh
-orca plugin validate .
-orca plugin dev watch .    # loads this folder into Orca and prints its logs and reloads; Ctrl-C unloads it
+node orca-plugin/scripts/sync-web.mjs --check   # fails when web/ drifted from dashboard/web
+orca plugin test orca-plugin && orca plugin check orca-plugin
+npx -p typescript@5 tsc -p orca-plugin
+orca plugin dev watch ./orca-plugin --check --shot ./orca-plugin/.orca/shots
 ```
 
-Orca names the publisher after where the plugin is installed from: the GitHub or GitLab owner of
-its repository, or `local` for a folder. See
-https://github.com/stablyai/orca/blob/main/docs/reference/plugin-authoring.md.
+An HTML panel counts as drawn when its page has loaded, so a shot shows the cached first paint, not the worker's answer.
