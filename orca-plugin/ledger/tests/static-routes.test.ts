@@ -2,6 +2,7 @@ import './team-env.ts'; // first: the team root is read when modules load, and o
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { createServer, request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -114,7 +115,7 @@ test('a file replaced by a link after the scan is refused at read time, and so i
   // readAsset itself says why
   const asset = scanBundle(root).get('/index.html')!;
   await assert.doesNotReject(readAsset(root, asset));
-  await assert.rejects(readAsset(root, { ...asset, file: join(root, 'lib', 'a.js'), rel: 'lib/a.js' }), /moved or linked/);
+  await assert.rejects(readAsset(root, { ...asset, file: join(root, 'lib', 'a.js'), rel: 'lib/a.js' }), /moved or linked|outside the bundle/);
 });
 
 test('assets with spaces and non-ASCII names are reachable under their percent-encoded URLs', async (t) => {
@@ -141,4 +142,19 @@ test('an unreadable file is a request failure, not a crash', async (t) => {
   t.after(() => { try { chmodSync(join(root, 'js', 'app.js'), 0o644); } catch { /* the scratch directory is already gone */ } });
   assert.equal((await get('/js/app.js')).status, process.getuid?.() === 0 ? 200 : 500);
   assert.equal((await get('/')).status, 200);
+});
+
+test('a registered asset that becomes a FIFO is refused without blocking, over HTTP and in readAsset', async (t) => {
+  const { root } = bundle(t);
+  const { get } = await serveApi(t, root);
+  const asset = scanBundle(root).get('/js/app.js')!;
+  assert.equal((await get('/js/app.js')).status, 200);
+  rmSync(join(root, 'js', 'app.js'));
+  execFileSync('mkfifo', [join(root, 'js', 'app.js')]); // a plain open(O_RDONLY) of this would wait for a writer forever
+  const settled = (promise: Promise<unknown>) => Promise.race([promise.then(() => 'settled', () => 'settled'), new Promise((done) => setTimeout(() => done('blocked'), 3000))]);
+  assert.equal(await settled(readAsset(root, asset)), 'settled');
+  await assert.rejects(readAsset(root, asset), /not a regular file/);
+  const answer = await Promise.race([get('/js/app.js'), new Promise<{ status: number }>((done) => setTimeout(() => done({ status: -1 }), 3000))]);
+  assert.equal(answer.status, 500, 'the request settles with a failure instead of hanging');
+  assert.equal((await get('/index.html')).status, 200, 'other assets still answer');
 });

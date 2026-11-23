@@ -111,14 +111,18 @@ function details(t) {
   }
   return [desc.trim().replace(/\s+/g, ' ').slice(0, 500), desc ? t.source + ' · ' + t.package : ''];
 }
-/** Inventory of the commands on a PATH (the login shell's plus this process's when none is given; `shell` is only for tests). */
-export function discover(pathEnv?: string, shell = userInfo().shell || '/bin/sh'): CliTools {
+/**
+ * Inventory of the commands on a PATH (the login shell's plus this process's when none is given). `shell` is only
+ * for tests: a path, or a function that finds it; either way it is resolved inside the guarded branch, so a failure to
+ * find the login shell falls back to this process's PATH with a warning.
+ */
+export function discover(pathEnv?: string, shell?: string | (() => string)): CliTools {
   const warnings: string[] = [];
   if (pathEnv === undefined) {
     pathEnv = process.env.PATH || '';
     try {
       const out = execFileSync(
-        shell,
+        (typeof shell === 'function' ? shell() : shell) ?? (userInfo().shell || '/bin/sh'),
         ['-ilc', 'printf "\\n__TEAM_DASHBOARD_PATH__%s\\n" "$PATH"'],
         { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] },
       );
