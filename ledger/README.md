@@ -11,7 +11,7 @@ Run the fixture suite with `node --test ledger/tests/*.test.ts`.
 | AGENT_LEDGER_HOME | ~/.agents/ledger | Private output directory |
 | AGENT_LEDGER_CLAUDE | ~/.claude/projects | Recursive *.jsonl |
 | AGENT_LEDGER_CODEX | ~/.codex/sessions | Recursive *.jsonl |
-| AGENT_LEDGER_COPILOT | ~/.copilot/session-state | */events.jsonl |
+| AGENT_LEDGER_COPILOT | ~/.copilot/session-state | */events.jsonl and */workspace.yaml |
 | AGENT_LEDGER_JCODE | ~/.jcode/sessions | *.json |
 | AGENT_LEDGER_HERMES | ~/.hermes/state.db | sessions, messages, system_prompts and session_model_usage |
 | AGENT_LEDGER_RTK | ~/Library/Application Support/rtk/history.db | commands |
@@ -19,6 +19,31 @@ Run the fixture suite with `node --test ledger/tests/*.test.ts`.
 
 Use absolute paths for overrides. Choose a private output directory outside
 the inputs. Raw archives contain complete conversations and command lines.
+
+## Dashboard API
+
+With an ingested ledger, run `node ledger/serve.ts --port 4748` on Node 24 or 26.
+The server binds to 127.0.0.1. For IPv6 loopback use `--host ::1`.
+The standalone API and the daemon share `AGENT_LEDGER_HOME`.
+
+A plugin worker can mount `createApi(store)` from `ledger/api.ts` as a Node
+HTTP request listener alongside its own routes. Pass an open ledger Store or
+the ledger directory. Call `await handler.close()` when deactivating the host.
+The handler owns its query worker and SQLite connection. The caller owns the
+HTTP server. Wire types for the five JSON endpoints are in `ledger/protocol.ts`.
+
+The first history request builds the derived tables from the archive. Subsequent
+requests check an ingest-log cursor. A changed session file rebuilds its source
+generation. A changed Hermes message rebuilds its session. RTK commands update
+by row. A parser version change creates fresh projections from archived bytes.
+Copilot workspace metadata is available from the first pass that archives its
+sidecar. Existing archives with events only use the event context.
+
+The API reads current Git metadata, report files, installed skills and local CLI
+metadata to match the dashboard. Default-branch defect metrics are cached by
+repository and commit. The first window covering a large repository can spend
+several minutes reading its Git history. Up to four serialized date windows
+stay in the query worker and refresh on new ingestion or after 30 seconds.
 
 ## Reading the archive
 
