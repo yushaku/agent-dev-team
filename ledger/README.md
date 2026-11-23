@@ -26,11 +26,21 @@ With an ingested ledger, run `node ledger/serve.ts --port 4748` on Node 24 or 26
 The server binds to 127.0.0.1. For IPv6 loopback use `--host ::1`.
 The standalone API and the daemon share `AGENT_LEDGER_HOME`.
 
-A plugin worker can mount `createApi(store)` from `ledger/api.ts` as a Node
-HTTP request listener alongside its own routes. Pass an open ledger Store or
-the ledger directory. Call `await handler.close()` when deactivating the host.
-The handler owns its query worker and SQLite connection. The caller owns the
-HTTP server. Wire types for the five JSON endpoints are in `ledger/protocol.ts`.
+Pass an open Store or ledger directory to `createApi`. Its `routes` property
+contains the dashboard endpoints and static assets for the plugin's listener.
+
+```ts
+import { createApi } from './api.ts';
+import { serve } from './http.ts';
+
+const api = createApi(store);
+const http = serve({ '/health': health, ...api.routes }, { port: 4748 });
+```
+
+During deactivation, call `await http.close()` and `await api.close()`.
+The API is also callable as a standalone Node HTTP request listener. The query
+worker writes derived tables, so use a scratch ledger when testing alongside
+the plugin. Wire types for dashboard JSON responses are in `ledger/protocol.ts`.
 
 The query worker builds derived tables from the archive at startup and checks
 the ingest-log cursor every second. Requests read the latest complete projections. A changed session file rebuilds its source
