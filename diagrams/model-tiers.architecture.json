@@ -13,16 +13,13 @@
           "label": "PO"
         },
         "cloud": {
-          "label": "Orchestrator sets tier"
-        },
-        "messagebus": {
-          "label": "Plan"
+          "label": "Tier (project catalog)"
         },
         "backend": {
-          "label": "Build"
+          "label": "Worker"
         },
         "external": {
-          "label": "Verify"
+          "label": "Independent review"
         }
       }
     }
@@ -57,58 +54,30 @@
       ]
     },
     {
-      "id": "top_2",
-      "type": "backend",
-      "label": "Builder",
-      "sublabel": "role override",
+      "id": "top_rev",
+      "type": "external",
+      "label": "Reviewer",
+      "sublabel": "full feature review",
       "pos": [
         40,
         170
       ],
       "size": [
-        140,
+        180,
         56
       ]
     },
     {
-      "id": "top_3",
-      "type": "external",
-      "label": "Code Reviewer",
-      "sublabel": "not below Builder, other agent",
+      "id": "top_b",
+      "type": "backend",
+      "label": "Builder",
+      "sublabel": "risk or role override",
       "pos": [
-        196,
+        236,
         170
       ],
       "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "top_4",
-      "type": "external",
-      "label": "Security",
-      "sublabel": "when triggered",
-      "pos": [
-        352,
-        170
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "top_5",
-      "type": "messagebus",
-      "label": "Solution Architect",
-      "sublabel": "arch review worker",
-      "pos": [
-        508,
-        170
-      ],
-      "size": [
-        140,
+        180,
         56
       ]
     },
@@ -127,30 +96,44 @@
       ]
     },
     {
-      "id": "work_3",
+      "id": "work_b",
       "type": "backend",
       "label": "Builder",
-      "sublabel": "tests, code, PR body",
+      "sublabel": "default",
       "pos": [
         40,
         330
       ],
       "size": [
-        140,
+        180,
         56
       ]
     },
     {
-      "id": "work_5",
+      "id": "work_rev",
       "type": "external",
-      "label": "Perf / A11y",
-      "sublabel": "when triggered",
+      "label": "Reviewer",
+      "sublabel": "re-review, not below Builder",
       "pos": [
-        196,
+        236,
         330
       ],
       "size": [
-        140,
+        200,
+        56
+      ]
+    },
+    {
+      "id": "work_se",
+      "type": "backend",
+      "label": "Support Engineer",
+      "sublabel": "default",
+      "pos": [
+        452,
+        330
+      ],
+      "size": [
+        180,
         56
       ]
     },
@@ -169,30 +152,16 @@
       ]
     },
     {
-      "id": "fast_0",
+      "id": "fast_b",
       "type": "backend",
       "label": "Builder",
-      "sublabel": "simple task",
+      "sublabel": "simple Task",
       "pos": [
         40,
         490
       ],
       "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "fast_1",
-      "type": "external",
-      "label": "Anti-AI Editor",
-      "sublabel": "run alone",
-      "pos": [
-        196,
-        490
-      ],
-      "size": [
-        140,
+        180,
         56
       ]
     }
@@ -203,10 +172,8 @@
       "label": "top tier",
       "wraps": [
         "t_top",
-        "top_2",
-        "top_3",
-        "top_4",
-        "top_5"
+        "top_rev",
+        "top_b"
       ]
     },
     {
@@ -214,8 +181,9 @@
       "label": "work tier",
       "wraps": [
         "t_work",
-        "work_3",
-        "work_5"
+        "work_b",
+        "work_rev",
+        "work_se"
       ]
     },
     {
@@ -223,8 +191,7 @@
       "label": "fast tier",
       "wraps": [
         "t_fast",
-        "fast_0",
-        "fast_1"
+        "fast_b"
       ]
     }
   ],

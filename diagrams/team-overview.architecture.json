@@ -16,18 +16,32 @@
           "label": "Orchestrator"
         },
         "messagebus": {
-          "label": "Plan"
+          "label": "PO-started session"
         },
         "backend": {
-          "label": "Build"
+          "label": "Worker"
         },
         "external": {
-          "label": "Verify"
+          "label": "Independent review"
         }
       }
     }
   },
   "components": [
+    {
+      "id": "sa_talk",
+      "type": "messagebus",
+      "label": "Solution Architect",
+      "sublabel": "system design, ADRs",
+      "pos": [
+        60,
+        80
+      ],
+      "size": [
+        180,
+        56
+      ]
+    },
     {
       "id": "po",
       "type": "frontend",
@@ -48,7 +62,7 @@
       "label": "Researcher",
       "sublabel": "product discovery",
       "pos": [
-        780,
+        820,
         80
       ],
       "size": [
@@ -57,13 +71,13 @@
       ]
     },
     {
-      "id": "sa_talk",
-      "type": "messagebus",
-      "label": "Solution Architect",
-      "sublabel": "discussion session",
+      "id": "support",
+      "type": "backend",
+      "label": "Support Engineer",
+      "sublabel": "read-only investigation",
       "pos": [
-        80,
-        80
+        60,
+        210
       ],
       "size": [
         180,
@@ -74,7 +88,7 @@
       "id": "orchestrator",
       "type": "cloud",
       "label": "Orchestrator",
-      "sublabel": "plans, dispatches, ships",
+      "sublabel": "grill, spec, tickets",
       "pos": [
         440,
         210
@@ -87,10 +101,10 @@
     {
       "id": "report",
       "type": "messagebus",
-      "label": "Research report",
+      "label": "Research note",
       "sublabel": "research/<topic>.md",
       "pos": [
-        780,
+        820,
         210
       ],
       "size": [
@@ -102,69 +116,27 @@
       "id": "builder",
       "type": "backend",
       "label": "Builder",
-      "sublabel": "tickets, tests, PR body",
+      "sublabel": "tickets via tdd",
       "pos": [
-        320,
+        300,
         340
       ],
       "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "antiai",
-      "type": "external",
-      "label": "Anti-AI Editor",
-      "sublabel": "fresh context",
-      "pos": [
-        320,
-        460
-      ],
-      "size": [
-        140,
+        160,
         56
       ]
     },
     {
       "id": "reviewer",
       "type": "external",
-      "label": "Code Reviewer",
+      "label": "Reviewer",
       "sublabel": "code-review, other agent",
       "pos": [
-        476,
-        460
+        580,
+        340
       ],
       "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "security",
-      "type": "external",
-      "label": "Security",
-      "sublabel": "when triggered",
-      "pos": [
-        632,
-        460
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "perf",
-      "type": "external",
-      "label": "Perf / A11y",
-      "sublabel": "when triggered",
-      "pos": [
-        788,
-        460
-      ],
-      "size": [
-        140,
+        180,
         56
       ]
     }
@@ -172,19 +144,10 @@
   "boundaries": [
     {
       "kind": "region",
-      "label": "Build",
+      "label": "Workers (one Orca Task each)",
       "wraps": [
-        "builder"
-      ]
-    },
-    {
-      "kind": "region",
-      "label": "Verify",
-      "wraps": [
-        "antiai",
-        "reviewer",
-        "security",
-        "perf"
+        "builder",
+        "reviewer"
       ]
     }
   ],
@@ -195,11 +158,7 @@
       "to": "orchestrator",
       "label": "request, gate answer",
       "fromSide": "bottom",
-      "toSide": "top",
-      "labelAt": [
-        450,
-        173
-      ]
+      "toSide": "top"
     },
     {
       "id": "orch-tells",
@@ -207,11 +166,7 @@
       "to": "po",
       "label": "gate question",
       "fromSide": "top",
-      "toSide": "bottom",
-      "labelAt": [
-        578,
-        173
-      ]
+      "toSide": "bottom"
     },
     {
       "id": "po-discuss",
@@ -251,11 +206,7 @@
       "to": "report",
       "label": "writes",
       "fromSide": "bottom",
-      "toSide": "top",
-      "labelAt": [
-        860,
-        173
-      ]
+      "toSide": "top"
     },
     {
       "id": "orch-reads",
@@ -266,48 +217,36 @@
       "toSide": "right"
     },
     {
+      "id": "to-support",
+      "from": "orchestrator",
+      "to": "support",
+      "label": "question Task",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
       "id": "to-build",
       "from": "orchestrator",
       "to": "builder",
-      "label": "dispatch",
-      "fromSide": "left",
-      "toSide": "left",
-      "via": [
-        [
-          200,
-          238
-        ],
-        [
-          200,
-          368
-        ]
-      ],
-      "labelAt": [
-        260,
-        354
-      ]
+      "label": "ticket Task",
+      "fromSide": "bottom",
+      "toSide": "top"
     },
     {
-      "id": "to-verify",
+      "id": "to-review",
       "from": "orchestrator",
-      "to": "antiai",
-      "label": "dispatch",
+      "to": "reviewer",
+      "label": "review Task",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "findings",
+      "from": "reviewer",
+      "to": "builder",
+      "label": "findings, re-review",
       "fromSide": "left",
-      "toSide": "left",
-      "via": [
-        [
-          200,
-          238
-        ],
-        [
-          200,
-          488
-        ]
-      ],
-      "labelAt": [
-        260,
-        474
-      ]
+      "toSide": "right"
     }
   ]
 }

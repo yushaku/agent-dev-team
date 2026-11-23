@@ -129,8 +129,8 @@
       "lane": "po",
       "col": 2,
       "type": "frontend",
-      "label": "/clear or /new",
-      "sublabel": "\"act as Orchestrator\"",
+      "label": "/orchestrator <job>",
+      "sublabel": "fresh session",
       "width": 170
     },
     {
@@ -147,8 +147,8 @@
       "lane": "orch",
       "col": 3,
       "type": "cloud",
-      "label": "Gate 1 or 100K",
-      "sublabel": "write handoff.md",
+      "label": "After to-tickets",
+      "sublabel": "compact or handoff.md",
       "width": 170
     },
     {
@@ -156,8 +156,8 @@
       "lane": "po",
       "col": 4,
       "type": "frontend",
-      "label": "/clear or /new",
-      "sublabel": "\"act as Orchestrator\"",
+      "label": "Context full",
+      "sublabel": "/clear, /orchestrator",
       "width": 170
     },
     {
@@ -227,7 +227,7 @@
       "id": "e5",
       "from": "pick",
       "to": "gate",
-      "label": "runs Tasks",
+      "label": "grill, spec, tickets",
       "fromSide": "right",
       "toSide": "left"
     },
