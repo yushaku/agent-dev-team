@@ -54,23 +54,24 @@ export function createApi(ledger: Store | string) {
     closed = false,
     next = 0;
   const pending = new Map<number, (r: Response) => void>();
+  function startWorker() {
+    const w = new Worker(new URL('./api-worker.ts', import.meta.url), { workerData: { home } });
+    worker = w;
+    w.on('message', ({ id, response }) => {
+      pending.get(id)?.(response);
+      pending.delete(id);
+    });
+    w.on('error', (e) => console.error('Dashboard worker failed', e));
+    w.on('exit', () => {
+      if (worker !== w) return;
+      worker = undefined;
+      for (const cb of pending.values()) cb([503, 'text/plain', 'Dashboard data is temporarily unavailable']);
+      pending.clear();
+    });
+  }
+  startWorker();
   function dispatch(url: string) {
-    if (!worker) {
-      const w = new Worker(new URL('./api-worker.ts', import.meta.url), { workerData: { home } });
-      worker = w;
-      w.on('message', ({ id, response }) => {
-        pending.get(id)?.(response);
-        pending.delete(id);
-      });
-      w.on('error', (e) => console.error('Dashboard worker failed', e));
-      w.on('exit', () => {
-        if (worker !== w) return;
-        worker = undefined;
-        for (const cb of pending.values())
-          cb([503, 'text/plain', 'Dashboard data is temporarily unavailable']);
-        pending.clear();
-      });
-    }
+    if (!worker) startWorker();
     const id = next++;
     return new Promise<Response>((done) => {
       pending.set(id, done);

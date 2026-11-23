@@ -32,8 +32,8 @@ the ledger directory. Call `await handler.close()` when deactivating the host.
 The handler owns its query worker and SQLite connection. The caller owns the
 HTTP server. Wire types for the five JSON endpoints are in `ledger/protocol.ts`.
 
-The first history request builds the derived tables from the archive. Subsequent
-requests check an ingest-log cursor. A changed session file rebuilds its source
+The query worker builds derived tables from the archive at startup and checks
+the ingest-log cursor every second. Requests read the latest complete projections. A changed session file rebuilds its source
 generation. A changed Hermes message rebuilds its session. RTK commands update
 by row. A parser version change creates fresh projections from archived bytes.
 Copilot workspace metadata is available from the first pass that archives its

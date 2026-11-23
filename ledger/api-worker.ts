@@ -8,6 +8,14 @@ import { discover } from './commands.ts';
 
 const store = new Store(workerData.home),
   refresh = projections(store);
+let revision = refresh();
+setInterval(() => {
+  try {
+    revision = refresh();
+  } catch (error) {
+    console.error('Dashboard projection refresh failed', error);
+  }
+}, 1000).unref();
 const snapshots = new Map<
   number,
   { revision: number; at: number; data: ReturnType<typeof build>; body: string }
@@ -23,8 +31,7 @@ function answer(url: string) {
   if (pathname === '/api/cli-tools') return [200, json, JSON.stringify(discover())];
   const input = q.get('days')?.trim() || '7',
     days = /^[+-]?\d+$/.test(input) ? Math.max(1, Math.min(90, Number(input))) : 7;
-  const revision = refresh(),
-    now = Date.now();
+  const now = Date.now();
   let snap = snapshots.get(days);
   if (!snap || snap.revision !== revision || now - snap.at >= 30000) {
     const data = build(store, days);

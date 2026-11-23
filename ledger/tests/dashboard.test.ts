@@ -391,3 +391,33 @@ test('Copilot counts visible directories and restores sidecar metadata after del
   assert.equal(data.sessions[0].id, 'archived');
   assert.equal(data.sessions[0].originator, 'test');
 });
+
+test('query worker follows appended history without HTTP requests', async (t) => {
+  const { root, store } = scratch(t);
+  const path = join(root, 'background.jsonl');
+  const line = '{"type":"token_usage_record","payload":{"usage":{"input_tokens":17}}}\n';
+  writeFileSync(path, line);
+  ingestFile(store, 'codex', path);
+  const api = createApi(store);
+  async function waitForCalls(count: number) {
+    const until = Date.now() + 10000;
+    while (Date.now() < until) {
+      if (store.db.prepare("SELECT 1 FROM sqlite_schema WHERE name='dashboard_sessions'").get()) {
+        const row = store.db
+          .prepare('SELECT data FROM dashboard_sessions WHERE version=?')
+          .get(PARSER_VERSION);
+        if (row && JSON.parse(String(row.data)).calls.length === count) return;
+      }
+      await new Promise((done) => setTimeout(done, 25));
+    }
+    assert.fail('background ingest cursor did not advance');
+  }
+  try {
+    await waitForCalls(1);
+    appendFileSync(path, line);
+    ingestFile(store, 'codex', path);
+    await waitForCalls(2);
+  } finally {
+    await api.close();
+  }
+});
