@@ -13,6 +13,16 @@ export class Store {
   constructor(home: string) {
     ensurePrivateHome(home);
     this.db = new DatabaseSync(join(home, 'ledger.sqlite'));
+    try {
+      this.init(home);
+    } catch (error) {
+      try { this.db.close(); } catch { /* already closed */ }
+      throw error;
+    }
+  }
+
+  /** All setup after the database opens; the constructor closes the connection if any of it fails. */
+  private init(home: string) {
     this.db.exec('PRAGMA busy_timeout=30000');
     this.db.prepare('ATTACH ? AS archive').run(join(home, 'archive.sqlite'));
     // Rollback journals give attached databases a single atomic commit.

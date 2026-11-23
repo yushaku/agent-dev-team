@@ -21,6 +21,8 @@ class Runner {
   lock?: Held;
   timer?: NodeJS.Timeout;
   debounce?: NodeJS.Timeout;
+  /** Why an event pass is wanted, and when that was first asked; cleared when it is dispatched. */
+  wanted?: { reason: string, since: number };
   inflight?: Promise<void>;
   periodicAt = 0;
   lastStart = 0;
@@ -52,8 +54,27 @@ class Runner {
     this.inflight = this.run(reason).finally(() => {
       this.inflight = undefined;
       if (this.again && !this.stopped) { this.again = false; void this.pass('queued'); }
+      this.armEvent(); // an event wanted during the pass is judged against the newest pass start
     });
     return this.inflight;
+  }
+  /**
+   * Event passes are dispatched here, never queued behind a running pass: the spacing is checked at the moment
+   * of dispatch against the start of whichever pass ran last, so no two passes start closer than minGapMs
+   * because of events (the periodic pass and its queued rerun are not events).
+   */
+  armEvent() {
+    if (!this.wanted || this.debounce || this.stopped || this.inflight) return;
+    const at = Math.max(this.wanted.since + this.o.debounceMs, this.lastStart + this.o.minGapMs);
+    this.debounce = setTimeout(() => {
+      this.debounce = undefined;
+      if (!this.wanted || this.stopped) return;
+      if (this.inflight || Date.now() < this.lastStart + this.o.minGapMs) return void this.armEvent(); // the pass's end re-arms
+      const { reason } = this.wanted;
+      this.wanted = undefined;
+      void this.pass(reason);
+    }, Math.max(0, at - Date.now()));
+    this.debounce.unref?.();
   }
   async run(reason: string) {
     const started = performance.now(), startedAt = new Date().toISOString();
@@ -107,13 +128,12 @@ export function start(options: Options = {}): Status {
   void runner.pass('start');
   return runner.status;
 }
-/** Asks for a pass soon. Calls inside the wait coalesce into one pass, and event passes start at least minGapMs apart. */
+/** Asks for a pass soon. Calls before it runs coalesce into one pass, and event passes start at least minGapMs after the previous pass started. */
 export function trigger(reason = 'trigger') {
   const r = current;
-  if (!r || r.stopped || r.debounce) return;
-  const at = Math.max(Date.now() + r.o.debounceMs, r.lastStart + r.o.minGapMs);
-  r.debounce = setTimeout(() => { r.debounce = undefined; void r.pass(reason); }, at - Date.now());
-  r.debounce.unref?.();
+  if (!r || r.stopped) return;
+  r.wanted ??= { reason, since: Date.now() };
+  r.armEvent();
 }
 export function status(): Status | undefined { return current?.status; }
 /** Stops the loop, waits for a pass in flight, closes the store, then releases the lock. Every caller gets the same promise. */

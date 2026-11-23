@@ -675,3 +675,148 @@ test('http: close() right after serve() leaves no listener behind', async () => 
   assert.equal(srv.server.listening,false);
   await assert.rejects(fetch(`http://127.0.0.1:${port}/ok`,{signal:AbortSignal.timeout(500)}));
 });
+
+async function legacyOwner() {
+  // A process standing in for a pre-SQLite-lock host: it only needs to be alive.
+  const child = spawn(process.execPath,['-e','setInterval(()=>{},1e9)'],{stdio:'ignore'});
+  await once(child,'spawn');
+  return { child, stopped: once(child,'exit') };
+}
+
+test('legacy lock: a live pre-SQLite host keeps the new host waiting, a dead one is cleared (mixed-version handover)', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'legacy');
+  mkdirSync(home);
+  const { acquire } = await import('../lock.ts');
+  const old = await legacyOwner();
+  writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:old.child.pid,host:'launchd',token:'old'}));
+  const refused = acquire(home,'new');
+  assert.ok('by' in refused);
+  assert.match((refused as {by:string}).by,/launchd pid \d+ \(legacy ingest\.lock\)/);
+  assert.ok(existsSync(join(home,'ingest.lock')),'the live host\'s file is left alone');
+  // The new runner reports it and keeps waiting, then takes over once the old host is gone.
+  const { start, stop, status } = await import('../ingest.ts');
+  const states: string[] = [];
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:120,host:'new',onState:s => states.push(s.lock+':'+(s.lockedBy ?? ''))});
+  try {
+    for (let i=0;i<100 && !states.some(x => x.startsWith('waiting:launchd'));i++) await sleep(20);
+    assert.ok(states.some(x => /^waiting:launchd pid \d+ \(legacy/.test(x)),states.join(' | '));
+    assert.equal(status()?.passes,0,'it ingested nothing while the old host lived');
+    old.child.kill('SIGKILL');
+    await old.stopped;
+    for (let i=0;i<200 && status()?.lock !== 'held';i++) await sleep(20);
+    assert.equal(status()?.lock,'held');
+    assert.equal(existsSync(join(home,'ingest.lock')),false,'the dead host\'s file is removed');
+  } finally { await stop(); }
+});
+
+test('legacy lock: an unreadable fresh file is a claim being written; an old one is junk', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'legacy2');
+  mkdirSync(home);
+  const { acquire } = await import('../lock.ts');
+  writeFileSync(join(home,'ingest.lock'),'');
+  assert.ok('by' in acquire(home,'new'));
+  const old = new Date(Date.now()-5*60_000);
+  utimesSync(join(home,'ingest.lock'),old,old);
+  const got = acquire(home,'new');
+  assert.ok('held' in got);
+  (got as {held:{release():void}}).held.release();
+});
+
+test('a failure after the lock is taken closes the connection: the very next acquire succeeds, in this process too', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'initfail');
+  const { acquire } = await import('../lock.ts');
+  assert.throws(() => acquire(home,'x',() => { throw Object.assign(new Error('disk says no'),{code:'EIO'}); }),/disk says no/);
+  const got = acquire(home,'x'); // a leaked connection in this process would answer BUSY
+  assert.ok('held' in got);
+  (got as {held:{release():void}}).held.release();
+});
+
+test('a store that fails to initialise leaves no open connection, and once() frees the lock', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'badstore');
+  mkdirSync(home,{mode:0o700});
+  writeFileSync(join(home,'archive.sqlite'),'this is not a database'.repeat(50));
+  const { once: runOnce } = await import('../ingest.ts');
+  const { acquire } = await import('../lock.ts');
+  await assert.rejects(runOnce({home,env:{...process.env,...f.env}}));
+  const got = acquire(home,'after');
+  assert.ok('held' in got,'the lock was released');
+  (got as {held:{release():void}}).held.release();
+  assert.throws(() => new Store(home));
+  rmSync(join(home,'archive.sqlite'));
+  const store = new Store(home); // the ledger database is not stuck behind a leaked handle
+  store.db.close();
+});
+
+test('tightening tolerates files that are not there', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'vanish');
+  mkdirSync(home,{mode:0o700});
+  const { tightenFiles } = await import('../private.ts');
+  tightenFiles(home);
+  writeFileSync(join(home,'ingest.lock.info'),'x');
+  chmodSync(join(home,'ingest.lock.info'),0o644);
+  unlinkSync(join(home,'ingest.lock.info'));
+  tightenFiles(home);
+});
+
+test('scheduler: event passes keep their spacing at dispatch even when a slow pass or a queued rerun is in the way', async t => {
+  const f = fixture(t);
+  const cli = join(f.root,'orca');
+  writeFileSync(cli,readFileSync(cli,'utf8').replace('case "$2"',`if [ "$2" = task-list ]; then sleep 0.3; fi
+  case "$2"`));
+  for (const interval of [60_000, 450]) {
+    const home = join(f.root,'spacing'+interval);
+    const starts: {reason:string,at:number}[] = [];
+    const { start, stop, trigger } = await import('../ingest.ts');
+    start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:interval,debounceMs:10,minGapMs:600,host:'test',onPass:p => starts.push({reason:p.reason,at:Date.parse(p.startedAt)})});
+    try {
+      const burst = setInterval(() => trigger('event'),20);
+      await sleep(4500);
+      clearInterval(burst);
+      await sleep(900);
+    } finally { await stop(); }
+    const ordered = starts.sort((a,b) => a.at-b.at);
+    const events = ordered.filter(p => p.reason === 'event');
+    // With a 450 ms period the periodic passes already cover the events; the spacing must hold for any event pass that does run.
+    if (interval > 1000) assert.ok(events.length >= 3,`interval ${interval}: ${JSON.stringify(ordered)}`);
+    for (const e of events) {
+      const previous = ordered[ordered.indexOf(e)-1];
+      assert.ok(previous,'an event pass follows the first pass');
+      assert.ok(e.at - previous.at >= 600-25,`interval ${interval}: event pass ${e.at-previous.at} ms after the previous pass started`);
+    }
+  }
+});
+
+test('plugin host: a second activation without a shutdown replaces the first cleanly (one listener, one ingest, old handlers inert)', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'twice');
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const saved = {...process.env};
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  const { status } = await import('../ingest.ts');
+  const make = () => { const handlers: Record<string,()=>void> = {}; return { handlers, orca: { log() {}, host: { call: async () => {} }, events: { on: (e: string, h: () => void) => { handlers[e] = h; } } } }; };
+  const one = make(), two = make();
+  const probe = () => fetch(`http://127.0.0.1:${port}/health`,{signal:AbortSignal.timeout(500)}).then(r => r.json(),() => null);
+  await run(one.orca);
+  for (let i=0;i<200 && !(await probe())?.ok;i++) await sleep(25);
+  assert.equal((await probe())?.lock,'held');
+  const firstPid = (await probe())?.startedAt;
+  await run(two.orca); // no shutdown in between
+  for (let i=0;i<200 && !(await probe())?.ok;i++) await sleep(25);
+  const second = await probe();
+  assert.equal(second?.lock,'held');
+  assert.notEqual(second?.startedAt,firstPid,'a new ingest runner replaced the first');
+  const passes = status()!.passes;
+  one.handlers['agent.status.changed']();
+  await sleep(300);
+  assert.equal(status()!.passes,passes,'the first activation\'s event handler does nothing now');
+  await shutdown(); // closes only the live listener, and it is the only one
+  await sleep(100);
+  assert.equal(await probe(),null,'no listener is left on the port');
+});
