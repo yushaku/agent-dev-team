@@ -152,6 +152,11 @@ export function renderFeatures(S) {
   };
   const variant = v => v === "orca" ? "Có Orca" : "Trực tiếp";
   const source = FEATURE_SOURCES;
+  /* A repository whose Git history is still being analysed (features.repositories[repo].loading) has no post-merge numbers yet: say so where they are shown. */
+  const repoStates = C.state.data.features?.repositories || {};
+  const analysing = repo => !!repoStates[repo]?.loading;
+  const pendingRepos = [...new Set(rows.map(f => f.repo))].filter(analysing);
+  const pendingNote = pendingRepos.length ? ` Đang phân tích Git (${pendingRepos.map(esc).join(", ")}): số liệu sau merge của repo này chưa đầy đủ.` : "";
   const groups = FEATURE_VARIANTS.map(v => ({ ...v, rows: rows.filter(f => f.variant === v.id) }));
   const counts = groups.map(v => v.name + ": " + v.rows.length + " Run").join(" · ");
   [
@@ -176,7 +181,7 @@ export function renderFeatures(S) {
           return { label: v.name, full: v.name + ": " + v.rows.length + " Run", dot: v.color,
             segs: [{ v: n || 0, color: v.color, name: title }], right: [{ t: n == null ? "Chưa rõ" : format(n) }] };
         }) }) : "",
-      caption: id === "#feature-escaped" ? "Trong 30 ngày sau merge · SZZ là ước tính; trailer ghi đè blame. " + groups.map(v => `${esc(v.name)}: ${v.rows.filter(f => f.escaped_defects != null).length}/${v.rows.length} Run có dữ liệu`).join(" · ") : id === "#feature-findings" ? groups.map(v => `${esc(v.name)}: ${v.rows.filter(f => f.gate2_findings != null).length}/${v.rows.length} Run có dữ liệu`).join(" · ") : "",
+      caption: id === "#feature-escaped" ? "Trong 30 ngày sau merge · SZZ là ước tính; trailer ghi đè blame. " + groups.map(v => `${esc(v.name)}: ${v.rows.filter(f => f.escaped_defects != null).length}/${v.rows.length} Run có dữ liệu`).join(" · ") + pendingNote : id === "#feature-findings" ? groups.map(v => `${esc(v.name)}: ${v.rows.filter(f => f.gate2_findings != null).length}/${v.rows.length} Run có dữ liệu`).join(" · ") : "",
     });
   });
   const surfaced = groups.map(v => v.rows.flatMap(f => f.fix_commits || []));
@@ -187,7 +192,7 @@ export function renderFeatures(S) {
       cats: buckets.map(([, , label]) => ({ label, long: label + " ngày" })), series: FEATURE_VARIANTS,
       get: (i, j) => surfaced[j].filter(f => f.days_after_merge >= buckets[i][0] && f.days_after_merge < buckets[i][1]).length,
       fv: v => v + " lượt gán lỗi", fy: v => Number.isInteger(v) ? String(v) : "", yTitle: "Lượt gán lỗi", xTitle: "Ngày sau merge", aria: "Phân bố ngày phát hiện lỗi theo cách chạy",
-    }) : "", caption: "Một commit sửa nhiều tính năng được tính cho từng Run. Run mới merge chưa đủ thời gian quan sát.",
+    }) : "", caption: "Một commit sửa nhiều tính năng được tính cho từng Run. Run mới merge chưa đủ thời gian quan sát." + pendingNote,
   });
   C.fig("#feature-distribution", { title: "Phân bố vòng sửa", subtitle: counts,
     legend: FEATURE_VARIANTS, body: rows.length ? C.vBars({ W: C.widthOf("#feature-distribution"),
@@ -203,7 +208,7 @@ export function renderFeatures(S) {
   $("#feature-runs").innerHTML = rows.length ? table(["Cách chạy", "Repo / nhánh", "Hoạt động", "Thời gian", "Token", "Vòng sửa / nguồn", "Lỗi Gate 2", "Lỗi sau merge / ngày trung vị", "Đã giao"], rows.map(f => {
     const skills = Object.entries(f.loaded_skills).map(([name, count]) => name + " × " + count).join(", ");
     const split = f.variant === "orca" ? `<br><small>Điều phối: ${value(f.orchestrator_tokens)} · Worker: ${value(f.worker_tokens)}</small>` : "";
-    const defects = f.escaped_defects == null ? "Chưa rõ" : `${f.escaped_defects} lỗi · ${f.median_days_to_surface == null ? "Chưa rõ" : Number(f.median_days_to_surface.toFixed(2))} ngày<details><summary>Commit sửa lỗi · ${f.source === "trailer" ? "trailer" : "ước tính SZZ"}</summary>${(f.fix_commits || []).map(fix => `<p>${esc(fix.sha.slice(0, 10))} · ${esc(fix.subject)}<br>${esc(fix.date)} · ${Number(fix.days_after_merge.toFixed(2))} ngày · ${fix.source === "trailer" ? "trailer" : "ước tính SZZ"}</p>`).join("")}</details>`;
+    const defects = f.escaped_defects == null ? (analysing(f.repo) ? "Đang phân tích Git…" : "Chưa rõ") : `${f.escaped_defects} lỗi · ${f.median_days_to_surface == null ? "Chưa rõ" : Number(f.median_days_to_surface.toFixed(2))} ngày<details><summary>Commit sửa lỗi · ${f.source === "trailer" ? "trailer" : "ước tính SZZ"}</summary>${(f.fix_commits || []).map(fix => `<p>${esc(fix.sha.slice(0, 10))} · ${esc(fix.subject)}<br>${esc(fix.date)} · ${Number(fix.days_after_merge.toFixed(2))} ngày · ${fix.source === "trailer" ? "trailer" : "ước tính SZZ"}</p>`).join("")}</details>`;
     return `<tr><td>${variant(f.variant)}</td><th scope="row">${esc(f.repo)}<br>${esc(f.branch)}<br><small>${f.session_count} phiên · ${esc(f.agents.join(", "))}</small><details><summary>Skill và Run liên kết</summary><p>${esc(skills || "Chưa ghi nhận skill")}</p><p>${esc(f.run_ids.join(", "))}</p></details></th><td>${esc(dt(f.first_activity))}<br>${esc(dt(f.last_activity))}</td><td>${f.lead_seconds == null ? "Chưa rõ" : C.dur(f.lead_seconds)}</td><td>${value(f.tokens)}${split}</td><td>${f.fix_rounds.count}<br><small>${esc(source[f.fix_rounds.source] || f.fix_rounds.source)}</small></td><td>${value(f.gate2_findings)}</td><td>${defects}</td><td>${f.delivered == null ? "Chưa rõ" : f.delivered ? "Đã merge" : "Chưa merge"}</td></tr>`;
   }).join("")) : '<p class="muted">Không có Run trên nhánh tính năng trong khoảng và bộ lọc này.</p>';
 }
