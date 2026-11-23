@@ -14,7 +14,7 @@ export function makeFetch(d) {
         const data = await extra(url)
         return { ok: true, status: 200, json: async () => data }
       } catch (e) {
-        return { ok: false, status: Number(/^http_(\d+)$/.exec(e.code ?? '')?.[1]) || (e.code === 'too_large' ? 413 : 503), json: async () => ({}) }
+        return { ok: false, status: Number(/^http_(\d+)$/.exec(e.code ?? '')?.[1]) || (e.code === 'too_large' ? 413 : 503), json: async () => ({ error: String(e.message || '') }) }
       }
     }
     if (url.pathname !== '/api/data') return d.real(input, init)

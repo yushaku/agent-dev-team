@@ -151,5 +151,7 @@ test('a too-large skill document reaches the sheet as HTTP 413', async () => {
     real: async () => 'real', base: 'http://127.0.0.1:4747', ask: async () => ({}), cached: () => null, remember: () => {}, firstDays: 7, hasCharts: () => false, ok: () => {}, fail: () => {},
     extra: { '/api/team/skill': async () => { throw Object.assign(new Error('Tài liệu của skill quá lớn'), { code: 'too_large' }) } },
   })
-  assert.equal((await withExtra('/api/team/skill?name=big')).status, 413)
+  const refused = await withExtra('/api/team/skill?name=big')
+  assert.equal(refused.status, 413)
+  assert.deepEqual(await refused.json(), { error: 'Tài liệu của skill quá lớn' }, 'the worker\'s message reaches the sheet')
 })
