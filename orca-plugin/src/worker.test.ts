@@ -1,6 +1,9 @@
 import { assert, mountWorker, test } from 'orca/testing'
 import * as main from './worker'
 
+// The ledger host (real ingest, port 4748) stays off in tests.
+;(globalThis as any).process.env.TEAM_DASHBOARD_NO_LEDGER = '1'
+
 const realFetch = globalThis.fetch
 const dashboard = (res: () => Response) => {
   globalThis.fetch = (async () => res()) as typeof fetch
