@@ -4,6 +4,7 @@ Run `node ledger/daemon.ts` with Node 26. The first pass backfills available
 history. Subsequent passes start at 60-second intervals. A slow pass finishes
 before the next begins. Use `node ledger/daemon.ts --once` for one pass. It
 prints wall time in milliseconds for each source kind to stdout, writes source errors to stderr and exits nonzero if a source read failed.
+Ingest lives in `ingest.ts` (`start(options)`, `trigger()`, `stop()`, `once()`); `daemon.ts` is the launchd entry and the Orca plugin worker (`orca-plugin/src/ledger-host.ts`) is the other host. Only one host ingests into a ledger directory: `ingest.lock` holds its pid, and a lock whose process is gone or that was not touched for 5 minutes is taken over. A second host waits and retries each interval; `--once` exits 75 with a message. `http.ts` is a small loopback route server (`/health` on 4748 in the plugin). Code runs on Node 24 (Orca's worker) and Node 26.
 Run the fixture suite with `node --test ledger/tests/*.test.ts`.
 
 | Environment variable | Default | Input |

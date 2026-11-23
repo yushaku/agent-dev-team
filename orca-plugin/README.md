@@ -10,6 +10,10 @@ Open it: `orca plugin open local.team-dashboard --panel tasks`
 - `web/panel.js` and `web/panel.css` are this plugin's own. `panel.js` answers dash.js's `fetch("/api/data?days=N")` through `plugin.request('tasks.data')`, shows a bar with a message and retry when 4747 is down, and keeps the last snapshot in `localStorage` so the panel paints at once and refreshes after. `panel.css` adds a light palette (Orca's `html.light`) and a narrow-sidebar gutter.
 - `src/worker.ts` fetches `/api/data`, `src/trim.ts` cuts it to what the Tasks tab reads (about 0.85 MB of the 1.6 MB) so the answer fits the 1 MiB limit, `src/protocol.ts` types the request.
 
+## Ledger host
+
+The worker also hosts the agent history ledger (`ledger/`, step 2a): `src/ledger-host.ts` starts ingest into `~/.agents/ledger` (or `AGENT_LEDGER_HOME`) at once and every 60 s, runs a debounced pass on `agent.status.changed` and `workspace.created/removed`, shows "Ledger HH:MM ✓" in the status bar, and serves `GET http://127.0.0.1:4748/health`. The worker imports `../../ledger/*.ts` by relative path, so it works from this repository's dev folder; shipping the plugin elsewhere needs `ledger/` copied in. Tests set `TEAM_DASHBOARD_NO_LEDGER=1` so they never ingest or bind 4748.
+
 ## Develop
 
 ```sh
