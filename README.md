@@ -110,7 +110,7 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 - `skills-lock.json`: pinned downloaded skills
 - `templates/`: file templates for projects
 - `diagrams/`: architecture diagrams
-- `docs/`: Vietnamese docs site (GitHub Pages)
+- `docs/`: Vietnamese docs site (GitHub Pages); each diagram is an inline `archify-embed.py` snippet (`frappe-docs`) between `<!-- archify:<name> -->` markers, re-embedded whenever `diagrams/<name>.html` is re-rendered
 - `dashboard/`: local dashboard
 
 ## Metrics
