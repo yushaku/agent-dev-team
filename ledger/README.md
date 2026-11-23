@@ -3,7 +3,7 @@
 Run `node ledger/daemon.ts` with Node 26. The first pass backfills available
 history. Subsequent passes start at 60-second intervals. A slow pass finishes
 before the next begins. Use `node ledger/daemon.ts --once` for one pass. It
-prints source errors to stderr and exits nonzero if a source read failed.
+prints wall time in milliseconds for each source kind to stdout, writes source errors to stderr and exits nonzero if a source read failed.
 Run the fixture suite with `node --test ledger/tests/*.test.ts`.
 
 | Environment variable | Default | Input |
@@ -42,14 +42,19 @@ An unfinished JSONL line stays at the cursor until a newline arrives.
 Rotation, observed shrinkage and reappearance start a new generation.
 Whole JSON files retain their original bytes. Database rows use JSON objects
 with column names, decimal integer literals and base64 objects for BLOBs.
-A change to the database or WAL triggers bounded rowid queries and row-hash
-comparisons because the dashboard tables have mutable fields and no reliable
-update timestamp. Each page releases its source read transaction.
+On a database or WAL change, the ledger checks rtk commands above the last
+archived rowid. It rehashes the small Hermes sessions table, including closed
+sessions, and reads new messages plus the previous 256 rowid positions.
+An edit to an older message or a previously archived rtk command can be missed.
+Each page releases its source read transaction.
 
-Orca snapshots store the full JSON result for each command and page.
-The outer CLI envelope contains a per-call request ID. Run and worker lists
-are paginated. Each run includes tasks, gates, up to 500 inbox messages
-(the dashboard's window), and a worker-show result for each listed dispatch.
+Orca polls the paginated run list every cycle. New runs, changes to list
+entries and open runs trigger detail reads for tasks, gates, the latest 500
+inbox messages, workers and dispatches. A completed run reuses its archive
+until its list entry changes. When Orca omits run status, the daemon checks
+task, gate and worker states. Empty runs stay open for polling. A complete
+host-wide worker inventory can serve as a shared change check for several
+open runs. Changed worker lists still get a full per-run snapshot.
 An unavailable CLI is retried on the next pass. Previously observed data
 stays in the archive when a source disappears.
 
