@@ -47,6 +47,7 @@ if (import.meta.main) {
   const store = new Store(process.env.AGENT_LEDGER_HOME || join(homedir(),'.agents/ledger'));
   try {
     do {
+      const started = performance.now();
       try {
         const errors = cycle(store);
         for (const message of errors) console.error(message);
@@ -55,7 +56,7 @@ if (import.meta.main) {
         console.error(error);
         if (once) process.exitCode = 1;
       }
-      if (!once) await sleep(60000);
+      if (!once) await sleep(Math.max(0, 60000 - (performance.now() - started)));
     } while (!once);
   } finally { store.db.close(); }
 }
