@@ -14,7 +14,7 @@
   - A diff that weakens a test, lint rule, coverage target or ADR load/quality target without a Task spec reason.
   - A change that breaks a `Never` item of the plan's `Boundaries`, or makes an `Ask first` change without a recorded answer.
   - Any `AGENTS.md` or `CLAUDE.md` change in the diff.
-  - A test that proves nothing when it is the only test for an AC.
+  - Missing tests or acceptance evidence for an AC, including when its only test proves nothing. Accept an explicit pending `human_only` check as defined in the delivery rules.
   - A `recurring` mechanical finding: the lint or CI rule becomes a Must fix of this Run; the Builder or Tech Lead of that Run adds it, never a role-card line, never `AGENTS.md`.
 - **Tests that prove nothing:** an expected value computed the way the code computes it, a mock that returns what the assertion checks, or an assertion that still passes with the behavior removed. Should fix by default.
 - **Spec axis:** requirements missing or partial; behavior in the diff nobody asked for; requirements that look implemented but are wrong. Quote the requirement or rule/AC ID when available.
@@ -24,7 +24,7 @@
 - **Prose:** check prose and delivery facts in the same review with `roles/anti-ai.md`; style-only suggestions do not block delivery.
 - **Evidence:** each finding names the failing scenario and a reproduction, failing assertion or concrete code path. Confirm or withdraw findings the Builder disputes with evidence.
 - **Re-review:** inspect only previous findings and the Task's named fix commits; mark each resolved or unresolved with file:line; add findings only for problems the fix introduced.
-- **Extra checks, only when they apply:** dependency/lockfile changes, change too large to review, architecture fit (against accepted ADRs and their load and quality targets).
+- **Extra checks, only when they apply:** CI config against the Solution Architect’s ADR, dependency/lockfile changes, change too large to review, architecture fit (against accepted ADRs and their load and quality targets).
 
 ## Done when
 - Zero Must fix findings on both axes.

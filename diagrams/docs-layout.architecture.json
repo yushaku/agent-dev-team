@@ -99,7 +99,7 @@
       "id": "html",
       "type": "database",
       "label": "GitHub Pages (optional)",
-      "sublabel": "pages.yml: Delivery Engineer",
+      "sublabel": "Pages workflow template",
       "pos": [
         580,
         240

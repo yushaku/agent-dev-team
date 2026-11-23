@@ -12,10 +12,10 @@ Read when creating, editing or reviewing documentation; load only the relevant s
 | `.team/config.yaml` | PO (Orchestrator proposes) | Team config (`skills/init-team/references/config-schema.md`); local-only until the team adopts it | Project settings change |
 | `DESIGN.md` | Designer | Visual identity: tokens in use, type, spacing, component rules | The PO picks an option at G-UI that sets a new rule |
 | `README.md` | PO | What it is, how to run it | The PO asks |
-| `todo.md` | PO | Roadmap; each item has **Goal**, **Outcome** (may name story IDs), a checkbox, optional `Ref: .team/research/<topic>.md` | The PO adds items; the delivery owner removes shipped ones |
+| `todo.md` | PO | Roadmap; each item has **Goal**, **Outcome** (may name story IDs), a checkbox, optional `Ref: .team/research/<topic>.md` | The PO adds items; the Orchestrator removes shipped ones |
 | `docs/diagrams/<name>.json` | Builder or assigned Tech Lead; Solution Architect for system design diagrams | Archify spec of a kept diagram (source) | The shape it shows changes |
 | `docs/diagrams/<name>.html` | Whoever changes its spec | Archify render of that spec (`frappe-docs` pipeline) | Its spec changes, in the same commit |
-| `.github/workflows/pages.yml` | Delivery owner; the PO reviews the PR | Publishes the docs site when `docs.site: pages` (`## Published site`) | The publish list changes |
+| `.github/workflows/pages.yml` | Orchestrator for a template copy, Builder for changes; the PO reviews the PR | Publishes the docs site when `docs.site: pages` (`## Published site`) | The publish list changes |
 
 - Committed documents are edited and committed by their assigned owner; the commit body lives in that commit.
 - The Builder owns related documentation by default. Assign a specialist author only for a specific requirements or design need; include assigned paths in the Task. Existing read-only documents stay read-only unless the PO authorizes changes.

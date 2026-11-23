@@ -1,8 +1,11 @@
 # Finish
 
-- The Builder delivers using `roles/delivery.md`, normally within its existing Task; a separate Delivery Task needs the reason in `start.md` "Team decisions". Deliver per `delivery.mode`; for `branch`, push only if `delivery.push`. In `pr` mode run `orca worktree set --pr <n>` after the assigned worker opens the PR, and move the card (`start.md` "Board mapping").
+- Remove shipped items from `todo.md` and rewrite deferred items for the later capability.
+- With `docs.site: pages` and no `.github/workflows/pages.yml`, copy `templates/pages.yml` there and commit it before review. Assign the Builder if it needs more than the template copy. Ask the PO to enable Pages per `docs-policy.md` "Published site".
+- Use Git, PR administration and Orca commands without reading code or diffs. For `delivery.mode: branch`, leave commits on the feature branch and push only if `delivery.push`. For `delivery.mode: pr`, push the feature branch, open a draft PR with title per `delivery.pr_title` and the Builder report’s `## Commit body` contents verbatim, confirm CI is green, then run `orca worktree set --worktree <selector> --pr <n>`. Move the card per `start.md` "Board mapping".
+- Record delivery in the Run as a completed Orchestrator Task with `Measurement.kind: delivery`.
 - Report link/branch, summary, risks, pending `human_only` steps and ticket fix draft for G-Reply.
-- **Local test before Gate 2:** the existing Builder runs the final revision in the Run-owned `DEV` pane, applies local migrations and seeds test data covering the changed flow. Reuse project scripts; preserve existing data. Verify readiness via Orca browser, confirm the Run-owned server is still reachable when handing off, and keep it running for PO testing. Report URL, test account/access, seeded scenarios, short test steps and terminal/log details per `specs.md`; blockers must be resolved or explicitly waived by the PO before approval is requested. For changes with no runnable app/data, state what is inapplicable.
+- **Local test before Gate 2:** the existing Builder runs the final revision in the Run-owned `DEV` pane, applies local migrations and seeds test data covering the changed flow. Reuse project scripts; preserve existing data. Verify readiness via Orca browser, confirm the Run-owned server is still reachable when handing off, and keep it running for PO testing. Report URL, test account/access, seeded scenarios, the PO’s manual test steps and terminal/log details per `specs.md`. List manual and on-device checks assigned to the PO as `human_only`; leave execution to the PO. Delivery blockers must be resolved or explicitly waived by the PO before approval is requested. For changes with no runnable app/data, state what is inapplicable.
 - After an interrupted delivery, reconcile Orca state with the actual branch, remote and Run-owned server state before continuing. Report what completed and what remains; continue within existing authorization and ask only for unresolved decisions (`gates.md`).
 - **Close check:** at close, read `curl -s localhost:4747/api/agent/run?id=<run>` and act on every high-severity issue (fix, or record why not in the delivery report).
 - After Gate 2, complete the close Task and retain `.team/<feature>/` reports, decisions and logs for process evaluation. Hand off only when context or ownership requires it; delete artifacts only on an explicit cleanup request.
@@ -23,4 +26,4 @@
 - `commands.verify` green.
 - A feature calling an external service (push, mail, payments): one real end-to-end call with its evidence in the delivery; mocked tests do not count.
 - UI changes: screenshots in the delivery only when the visual loop ran; otherwise "UI check: PO" under Human steps.
-- Delivered per `delivery.mode` with the body in `roles/delivery.md`.
+- Delivered per `delivery.mode` with the Builder report’s `## Commit body` (`roles/builder.md` "Body").

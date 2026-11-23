@@ -23,9 +23,6 @@
         },
         "external": {
           "label": "Verify"
-        },
-        "database": {
-          "label": "Delivery"
         }
       }
     }
@@ -77,7 +74,7 @@
       "id": "orchestrator",
       "type": "cloud",
       "label": "Orchestrator",
-      "sublabel": "sizes, dispatches",
+      "sublabel": "dispatches, ships",
       "pos": [
         440,
         210
@@ -133,7 +130,7 @@
       "id": "builder",
       "type": "backend",
       "label": "Builder",
-      "sublabel": "all slices",
+      "sublabel": "tests, code, PR body",
       "pos": [
         320,
         460
@@ -172,26 +169,12 @@
       ]
     },
     {
-      "id": "qa",
-      "type": "external",
-      "label": "QA",
-      "sublabel": "AC to tests",
-      "pos": [
-        476,
-        580
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
       "id": "reviewer",
       "type": "external",
       "label": "Code Reviewer",
-      "sublabel": "other agent",
+      "sublabel": "checks test evidence",
       "pos": [
-        632,
+        476,
         580
       ],
       "size": [
@@ -205,7 +188,7 @@
       "label": "Security",
       "sublabel": "when triggered",
       "pos": [
-        788,
+        632,
         580
       ],
       "size": [
@@ -219,22 +202,8 @@
       "label": "Perf / A11y",
       "sublabel": "when triggered",
       "pos": [
-        944,
+        788,
         580
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "delivery",
-      "type": "database",
-      "label": "Delivery Engineer",
-      "sublabel": "docs, draft PR or branch",
-      "pos": [
-        320,
-        700
       ],
       "size": [
         140,
@@ -264,17 +233,9 @@
       "label": "Verify",
       "wraps": [
         "antiai",
-        "qa",
         "reviewer",
         "security",
         "perf"
-      ]
-    },
-    {
-      "kind": "region",
-      "label": "Delivery",
-      "wraps": [
-        "delivery"
       ]
     }
   ],
@@ -419,28 +380,6 @@
       "labelAt": [
         260,
         594
-      ]
-    },
-    {
-      "id": "to-delivery",
-      "from": "orchestrator",
-      "to": "delivery",
-      "label": "dispatch",
-      "fromSide": "left",
-      "toSide": "left",
-      "via": [
-        [
-          200,
-          238
-        ],
-        [
-          200,
-          728
-        ]
-      ],
-      "labelAt": [
-        260,
-        714
       ]
     }
   ]

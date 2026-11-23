@@ -19,7 +19,7 @@
 <h1>Chọn đội hình</h1>
 <p class="lead">Orchestrator tự đánh giá mục tiêu, độ rõ của yêu cầu, phạm vi ảnh hưởng và rủi ro để chọn đội hình và Task cần thiết. Trước khi giao việc, nói ngắn gọn role nào tham gia và lý do.</p>
 <h2>Mặc định hai người thực hiện</h2><p>Một Builder chẩn đoán, sửa code, test, đo kết quả, cập nhật docs và bàn giao. Một Reviewer độc lập kiểm yêu cầu, code, test, rủi ro và văn phong. Trước khi thêm người, Orchestrator nêu bằng chứng hoặc quyết định còn thiếu và vì sao hai người hiện tại chưa đáp ứng được.</p>
-<p>Orchestrator quyết định có cần Task riêng cho điều tra, lập kế hoạch, QA hoặc review spec hay không. Có thể gộp trách nhiệm tương thích; người review code phải độc lập với Builder. Câu hỏi chỉ đọc có thể dùng một Investigator, không cần Run hay worktree.</p>
+<p>Orchestrator quyết định có cần Task riêng cho điều tra, lập kế hoạch hoặc review spec hay không. Có thể gộp trách nhiệm tương thích; người review code phải độc lập với Builder. Câu hỏi chỉ đọc có thể dùng một Investigator, không cần Run hay worktree.</p>
 <h2>Giữ các kiểm tra và cổng duyệt</h2>
 <ul><li>Quy tắc nghiệp vụ mới hoặc đổi: Người được giao cập nhật spec và PO duyệt Gate 1; chỉ tách Tech Lead khi còn yêu cầu hoặc thiết kế chưa rõ.</li><li>Màn hình hoặc luồng mới: theo G-UI và <code>ui_rules</code>.</li><li>Audit được kích hoạt bởi rủi ro vẫn phải thực hiện; bàn giao giữ Gate 2 và ticket giữ các cổng riêng.</li><li>Tác động kiến trúc chưa có ADR được chấp nhận: sau Gate 1, nhờ PO mở phiên Solution Architect trước khi lập plan.</li></ul>
 <h2>Điều chỉnh trong lúc làm</h2>

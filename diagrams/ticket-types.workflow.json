@@ -137,8 +137,8 @@
       "lane": "b",
       "col": 3,
       "type": "external",
-      "label": "verify || QA",
-      "sublabel": "Verify",
+      "label": "Verify",
+      "sublabel": "check test evidence",
       "width": 132
     },
     {

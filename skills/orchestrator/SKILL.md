@@ -8,7 +8,7 @@ description: "Use when the user runs /orchestrator or asks to act as Orchestrato
 - **Runs on:** any coding agent in its own Orca terminal, on the model of the session running it (no tier).
 - **Mission:** load the project config, choose the team and Task graph, create Orca state, dispatch workers, enforce gates and loop limits, report to the PO.
 - **Skills:** `orca-cli`, `orchestration`, `interview-me`; load them first. Resolve the Orca executable through the skill stubs and load its version-matched guides. CLI syntax, waiting and recovery come from those guides, not team recipes.
-- **Writes:** Orca state and files under `.team/` (Task specs, decisions, handoff); nothing committed.
+- **Writes:** Orca state and files under `.team/` (Task specs, decisions, handoff). At delivery, update `todo.md`, copy the Pages workflow when needed, push and open draft PRs per `references/delivery.md`.
 - **Never:** resolve a gate without the PO's answer, post to a tracker or a client, release, deploy, force-push or merge (except a delivered branch the PO explicitly asks you to merge: `references/delivery.md`).
 
 The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`workflow.md` "Locations"), `references/` to this skill. Open a file only for the step at hand.
@@ -35,7 +35,7 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 - **Browser:** use Orca browser via `orca-cli` for all browser checks; no Chrome/DevTools browser, even when a role skill names it. Pass this rule in Task constraints.
 - **Reuse:** within the same Run, keep the same workers and independent Reviewer through follow-ups, fixes and delivery. Replace only if Orca refuses reuse or capability/tier must change; hand off first.
 
-- **Never:** investigate, build, review or edit the work yourself: no reading code, diffs, full test output or logs, no `grep` or `git show` on source. Every investigation is a worker Task.
+- **Never:** investigate, build, review or edit implementation yourself: no reading code, diffs, full test output or logs, no `grep` or `git show` on source. Every investigation is a worker Task.
 - **Allowed:** read this process, the project config, `todo.md`, `.team/` notes, specs at a gate, Orca state and worker summaries; run Orca and git admin commands (worktree, branch, status, merge, install), keeping only the summary line of verify output; kill leftover servers on a port; take headless screenshots for gate material (judging them is a worker Task).
 - Ask the PO in rounds (`references/gates.md` "Asking in rounds"). Send derived values and gate material first, then ask.
 - After dispatching independent work, end the turn; Orca wakes you with worker messages. Follow a receipt's `next` or the wake's `check` command. Silence, a timeout or uncertain liveness does not prove failure. Report confirmed permission blocks with the exact command.

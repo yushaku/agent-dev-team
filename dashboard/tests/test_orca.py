@@ -99,8 +99,8 @@ class OrcaMetricsTests(unittest.TestCase):
                 worker_pages.append(args)
                 return {"workers": [], "page": {"nextCursor": None if "--cursor" in args else "next"}}
             if command == "task-list":
-                return {"tasks": [dict(id=k, task_title=k, status="completed", spec='Measurement: {"kind":"' + kind + '"}')
-                                  for k, kind in (("deliver", "delivery"), ("close", "close"))]}
+                return {"tasks": [dict(id=k, task_title=title, status="completed", spec='Measurement: {"kind":"' + kind + '"}')
+                                  for k, title, kind in (("deliver", "Publish change", "delivery"), ("close", "close", "close"))]}
             if command == "inbox":
                 return {"messages": []}
             if command == "gate-list":
@@ -116,6 +116,8 @@ class OrcaMetricsTests(unittest.TestCase):
         r = state["runs"][0]
         self.assertEqual(len(worker_pages), 2)
         self.assertEqual(r["stage"], "delivered")
+        self.assertEqual(state["tasks"]["deliver"]["role"], "builder")
+        self.assertEqual(state["tasks"]["deliver"]["measurement"]["kind"], "delivery")
         self.assertEqual(r["lead_seconds"], 40)
         self.assertEqual(r["gate_wait_seconds"], 30)
         self.assertEqual(len([e for e in r["events"] if e["kind"] == "gate_question"]), 2)
