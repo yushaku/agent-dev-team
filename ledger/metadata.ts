@@ -1,3 +1,4 @@
+import type { TeamSkill } from './protocol.ts';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -109,7 +110,7 @@ function listed(name: string) {
     .split('\n')
     .some((line) => line.match(/^([a-z0-9][a-z0-9-]*):/)?.[1] === name);
 }
-export function skillDoc(name: string) {
+export function skillDoc(name: string): TeamSkill | null {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$/.test(name)) return null;
   const path = join(skills, name, 'SKILL.md');
   let body = read(path),

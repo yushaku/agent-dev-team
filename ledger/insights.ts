@@ -1,3 +1,4 @@
+import type { AgentSummary, AgentRun, DashboardData, DashboardRun } from './protocol.ts';
 import type { UsageRow } from './protocol.ts';
 import { join } from 'node:path';
 import { teams, read, installed } from './metadata.ts';
@@ -24,7 +25,7 @@ const dur = (n) => {
 };
 const ids = (xs) => xs.slice(0, 3).join(', ') + (xs.length > 3 ? ' +' + (xs.length - 3) : '');
 const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-function featureScope(d, repo, run) {
+function featureScope(d: DashboardData, repo, run) {
   const runs = d.features.runs.filter((f) => (!repo || f.repo === repo) && (!run || f.run_ids.includes(run)));
   return {
     orca_loading: d.features.orca_loading,
@@ -36,7 +37,7 @@ function featureScope(d, repo, run) {
     ),
   };
 }
-function runSummary(r) {
+function runSummary(r: DashboardRun) {
   const fixes = r.tasks.filter((t) => t.measurement.kind === 'fix'),
     unknown = fixes.filter((t) => !t.measurement.round).length;
   return {
@@ -279,7 +280,7 @@ function issues(data, sessions: UsageRow[], runs) {
   }
   return out.sort((a, b) => severity[a.severity] - severity[b.severity] || compare(a.id, b.id));
 }
-export function summary(d, q: URLSearchParams) {
+export function summary(d: DashboardData, q: URLSearchParams): AgentSummary {
   const repo = q.get('repo') || null,
     run = q.get('run') || null,
     role = q.get('role') || null,
@@ -364,7 +365,7 @@ export function summary(d, q: URLSearchParams) {
     issues: issues(d, sessions, runs),
   };
 }
-export function runDetail(d, id) {
+export function runDetail(d: DashboardData, id: string | null): AgentRun | null {
   const r = d.orca.runs.find((r) => r.id === id);
   if (!r) return null;
   const sessions = d.sessions.filter((s) => s.run_id === id),

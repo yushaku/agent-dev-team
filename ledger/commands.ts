@@ -1,3 +1,4 @@
+import type { CliTools } from './protocol.ts';
 import { accessSync, constants, readFileSync, realpathSync, readdirSync, statSync } from 'node:fs';
 import { hostname, type, userInfo } from 'node:os';
 import { dirname, basename, join, resolve } from 'node:path';
@@ -111,7 +112,7 @@ function details(t) {
   }
   return [desc.trim().replace(/\s+/g, ' ').slice(0, 500), desc ? t.source + ' · ' + t.package : ''];
 }
-export function discover(pathEnv?: string) {
+export function discover(pathEnv?: string): CliTools {
   const warnings: string[] = [];
   if (pathEnv === undefined) {
     pathEnv = process.env.PATH || '';
