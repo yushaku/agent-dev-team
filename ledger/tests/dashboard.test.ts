@@ -1,3 +1,5 @@
+import { teamFixture } from './team-env.ts';
+import { golden } from './golden.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -27,6 +29,7 @@ import { skillDoc } from '../metadata.ts';
 
 const dashboard = resolve(import.meta.dirname, '../../dashboard'),
   fixtures = join(dashboard, 'tests/fixtures');
+/** Records Python's answer for a label while GOLDEN_RECORD=1; otherwise unused (the golden file is read). */
 function python(source: string, args: string[] = [], env = {}) {
   return JSON.parse(
     execFileSync('python3', ['-c', source, ...args], {
@@ -36,6 +39,9 @@ function python(source: string, args: string[] = [], env = {}) {
     }),
   );
 }
+const py = (label: string, root: string, source: string, args: string[] = []) =>
+  golden(label, root, () => python(source, args));
+void teamFixture;
 function scratch(t) {
   const root = mkdtempSync(join(tmpdir(), 'api-golden-'));
   const store = new Store(root);
@@ -56,7 +62,7 @@ test('archived sessions and snapshots match Python across branch changes, append
     files.push(path);
     ingestFile(store, agent, path);
     refresh();
-    const expected = python(
+    const expected = py('session-' + agent, root,
       'import sys,json\nfrom backend.parsers.' +
         agent +
         ' import parse_' +
@@ -70,7 +76,7 @@ test('archived sessions and snapshots match Python across branch changes, append
     assert.deepEqual(JSON.parse(String(row.data)), expected);
   }
   const now = Date.parse('2026-11-13T23:59:59Z') / 1000;
-  const expected = python(
+  const expected = py('build-branch-switch', root,
     `import sys,json
 from unittest.mock import patch
 from backend import usage, insights
@@ -134,7 +140,7 @@ test('Copilot sidecar, JCode and Hermes use the Python parser contract', (t) => 
     writeFileSync(join(root, 'workspace.yaml'), 'id: test\nclient_name: golden\n');
     assert.deepEqual(
       parseFile(agent, path, doc, { id: 'test', client_name: 'golden' }),
-      python(
+      py('parse-' + agent, root,
         'import sys,json\nfrom backend.parsers.' +
           agent +
           ' import parse_' +
@@ -146,7 +152,7 @@ test('Copilot sidecar, JCode and Hermes use the Python parser contract', (t) => 
       ),
     );
   }
-  const expected = python(
+  const expected = py('hermes-contract', root,
     `import json,sqlite3,sys
 from backend.parsers import hermes
 hermes.HERMES_DB=sys.argv[1]
@@ -193,7 +199,7 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
   mkdirSync(p);
   writeFileSync(join(p, 'hello'), 'test', { mode: 0o755 });
   const cli = discover(p),
-    old = python(
+    old = py('cli-discover', root,
       'import json,sys\nfrom backend.cli_tools import discover\nprint(json.dumps(discover(sys.argv[1])))',
       [p],
     );
@@ -203,7 +209,7 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
   const doc = skillDoc(name);
   assert.deepEqual(
     doc,
-    python(
+    py('skill-doc-team-builder', root,
       'import sys,json\nfrom backend.team_docs import skill_doc\nprint(json.dumps(skill_doc(sys.argv[1])))',
       [name],
     ),
@@ -265,7 +271,7 @@ test('archived Orca requests and agent run match Python JSON and Markdown', (t) 
   }
   const fixture = join(root, 'orca.json');
   writeFileSync(fixture, JSON.stringify(calls));
-  const expected = python(
+  const expected = py('orca-runs-run-detail', root,
     `import sys,json
 from unittest.mock import patch
 from backend import orca,usage,insights
@@ -294,7 +300,7 @@ test('SQLite row corrections update only the affected session and RTK commands m
   for (const id of ['a', 'b']) put(source, 'sessions/' + id, { id, started_at: 100, input_tokens: 5 });
   put(source, 'messages/1', { session_id: 'a', role: 'user', content: 'before', timestamp: 101, active: 1 });
   const path = join(root, 'oracle.db');
-  const expected = python(
+  const expected = py('rtk-commands', root,
     `import json,sys,sqlite3
 from backend.parsers import common
 db=sqlite3.connect(sys.argv[1])
@@ -326,9 +332,12 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
     repo = join(root, 'repo');
   mkdirSync(repo);
   function git(...args: string[]) {
+    // Fixed identity and dates make the commit ids reproducible, so the frozen Python answer stays valid.
+    const when = '2026-11-01T00:00:00+0000';
     return execFileSync('git', ['-C', repo, ...args], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, GIT_AUTHOR_DATE: when, GIT_COMMITTER_DATE: when, GIT_AUTHOR_NAME: 'A', GIT_AUTHOR_EMAIL: 'a@example.test', GIT_COMMITTER_NAME: 'A', GIT_COMMITTER_EMAIL: 'a@example.test' },
     }).trim();
   }
   git('init', '-b', 'main');
@@ -359,7 +368,7 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
   );
   ingestFile(store, 'codex', path);
   projections(store)();
-  const expected = python(
+  const expected = py('repo-defects', root,
     'import json,sys\nfrom backend.escaped import default_head,repo_defects\np=sys.argv[1]\nprint(json.dumps(repo_defects(p,default_head(p))))',
     [repo],
   );

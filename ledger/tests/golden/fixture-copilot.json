@@ -1,0 +1,43 @@
+{
+ "agent": "copilot",
+ "cwd": "/example/project",
+ "branch": null,
+ "start": 1794589200.012345,
+ "end": 1794589203.012345,
+ "id": "copilot-example",
+ "originator": "fixture",
+ "skills": [
+  [
+   "example-skill",
+   1794589202.012345
+  ]
+ ],
+ "subagent": false,
+ "snapshot": {
+  "ts": 1794589203.012345,
+  "premium": 1,
+  "fin": 12,
+  "cr": 7,
+  "cw": 1,
+  "out": 4,
+  "requests": 0
+ },
+ "tasks": [],
+ "calls": [
+  [
+   1794589201.012345,
+   "example-model",
+   "high",
+   12,
+   7,
+   1,
+   4,
+   1,
+   "cp:copilot-example:2",
+   1
+  ]
+ ],
+ "preview": "",
+ "role_line": null,
+ "discussion": null
+}

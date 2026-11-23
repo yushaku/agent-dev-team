@@ -5,6 +5,7 @@ import { appendFileSync, mkdtempSync, renameSync, rmSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { golden as frozen } from './golden.ts';
 import { test } from 'node:test';
 import { Worker } from 'node:worker_threads';
 import { PARSER_VERSION, projectionStatus, projections } from '../derived.ts';
@@ -47,22 +48,26 @@ test('Codex generations preserve prefix, partial-overlap and disjoint histories 
     refresh();
     assert.equal(projectionStatus(store).errors, 0);
   }
+  let n = 0;
   function golden(text: string) {
     const oracle = join(root, 'oracle.jsonl');
     writeFileSync(oracle, text);
-    const expected = JSON.parse(
-      execFileSync(
-        'python3',
-        [
-          '-c',
-          'import json,sys;from backend.parsers.codex import parse_codex;print(json.dumps(parse_codex(sys.argv[1])))',
-          oracle,
-        ],
-        {
-          cwd: resolve(import.meta.dirname, '../../dashboard'),
-          encoding: 'utf8',
-          env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
-        },
+    // Python's parse_codex of this exact text, frozen in tests/golden (recorded with GOLDEN_RECORD=1).
+    const expected = frozen('codex-generation-' + ++n, root, () =>
+      JSON.parse(
+        execFileSync(
+          'python3',
+          [
+            '-c',
+            'import json,sys;from backend.parsers.codex import parse_codex;print(json.dumps(parse_codex(sys.argv[1])))',
+            oracle,
+          ],
+          {
+            cwd: resolve(import.meta.dirname, '../../dashboard'),
+            encoding: 'utf8',
+            env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
+          },
+        ),
       ),
     );
     assert.deepEqual(

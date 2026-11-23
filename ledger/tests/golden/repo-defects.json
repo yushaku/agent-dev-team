@@ -1,0 +1,22 @@
+{
+ "features": {
+  "feat/test": {
+   "merge_sha": "8e9e8d052bb4251f081b549fc0a0fb866ec52814",
+   "merged_at": 1793491200,
+   "fix_commits": [
+    {
+     "sha": "9bac47ca67bc9b727c92befc75d238e8e750172b",
+     "subject": "fix: sample",
+     "date": "2026-11-01T00:00:00+00:00",
+     "source": "szz",
+     "days_after_merge": 0
+    }
+   ],
+   "escaped_defects": 1,
+   "median_days_to_surface": 0,
+   "source": "szz"
+  }
+ },
+ "unattributed_fix_commits": [],
+ "error": null
+}

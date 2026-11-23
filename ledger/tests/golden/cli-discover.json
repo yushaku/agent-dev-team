@@ -1,0 +1,26 @@
+{
+ "machine": "MacBook-Air-cua-SonLV.local",
+ "system": "Darwin",
+ "generated_at": 1795438188.2065501,
+ "directories": [
+  "$ROOT/bin"
+ ],
+ "warnings": [],
+ "sources": {
+  "$REALROOT/bin": 1
+ },
+ "tools": [
+  {
+   "name": "hello",
+   "alternatives": [],
+   "path": "$ROOT/bin/hello",
+   "resolved_path": "$REALROOT/bin/hello",
+   "source": "$REALROOT/bin",
+   "package": "",
+   "version": "",
+   "install_kind": "",
+   "description": "",
+   "description_source": ""
+  }
+ ]
+}

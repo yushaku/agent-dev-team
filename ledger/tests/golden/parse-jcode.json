@@ -1,0 +1,31 @@
+{
+ "agent": "jcode",
+ "cwd": null,
+ "branch": null,
+ "start": 1794564000,
+ "end": 1794564000,
+ "id": "j",
+ "originator": null,
+ "skills": [],
+ "hooks": {},
+ "subagent": false,
+ "tasks": [],
+ "dispatcher": false,
+ "title": "",
+ "calls": [
+  [
+   1794564000,
+   "?",
+   null,
+   6,
+   0,
+   0,
+   0,
+   0,
+   null
+  ]
+ ],
+ "preview": "",
+ "role_line": null,
+ "discussion": null
+}

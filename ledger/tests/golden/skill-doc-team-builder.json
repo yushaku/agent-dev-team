@@ -1,0 +1,11 @@
+{
+ "name": "team-builder",
+ "origin": "own",
+ "source": "đội tự viết",
+ "body": "# Builder\n\n**Runs on:** work\n\nBuilds the ticket. See [notes](references/notes.md).\n",
+ "refs": [
+  "notes.md"
+ ],
+ "path": "~/orca/workspaces/teams/plugin-tasks-tab/ledger/tests/fixtures/team/skills/team-builder/SKILL.md",
+ "description": "Builds one ticket test-first and returns evidence."
+}

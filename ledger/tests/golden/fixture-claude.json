@@ -1,0 +1,45 @@
+{
+ "agent": "claude",
+ "cwd": "/example/project",
+ "branch": "main",
+ "start": 1794589201.012345,
+ "end": 1794589202.012345,
+ "sid": "claude-example",
+ "originator": null,
+ "skills": [],
+ "hooks": {},
+ "tasks": [],
+ "dispatcher": false,
+ "branch_segments": [
+  {
+   "cwd": "/example/project",
+   "branch": "main",
+   "branch_source": "message_context",
+   "at": 1794589201.012345
+  }
+ ],
+ "calls": [
+  [
+   1794589202.012345,
+   "example-model",
+   null,
+   10,
+   1,
+   2,
+   4,
+   2,
+   "m1",
+   0,
+   {
+    "cwd": "/example/project",
+    "branch": "main",
+    "branch_source": "message_context"
+   }
+  ]
+ ],
+ "subagent": false,
+ "id": "claude-example",
+ "preview": "[redacted]",
+ "role_line": null,
+ "discussion": null
+}

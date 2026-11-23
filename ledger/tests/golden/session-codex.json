@@ -1,0 +1,128 @@
+{
+ "agent": "codex",
+ "cwd": "/repo/main",
+ "branch": "main",
+ "start": 1794528000,
+ "end": 1794528009,
+ "id": "codex-switch",
+ "originator": null,
+ "skills": [
+  [
+   "code-review",
+   1794528003
+  ],
+  [
+   "code-review",
+   1794528006
+  ]
+ ],
+ "hooks": {},
+ "subagent": false,
+ "tasks": [],
+ "dispatcher": false,
+ "branch_segments": [
+  {
+   "cwd": "/repo/main",
+   "branch": "main",
+   "branch_source": "session",
+   "at": 1794528000
+  },
+  {
+   "cwd": "/repo/main",
+   "branch": "main",
+   "branch_source": "message_context",
+   "at": 1794528001
+  },
+  {
+   "cwd": "/repo/feature",
+   "branch": "feat/switch",
+   "branch_source": "message_context",
+   "at": 1794528004
+  }
+ ],
+ "discussion_read": null,
+ "tool_count": 2,
+ "search": [
+  [
+   "read_full",
+   1794528003
+  ],
+  [
+   "read_full",
+   1794528006
+  ]
+ ],
+ "calls": [
+  [
+   1794528002,
+   "test",
+   null,
+   80,
+   20,
+   5,
+   10,
+   0,
+   null,
+   0,
+   {
+    "cwd": "/repo/main",
+    "branch": "main",
+    "branch_source": "message_context"
+   }
+  ],
+  [
+   1794528005,
+   "test",
+   null,
+   80,
+   20,
+   5,
+   10,
+   0,
+   null,
+   0,
+   {
+    "cwd": "/repo/main",
+    "branch": "main",
+    "branch_source": "message_context"
+   }
+  ],
+  [
+   1794528007,
+   "test",
+   null,
+   170,
+   30,
+   10,
+   25,
+   0,
+   null,
+   0,
+   {
+    "cwd": "/repo/feature",
+    "branch": "feat/switch",
+    "branch_source": "message_context"
+   }
+  ],
+  [
+   1794528009,
+   "test",
+   null,
+   50,
+   0,
+   0,
+   5,
+   0,
+   null,
+   0,
+   {
+    "cwd": "/repo/feature",
+    "branch": "feat/switch",
+    "branch_source": "message_context"
+   }
+  ]
+ ],
+ "preview": "",
+ "role_line": null,
+ "discussion": null
+}

@@ -1,0 +1,30 @@
+{
+ "agent": "copilot",
+ "cwd": null,
+ "branch": null,
+ "start": 1794528001,
+ "end": 1794528001,
+ "id": "test",
+ "originator": "golden",
+ "skills": [],
+ "subagent": false,
+ "snapshot": null,
+ "tasks": [],
+ "calls": [
+  [
+   1794528001,
+   "?",
+   null,
+   8,
+   4,
+   0,
+   0,
+   0,
+   "cp:test:None",
+   1
+  ]
+ ],
+ "preview": "",
+ "role_line": null,
+ "discussion": null
+}

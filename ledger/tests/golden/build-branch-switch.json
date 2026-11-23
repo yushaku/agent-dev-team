@@ -1,0 +1,612 @@
+[
+ {
+  "generated_at": 1794614399,
+  "days": 7,
+  "range_start": 1794070800,
+  "dates": [
+   "2026-11-08",
+   "2026-11-09",
+   "2026-11-10",
+   "2026-11-11",
+   "2026-11-12",
+   "2026-11-13",
+   "2026-11-14"
+  ],
+  "sessions": [
+   {
+    "id": "claude-switch",
+    "session_id": "claude-switch",
+    "agent": "claude",
+    "repo": "repo",
+    "worktree": "main",
+    "branch": "main",
+    "cwd": "/repo/main",
+    "role": "chat trực tiếp",
+    "role_src": null,
+    "originator": "?",
+    "start": 1794528000,
+    "end": 1794528008,
+    "preview": "Review the plan",
+    "title": "",
+    "task_id": null,
+    "task_title": null,
+    "run_id": null,
+    "attribution": "unassigned",
+    "aggregate": false,
+    "routing": null,
+    "calls": 4,
+    "fin": 360,
+    "cr": 50,
+    "cw": 15,
+    "out": 41,
+    "reason": 0,
+    "prem": 0,
+    "snapshot": null,
+    "ctx": [
+     125,
+     240,
+     50,
+     10
+    ],
+    "days": {
+     "2026-11-13": [
+      360,
+      50,
+      15,
+      41,
+      0
+     ]
+    },
+    "hours": {
+     "2026-11-13 07": [
+      360,
+      50,
+      15,
+      41,
+      0
+     ]
+    },
+    "t0": 1794528001,
+    "mix": {
+     "test|?": 466
+    },
+    "models": {
+     "test": 466
+    },
+    "skills": {
+     "code-review": [
+      2,
+      1794528003
+     ]
+    },
+    "search": {
+     "read_full": 2
+    },
+    "feature_segments": [
+     {
+      "id": "claude-switch:branch:0",
+      "session_id": "claude-switch",
+      "agent": "claude",
+      "cwd": "/repo/main",
+      "repo": "repo",
+      "branch": "main",
+      "run_id": null,
+      "role": "chat trực tiếp",
+      "start": 1794528001,
+      "end": 1794528008,
+      "total": 146,
+      "skills": {
+       "code-review": [
+        1,
+        1794528001
+       ]
+      },
+      "hooks": {},
+      "branch_source": "message_context"
+     },
+     {
+      "id": "claude-switch:branch:1",
+      "session_id": "claude-switch",
+      "agent": "claude",
+      "cwd": "/repo/main",
+      "repo": "repo",
+      "branch": "feat/switch",
+      "run_id": null,
+      "role": "chat trực tiếp",
+      "start": 1794528004,
+      "end": 1794528004,
+      "total": 265,
+      "skills": {
+       "code-review": [
+        1,
+        1794528003
+       ]
+      },
+      "hooks": {},
+      "branch_source": "message_context"
+     },
+     {
+      "id": "claude-switch:branch:2",
+      "session_id": "claude-switch",
+      "agent": "claude",
+      "cwd": "/repo/second",
+      "repo": "repo",
+      "branch": "feat/second",
+      "run_id": null,
+      "role": "chat trực tiếp",
+      "start": 1794528006,
+      "end": 1794528006,
+      "total": 55,
+      "skills": {},
+      "hooks": {},
+      "branch_source": "message_context"
+     }
+    ],
+    "hooks": {},
+    "model": "test",
+    "effort": "?",
+    "ctx_med": 87,
+    "ctx_max": 240,
+    "total": 466
+   },
+   {
+    "id": "codex-switch",
+    "session_id": "codex-switch",
+    "agent": "codex",
+    "repo": "repo",
+    "worktree": "main",
+    "branch": "main",
+    "cwd": "/repo/main",
+    "role": "chat trực tiếp",
+    "role_src": null,
+    "originator": "?",
+    "start": 1794528000,
+    "end": 1794528009,
+    "preview": "",
+    "title": "",
+    "task_id": null,
+    "task_title": null,
+    "run_id": null,
+    "attribution": "unassigned",
+    "aggregate": false,
+    "routing": null,
+    "calls": 4,
+    "fin": 380,
+    "cr": 70,
+    "cw": 20,
+    "out": 50,
+    "reason": 0,
+    "prem": 0,
+    "snapshot": null,
+    "ctx": [
+     105,
+     105,
+     210,
+     50
+    ],
+    "days": {
+     "2026-11-13": [
+      380,
+      70,
+      20,
+      50,
+      0
+     ]
+    },
+    "hours": {
+     "2026-11-13 07": [
+      380,
+      70,
+      20,
+      50,
+      0
+     ]
+    },
+    "t0": 1794528002,
+    "mix": {
+     "test|?": 520
+    },
+    "models": {
+     "test": 520
+    },
+    "skills": {
+     "code-review": [
+      2,
+      1794528006
+     ]
+    },
+    "search": {
+     "read_full": 2
+    },
+    "feature_segments": [
+     {
+      "id": "codex-switch:branch:0",
+      "session_id": "codex-switch",
+      "agent": "codex",
+      "cwd": "/repo/main",
+      "repo": "repo",
+      "branch": "main",
+      "run_id": null,
+      "role": "chat trực tiếp",
+      "start": 1794528002,
+      "end": 1794528005,
+      "total": 230,
+      "skills": {
+       "code-review": [
+        1,
+        1794528003
+       ]
+      },
+      "hooks": {},
+      "branch_source": "message_context"
+     },
+     {
+      "id": "codex-switch:branch:1",
+      "session_id": "codex-switch",
+      "agent": "codex",
+      "cwd": "/repo/feature",
+      "repo": "repo",
+      "branch": "feat/switch",
+      "run_id": null,
+      "role": "chat trực tiếp",
+      "start": 1794528007,
+      "end": 1794528009,
+      "total": 290,
+      "skills": {
+       "code-review": [
+        1,
+        1794528006
+       ]
+      },
+      "hooks": {},
+      "branch_source": "message_context"
+     }
+    ],
+    "hooks": {},
+    "model": "test",
+    "effort": "?",
+    "ctx_med": 105,
+    "ctx_max": 210,
+    "total": 520
+   }
+  ],
+  "attribution": {
+   "total": 986,
+   "assigned": 0,
+   "unassigned": 986,
+   "inferred": 0,
+   "aggregate": 0,
+   "undated": 0
+  },
+  "features": {
+   "repositories": {
+    "repo": {
+     "features": {},
+     "unattributed_fix_commits": [],
+     "error": "default_branch_unavailable"
+    }
+   },
+   "orca_loading": true,
+   "runs": [
+    {
+     "id": "[\"repo\",\"feat/switch\"]",
+     "repo": "repo",
+     "branch": "feat/switch",
+     "variant": null,
+     "orca_loading": true,
+     "run_ids": [],
+     "first_activity": 1794528004,
+     "last_activity": 1794528009,
+     "lead_seconds": 5,
+     "tokens": 555,
+     "orchestrator_tokens": null,
+     "worker_tokens": null,
+     "session_count": 2,
+     "agents": [
+      "claude",
+      "codex"
+     ],
+     "loaded_skills": {
+      "code-review": 2
+     },
+     "fix_rounds": {
+      "count": 1,
+      "source": "code-review"
+     },
+     "gate2_findings": null,
+     "delivered": null,
+     "escaped_defects": null,
+     "fix_commits": [],
+     "median_days_to_surface": null,
+     "source": null,
+     "sources": {
+      "checkout": "unavailable",
+      "tokens": "session_usage",
+      "activity": "branch_activity_bounds",
+      "branch": [
+       "message_context"
+      ],
+      "loaded_skills": "session_skill_loads_and_hooks",
+      "gate2_convention_start": 1795392000,
+      "gate2_findings": "unavailable",
+      "delivered": "local_git_ancestry"
+     },
+     "heuristics": [
+      "repo_basename_identity",
+      "branch_last_segment",
+      "code_review_loads_minus_one"
+     ]
+    },
+    {
+     "id": "[\"repo\",\"feat/second\"]",
+     "repo": "repo",
+     "branch": "feat/second",
+     "variant": null,
+     "orca_loading": true,
+     "run_ids": [],
+     "first_activity": 1794528006,
+     "last_activity": 1794528006,
+     "lead_seconds": 0,
+     "tokens": 55,
+     "orchestrator_tokens": null,
+     "worker_tokens": null,
+     "session_count": 1,
+     "agents": [
+      "claude"
+     ],
+     "loaded_skills": {},
+     "fix_rounds": {
+      "count": 0,
+      "source": "code-review"
+     },
+     "gate2_findings": null,
+     "delivered": null,
+     "escaped_defects": null,
+     "fix_commits": [],
+     "median_days_to_surface": null,
+     "source": null,
+     "sources": {
+      "checkout": "unavailable",
+      "tokens": "session_usage",
+      "activity": "branch_activity_bounds",
+      "branch": [
+       "message_context"
+      ],
+      "loaded_skills": "session_skill_loads_and_hooks",
+      "gate2_convention_start": 1795392000,
+      "gate2_findings": "unavailable",
+      "delivered": "local_git_ancestry"
+     },
+     "heuristics": [
+      "repo_basename_identity",
+      "branch_last_segment",
+      "code_review_loads_minus_one"
+     ]
+    }
+   ],
+   "comparison": [
+    {
+     "variant": "direct",
+     "count": 0,
+     "median_tokens": null,
+     "median_fix_rounds": null,
+     "gate2_findings": null,
+     "gate2_known": 0
+    },
+    {
+     "variant": "orca",
+     "count": 0,
+     "median_tokens": null,
+     "median_fix_rounds": null,
+     "gate2_findings": null,
+     "gate2_known": 0
+    }
+   ],
+   "attribution": {
+    "total": 986,
+    "assigned": 610,
+    "unassigned": 376
+   }
+  },
+  "copilot_dirs": 0,
+  "orca": {
+   "available": false,
+   "error": null,
+   "fetched_at": null,
+   "runs": []
+  },
+  "roles_cfg": {
+   "tiers": {},
+   "order": [
+    "fast",
+    "work",
+    "top"
+   ],
+   "roles": {
+    "builder": {
+     "agent": null,
+     "tier": null,
+     "text": "work"
+    },
+    "reviewer": {
+     "agent": null,
+     "tier": null,
+     "text": "top"
+    }
+   }
+  },
+  "known_roles": [
+   "anti-ai",
+   "builder",
+   "orchestrator",
+   "perf-a11y",
+   "reviewer",
+   "security"
+  ],
+  "skills_installed": [
+   "orchestrator",
+   "team-builder",
+   "team-reviewer"
+  ],
+  "rtk": {
+   "available": false
+  }
+ },
+ {
+  "scope": {
+   "days": 7,
+   "repo": null,
+   "run": null,
+   "role": null,
+   "agent": null,
+   "generated_at": 1794614399
+  },
+  "totals": {
+   "tokens": 986,
+   "sessions": 2,
+   "assigned_tokens": 0,
+   "in": 740,
+   "cache_read": 120,
+   "cache_write": 35,
+   "out": 91
+  },
+  "features": {
+   "orca_loading": true,
+   "runs": [
+    {
+     "id": "[\"repo\",\"feat/switch\"]",
+     "repo": "repo",
+     "branch": "feat/switch",
+     "variant": null,
+     "orca_loading": true,
+     "run_ids": [],
+     "first_activity": 1794528004,
+     "last_activity": 1794528009,
+     "lead_seconds": 5,
+     "tokens": 555,
+     "orchestrator_tokens": null,
+     "worker_tokens": null,
+     "session_count": 2,
+     "agents": [
+      "claude",
+      "codex"
+     ],
+     "loaded_skills": {
+      "code-review": 2
+     },
+     "fix_rounds": {
+      "count": 1,
+      "source": "code-review"
+     },
+     "gate2_findings": null,
+     "delivered": null,
+     "escaped_defects": null,
+     "fix_commits": [],
+     "median_days_to_surface": null,
+     "source": null,
+     "sources": {
+      "checkout": "unavailable",
+      "tokens": "session_usage",
+      "activity": "branch_activity_bounds",
+      "branch": [
+       "message_context"
+      ],
+      "loaded_skills": "session_skill_loads_and_hooks",
+      "gate2_convention_start": 1795392000,
+      "gate2_findings": "unavailable",
+      "delivered": "local_git_ancestry"
+     },
+     "heuristics": [
+      "repo_basename_identity",
+      "branch_last_segment",
+      "code_review_loads_minus_one"
+     ]
+    },
+    {
+     "id": "[\"repo\",\"feat/second\"]",
+     "repo": "repo",
+     "branch": "feat/second",
+     "variant": null,
+     "orca_loading": true,
+     "run_ids": [],
+     "first_activity": 1794528006,
+     "last_activity": 1794528006,
+     "lead_seconds": 0,
+     "tokens": 55,
+     "orchestrator_tokens": null,
+     "worker_tokens": null,
+     "session_count": 1,
+     "agents": [
+      "claude"
+     ],
+     "loaded_skills": {},
+     "fix_rounds": {
+      "count": 0,
+      "source": "code-review"
+     },
+     "gate2_findings": null,
+     "delivered": null,
+     "escaped_defects": null,
+     "fix_commits": [],
+     "median_days_to_surface": null,
+     "source": null,
+     "sources": {
+      "checkout": "unavailable",
+      "tokens": "session_usage",
+      "activity": "branch_activity_bounds",
+      "branch": [
+       "message_context"
+      ],
+      "loaded_skills": "session_skill_loads_and_hooks",
+      "gate2_convention_start": 1795392000,
+      "gate2_findings": "unavailable",
+      "delivered": "local_git_ancestry"
+     },
+     "heuristics": [
+      "repo_basename_identity",
+      "branch_last_segment",
+      "code_review_loads_minus_one"
+     ]
+    }
+   ],
+   "repositories": {
+    "repo": {
+     "features": {},
+     "unattributed_fix_commits": [],
+     "error": "default_branch_unavailable"
+    }
+   }
+  },
+  "tokens_by_role": [
+   {
+    "role": "chat trực tiếp",
+    "tokens": 986,
+    "sessions": 2,
+    "share": 1,
+    "mix": [
+     {
+      "key": "codex|test|?",
+      "tokens": 520
+     },
+     {
+      "key": "claude|test|?",
+      "tokens": 466
+     }
+    ]
+   }
+  ],
+  "search_by_role": [],
+  "skills_by_role": {
+   "chat trực tiếp": [
+    {
+     "skill": "code-review",
+     "loads": 4,
+     "sessions": 2
+    }
+   ]
+  },
+  "runs": [],
+  "issues": []
+ },
+ "# Team dashboard summary\n\nScope: last 7 days, filters: none\n\n## Totals\n\n986 tokens in 2 sessions (0 assigned to Runs). Input 740, cache read 120, cache write 35, output 91.\n\n## Tokens by role\n\n| Role | Tokens | Share | Sessions | Top agent/model/effort |\n|---|---|---|---|---|\n| chat trực tiếp | 986 | 100.0% | 2 | codex/test/? 520, claude/test/? 466 |\n\n## Code search by role\n\nNo code searches.\n\n## Skills by role\n\n| Role | Skills (loads) |\n|---|---|\n| chat trực tiếp | code-review 4 |\n\n## Runs\n\nNo Runs in scope.\n\n## Feature Runs\n\n| Repo / branch | Variant | Escaped defects | Median days | Source |\n|---|---|---|---|---|\n| repo / feat/switch |  |  |  |  |\n| repo / feat/second |  |  |  |  |\n\n## Issues (0)\n\nNo issues detected.\n"
+]

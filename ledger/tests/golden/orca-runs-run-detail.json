@@ -1,0 +1,174 @@
+[
+ [
+  {
+   "id": "run_a",
+   "objective": "sample",
+   "created": 1794528000,
+   "tasks": [
+    {
+     "id": "task_a",
+     "run": "run_a",
+     "title": "builder: fix test",
+     "role": "builder",
+     "status": "completed",
+     "created": 1794528000,
+     "completed": null,
+     "agent": "codex",
+     "model": "test",
+     "effort": null,
+     "repo": "sample",
+     "worktree": "repo",
+     "measurement": {
+      "kind": "fix",
+      "round": 2,
+      "cause": "defect",
+      "source": "metadata"
+     },
+     "routing": [],
+     "started": 1794528000,
+     "tokens": {}
+    }
+   ],
+   "gates": [
+    {
+     "id": "g",
+     "task": "task_a",
+     "question": "Ready?",
+     "answer": "approve",
+     "kind": "approve",
+     "stage": "other",
+     "created": 1794528000,
+     "resolved": 1794528000
+    }
+   ],
+   "stage": "unknown",
+   "events": [
+    {
+     "id": "dispatch:d",
+     "at": 1794528000,
+     "kind": "dispatch",
+     "from": "Orchestrator",
+     "to": "builder: fix test",
+     "text": "Giao việc",
+     "body": "d",
+     "from_actor": "coordinator",
+     "to_actor": "term",
+     "to_task": "task_a"
+    },
+    {
+     "id": "g:gate_answer",
+     "at": 1794528000,
+     "kind": "gate_answer",
+     "from": "PO",
+     "to": "Orchestrator",
+     "from_actor": "po",
+     "to_actor": "coordinator",
+     "text": "approve",
+     "body": "Ready?"
+    },
+    {
+     "id": "g:gate_question",
+     "at": 1794528000,
+     "kind": "gate_question",
+     "from": "Orchestrator",
+     "to": "PO",
+     "from_actor": "coordinator",
+     "to_actor": "po",
+     "text": "Ready?",
+     "body": ""
+    },
+    {
+     "id": "m",
+     "at": 1794528000,
+     "kind": "message",
+     "from": "builder: fix test",
+     "to": "Orchestrator",
+     "text": "Tin nhắn",
+     "body": "sent",
+     "type": null,
+     "from_task": "task_a",
+     "to_task": null,
+     "from_actor": "term",
+     "to_actor": "coordinator"
+    }
+   ],
+   "messages_available": true,
+   "messages_limited": false,
+   "repo": "sample",
+   "delivered_at": null,
+   "lead_seconds": 600,
+   "gate_wait_seconds": 0,
+   "attention": [],
+   "tokens": {
+    "sessions": 0
+   },
+   "window_tokens": {},
+   "orchestrator_by_agent": {},
+   "orchestrator_activity": [],
+   "orchestrator_tokens": 0,
+   "worker_tokens": 0,
+   "fix_tokens_by_cause": {
+    "defect": {}
+   }
+  }
+ ],
+ {
+  "run": {
+   "id": "run_a",
+   "objective": "sample",
+   "repo": "sample",
+   "stage": "unknown",
+   "tasks": 1,
+   "kinds": {
+    "fix": 1
+   },
+   "fix_rounds": 1,
+   "fix_causes": {
+    "defect": 1
+   },
+   "fix_rounds_source": "measurement",
+   "fix_rounds_estimated": false,
+   "gate_wait_seconds": 0,
+   "lead_seconds": 600,
+   "delivered": false,
+   "worker_tokens": 0,
+   "orchestrator_tokens": 0
+  },
+  "features": {
+   "orca_loading": false,
+   "runs": [],
+   "repositories": {}
+  },
+  "tasks": [
+   {
+    "id": "task_a",
+    "title": "builder: fix test",
+    "role": "builder",
+    "kind": "fix",
+    "round": 2,
+    "cause": "defect",
+    "status": "completed",
+    "agent": "codex",
+    "model": "test",
+    "effort": null,
+    "tier": null,
+    "tokens": 0,
+    "duration_seconds": null,
+    "skills": {}
+   }
+  ],
+  "gates": [
+   {
+    "id": "g",
+    "kind": "approve",
+    "stage": "other",
+    "task": "task_a",
+    "wait_seconds": 0,
+    "question": "Ready?"
+   }
+  ],
+  "issues": [],
+  "skills_window_days": 7
+ },
+ "# Run run_a\n\nsample | repo sample | stage unknown | lead 10m | gate wait 0m | worker 0 tok, orchestrator 0 tok | fix rounds 1\n\n## Tasks\n\n| # | Role | Kind | Round | Agent/model/effort | Tier | Tokens | Duration | Status | Skills |\n|---|---|---|---|---|---|---|---|---|---|\n| 1 | builder | fix | 2 | codex/test/? |  | 0 | ? | completed | - |\n\nSkills cover sessions in the last 7 days only.\n\n## Gates\n\n| Gate | Kind | Stage | Wait | Question |\n|---|---|---|---|---|\n| g | approve | other | 0m | Ready? |\n\n## Issues (0)\n\nNo issues detected.\n"
+]

@@ -1,0 +1,44 @@
+{
+ "agent": "codex",
+ "cwd": "/example/project",
+ "branch": "main",
+ "start": 1794589200.012345,
+ "end": 1794589203.012345,
+ "id": "codex-example",
+ "originator": "example",
+ "skills": [],
+ "hooks": {},
+ "subagent": false,
+ "tasks": [],
+ "dispatcher": false,
+ "branch_segments": [
+  {
+   "cwd": "/example/project",
+   "branch": "main",
+   "branch_source": "session",
+   "at": 1794589200.012345
+  }
+ ],
+ "calls": [
+  [
+   1794589203.012345,
+   "example-model",
+   "high",
+   9,
+   3,
+   0,
+   4,
+   2,
+   null,
+   0,
+   {
+    "cwd": "/example/project",
+    "branch": "main",
+    "branch_source": "session"
+   }
+  ]
+ ],
+ "preview": "",
+ "role_line": null,
+ "discussion": null
+}
