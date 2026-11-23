@@ -485,3 +485,13 @@ test('a second host waits for the lock, takes it when the holder is gone, and a 
   writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:2147483646,host:'dead',token:'x'}));
   assert.ok('held' in acquire(home,'b'));
 });
+
+test('start() repeats a pass every interval when nothing else asks', async t => {
+  const f = fixture(t);
+  const home = join(f.root,'host3');
+  const passes: string[] = [];
+  const { start, stop } = await import('../ingest.ts');
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:150,host:'test',onPass:p=>passes.push(p.reason)});
+  try { for (let i=0;i<200 && passes.length<3;i++) await sleep(25); } finally { await stop(); }
+  assert.deepEqual(passes.slice(0,3),['start','interval','interval']);
+});
