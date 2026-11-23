@@ -19,6 +19,7 @@ import { files, ingestFile } from '../files.ts';
 import { projections, PARSER_VERSION } from '../derived.ts';
 import { parseFile, parseHermes } from '../session.ts';
 import { build } from '../dashboard.ts';
+import { GitMetrics } from '../git-metrics.ts';
 import { summary, markdown, runDetail } from '../insights.ts';
 import { createApi } from '../api.ts';
 import { discover } from '../commands.ts';
@@ -320,7 +321,7 @@ print(json.dumps([[dict(r) for r in db.execute('select * from commands')],common
   );
 });
 
-test('feature defect history matches Python across merge, fix, and a cached rebuild', (t) => {
+test('feature defect history matches Python across merge, fix, and a cached rebuild', async (t) => {
   const { root, store } = scratch(t),
     repo = join(root, 'repo');
   mkdirSync(repo);
@@ -362,6 +363,13 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
     'import json,sys\nfrom backend.escaped import default_head,repo_defects\np=sys.argv[1]\nprint(json.dumps(repo_defects(p,default_head(p))))',
     [repo],
   );
+  const gitMetrics = new GitMetrics(store.db);
+  try {
+    gitMetrics.warm();
+    await t.waitFor(() => assert.equal(gitMetrics.lookup(repo).metrics.loading, false), { timeout: 5000 });
+  } finally {
+    gitMetrics.close();
+  }
   for (let i = 0; i < 2; i++)
     assert.deepEqual(JSON.parse(JSON.stringify(build(store, 7).features.repositories.repo)), expected);
   assert.equal(store.db.prepare('SELECT count(*) n FROM dashboard_git').get().n, 1);

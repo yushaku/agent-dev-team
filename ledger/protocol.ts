@@ -34,7 +34,10 @@ interface FixCommit {
   source: string;
   days_after_merge?: number;
 }
-interface RepositoryMetrics {
+export interface RepositoryMetrics {
+  stale?: boolean;
+  loading?: boolean;
+  analysis_ms?: number;
   features: Record<
     string,
     {
