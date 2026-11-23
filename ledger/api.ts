@@ -2,6 +2,7 @@ import { Worker } from 'node:worker_threads';
 import { dirname } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { sendResponse, type Routes } from './http.ts';
 import type { Store } from './store.ts';
 
 const staticFiles = new Map([
@@ -30,14 +31,14 @@ const staticFiles = new Map([
     ].map((t) => 'js/tabs/' + t),
   ].map((n): [string, string] => ['/' + n + '.js', 'text/javascript']),
 ]);
-const routes = new Set([
+const apiPaths = new Set([
   '/api/data',
   '/api/agent/summary',
   '/api/agent/run',
   '/api/team/skill',
   '/api/cli-tools',
 ]);
-type Response = [number, string, string | Buffer];
+type WorkerReply = [number, string, string | Buffer];
 export function createApi(ledger: Store | string) {
   const home =
     typeof ledger === 'string'
@@ -53,7 +54,7 @@ export function createApi(ledger: Store | string) {
   let worker: Worker | undefined,
     closed = false,
     next = 0;
-  const pending = new Map<number, (r: Response) => void>();
+  const pending = new Map<number, (r: WorkerReply) => void>();
   function startWorker() {
     const w = new Worker(new URL('./api-worker.ts', import.meta.url), { workerData: { home } });
     worker = w;
@@ -73,42 +74,56 @@ export function createApi(ledger: Store | string) {
   function dispatch(url: string) {
     if (!worker) startWorker();
     const id = next++;
-    return new Promise<Response>((done) => {
+    return new Promise<WorkerReply>((done) => {
       pending.set(id, done);
       worker!.postMessage({ id, url });
     });
   }
-  async function handler(req: IncomingMessage, res: ServerResponse) {
-    function send([code, type, body]: Response) {
-      res.writeHead(code, {
+  function response([status, type, body]: WorkerReply) {
+    return new Response(typeof body === 'string' ? body : new Uint8Array(body), {
+      status,
+      headers: {
         'Content-Type': type,
-        'Content-Length': Buffer.byteLength(body),
+        'Content-Length': String(Buffer.byteLength(body)),
         'Cache-Control': 'no-store',
-      });
-      res.end(body);
-    }
-    if (!/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(req.headers.host || ''))
-      return send([403, 'text/plain', 'forbidden']);
-    if (req.method !== 'GET') return send([405, 'text/plain', 'method not allowed']);
+      },
+    });
+  }
+  async function route(req: { method?: string; headers?: IncomingMessage['headers'] }, url: URL) {
+    if (!/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(req.headers?.host || ''))
+      return response([403, 'text/plain', 'forbidden']);
+    if (req.method !== 'GET') return response([405, 'text/plain', 'method not allowed']);
     try {
-      const url = new URL(req.url || '/', 'http://localhost'),
-        type = staticFiles.get(url.pathname);
+      const type = staticFiles.get(url.pathname);
       if (type) {
         const path = url.pathname === '/' ? '/index.html' : url.pathname;
-        return send([
+        return response([
           200,
           type + '; charset=utf-8',
           await readFile(new URL('../dashboard/web' + path, import.meta.url)),
         ]);
       }
-      if (!routes.has(url.pathname)) return send([404, 'text/plain', 'not found']);
-      if (closed) return send([503, 'text/plain', 'Dashboard data is temporarily unavailable']);
-      send(await dispatch(url.pathname + url.search));
+      if (!apiPaths.has(url.pathname)) return response([404, 'text/plain', 'not found']);
+      if (closed) return response([503, 'text/plain', 'Dashboard data is temporarily unavailable']);
+      return response(await dispatch(url.pathname + url.search));
     } catch {
-      send([500, 'text/plain', 'Dashboard request failed']);
+      return response([500, 'text/plain', 'Dashboard request failed']);
     }
   }
+  const routes: Routes = Object.fromEntries(
+    [...apiPaths, ...staticFiles.keys()].map((path) => [path, route]),
+  );
+  async function handler(req: IncomingMessage, res: ServerResponse) {
+    let url: URL;
+    try {
+      url = new URL(req.url || '/', 'http://localhost');
+    } catch {
+      return sendResponse(res, response([400, 'text/plain', 'invalid URL']));
+    }
+    await sendResponse(res, await route(req, url));
+  }
   return Object.assign(handler, {
+    routes,
     async close() {
       closed = true;
       await worker?.terminate();
