@@ -111,8 +111,8 @@
       "lane": "orch",
       "col": 3,
       "type": "messagebus",
-      "label": "Metrics row",
-      "sublabel": ".team/metrics.md"
+      "label": "Gate 2 findings",
+      "sublabel": "decisions.md; dashboard counts"
     },
     {
       "id": "retro",

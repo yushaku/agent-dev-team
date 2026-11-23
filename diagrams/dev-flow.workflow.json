@@ -167,8 +167,8 @@
       "lane": "orch",
       "col": 5,
       "type": "messagebus",
-      "label": "Metrics, retro*",
-      "sublabel": "then close the Run"
+      "label": "Retro*, close Run",
+      "sublabel": "dashboard metrics"
     }
   ],
   "edges": [
