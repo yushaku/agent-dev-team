@@ -1,10 +1,10 @@
 # Ticket mode
 
-Use `start.md` for team selection; add Analyst/Investigator only for a named gap existing workers cannot cover.
+Use `start.md` for team selection; add an Investigator only for a named gap existing workers cannot cover.
 
 ## Intake
 
-- Read the full thread via configured access (manual: PO supplies it). Summarize latest confirmed requirements and contradictions in `languages.po`.
+- Read only the title, description and the last few comments: enough to classify the type below and pick the team. A long or contradictory thread goes to an Investigator (`roles/investigator.md` step 1); use its requirement summary, never the full thread, in the Orchestrator context. Manual access: the PO supplies the thread.
 - Link related tickets and deduplicate before investigating. The ticket remains the external record; keep internal evidence in the Run reports.
 - Poll only on an authorized schedule using the configured query. Waiting for the client is a waiting status; resume when an answer arrives.
 - Prioritize incidents, overdue tickets, client-blocked work, then tracker priority and due date.
