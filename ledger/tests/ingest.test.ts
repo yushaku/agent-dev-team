@@ -676,52 +676,19 @@ test('http: close() right after serve() leaves no listener behind', async () => 
   await assert.rejects(fetch(`http://127.0.0.1:${port}/ok`,{signal:AbortSignal.timeout(500)}));
 });
 
-async function legacyOwner() {
-  // A process standing in for a pre-SQLite-lock host: it only needs to be alive.
-  const child = spawn(process.execPath,['-e','setInterval(()=>{},1e9)'],{stdio:'ignore'});
-  await once(child,'spawn');
-  return { child, stopped: once(child,'exit') };
-}
-
-test('legacy lock: a live pre-SQLite host keeps the new host waiting, a dead one is cleared (mixed-version handover)', async t => {
+test('a leftover ingest.lock file from an older build is removed once the lock is held, and ingest runs', async t => {
   const f = fixture(t);
-  const home = join(f.root,'legacy');
+  const home = join(f.root,'leftover');
   mkdirSync(home);
-  const { acquire } = await import('../lock.ts');
-  const old = await legacyOwner();
-  writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:old.child.pid,host:'launchd',token:'old'}));
-  const refused = acquire(home,'new');
-  assert.ok('by' in refused);
-  assert.match((refused as {by:string}).by,/launchd pid \d+ \(legacy ingest\.lock\)/);
-  assert.ok(existsSync(join(home,'ingest.lock')),'the live host\'s file is left alone');
-  // The new runner reports it and keeps waiting, then takes over once the old host is gone.
+  writeFileSync(join(home,'ingest.lock'),JSON.stringify({pid:process.pid,host:'launchd',token:'old'}));
   const { start, stop, status } = await import('../ingest.ts');
-  const states: string[] = [];
-  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},intervalMs:120,host:'new',onState:s => states.push(s.lock+':'+(s.lockedBy ?? ''))});
+  start({home,env:{...process.env,...f.env,AGENT_LEDGER_HOME:home},host:'new'});
   try {
-    for (let i=0;i<100 && !states.some(x => x.startsWith('waiting:launchd'));i++) await sleep(20);
-    assert.ok(states.some(x => /^waiting:launchd pid \d+ \(legacy/.test(x)),states.join(' | '));
-    assert.equal(status()?.passes,0,'it ingested nothing while the old host lived');
-    old.child.kill('SIGKILL');
-    await old.stopped;
-    for (let i=0;i<200 && status()?.lock !== 'held';i++) await sleep(20);
+    for (let i=0;i<200 && !status()?.passes;i++) await sleep(25);
     assert.equal(status()?.lock,'held');
-    assert.equal(existsSync(join(home,'ingest.lock')),false,'the dead host\'s file is removed');
+    assert.ok((status()?.passes ?? 0) >= 1,'a pass ran');
+    assert.equal(existsSync(join(home,'ingest.lock')),false);
   } finally { await stop(); }
-});
-
-test('legacy lock: an unreadable fresh file is a claim being written; an old one is junk', async t => {
-  const f = fixture(t);
-  const home = join(f.root,'legacy2');
-  mkdirSync(home);
-  const { acquire } = await import('../lock.ts');
-  writeFileSync(join(home,'ingest.lock'),'');
-  assert.ok('by' in acquire(home,'new'));
-  const old = new Date(Date.now()-5*60_000);
-  utimesSync(join(home,'ingest.lock'),old,old);
-  const got = acquire(home,'new');
-  assert.ok('held' in got);
-  (got as {held:{release():void}}).held.release();
 });
 
 test('a failure after the lock is taken closes the connection: the very next acquire succeeds, in this process too', async t => {
@@ -819,4 +786,78 @@ test('plugin host: a second activation without a shutdown replaces the first cle
   await shutdown(); // closes only the live listener, and it is the only one
   await sleep(100);
   assert.equal(await probe(),null,'no listener is left on the port');
+});
+
+/** An Orca stand-in whose first task-list call stalls until the gate file is removed (later calls do not). */
+function stalled(f: ReturnType<typeof fixture>) {
+  const cli = join(f.root,'orca');
+  writeFileSync(cli,readFileSync(cli,'utf8').replace('case "$2"',`if [ "$2" = task-list ] && [ ! -f "$GATE.done" ]; then
+    touch "$GATE"
+    while [ -f "$GATE" ]; do sleep 0.05; done
+    touch "$GATE.done"
+  fi
+  case "$2"`));
+  return join(f.root,'gate');
+}
+function hostFixture(t: import('node:test').TestContext, f: ReturnType<typeof fixture>, name: string) {
+  const home = join(f.root,name);
+  const port = 20000 + Math.floor(Math.random()*20000);
+  const saved = {...process.env};
+  Object.assign(process.env,f.env,{AGENT_LEDGER_HOME:home,TEAM_DASHBOARD_HEALTH_PORT:String(port)});
+  t.after(() => { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env,saved); });
+  const bars: string[] = [];
+  const make = () => ({ log() {}, host: { call: async (_: string, p: {text:string}) => { bars.push(p.text); } }, events: { on() {} } });
+  const probe = () => fetch(`http://127.0.0.1:${port}/health`,{signal:AbortSignal.timeout(500)}).then(r => r.json(),() => null);
+  return { home, port, bars, make, probe };
+}
+
+test('plugin host: shutdown and a new activation overlapping a delayed pass run in order, and the activation is not lost', async t => {
+  const f = fixture(t);
+  const gate = stalled(f);
+  process.env.GATE = gate;
+  t.after(() => { delete process.env.GATE; });
+  const h = hostFixture(t,f,'overlap');
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.make());
+  for (let i=0;i<200 && !existsSync(gate);i++) await sleep(25);
+  assert.ok(existsSync(gate),'a pass is in flight');
+  let shutDown = false, reactivated = false;
+  const sd = shutdown().then(() => { shutDown = true; });
+  const re = run(h.make()).then(() => { reactivated = true; });
+  await sleep(300);
+  assert.equal(shutDown,false,'shutdown waits for the pass to drain');
+  assert.equal(reactivated,false,'the new activation waits for the shutdown');
+  unlinkSync(gate);
+  await Promise.all([sd,re]);
+  assert.ok(shutDown && reactivated);
+  let health: {ok:boolean,lock:string} | null = null;
+  for (let i=0;i<200 && !health?.ok;i++) { await sleep(25); health = await h.probe(); }
+  assert.equal(health?.lock,'held','the second activation is running');
+  assert.ok(!h.bars.some(b => b.includes('not started')),h.bars.join(' | '));
+  await shutdown();
+  assert.equal(await h.probe(),null);
+});
+
+test('plugin host: two overlapping shutdowns both wait for the drain, in order', async t => {
+  const f = fixture(t);
+  const gate = stalled(f);
+  process.env.GATE = gate;
+  t.after(() => { delete process.env.GATE; });
+  const h = hostFixture(t,f,'twoshut');
+  const { run, shutdown } = await import('../../orca-plugin/src/ledger-host.ts');
+  await run(h.make());
+  for (let i=0;i<200 && !existsSync(gate);i++) await sleep(25);
+  assert.ok(existsSync(gate));
+  const order: string[] = [];
+  const a = shutdown().then(() => order.push('a')), b = shutdown().then(() => order.push('b'));
+  await sleep(300);
+  assert.deepEqual(order,[],'neither resolves while the pass drains');
+  unlinkSync(gate);
+  await Promise.all([a,b]);
+  assert.deepEqual(order,['a','b']);
+  assert.equal(await h.probe(),null,'the listener is closed');
+  const { acquire } = await import('../lock.ts');
+  const got = acquire(h.home,'after');
+  assert.ok('held' in got,'the lock is free');
+  (got as {held:{release():void}}).held.release();
 });
