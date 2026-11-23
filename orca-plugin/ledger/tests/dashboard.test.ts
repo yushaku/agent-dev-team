@@ -12,7 +12,7 @@ import {
   unlinkSync,
   mkdirSync,
 } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { hostname, tmpdir, type as osType } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer, get } from 'node:http';
 import { once } from 'node:events';
@@ -149,7 +149,14 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
   writeFileSync(join(p, 'hello'), 'test', { mode: 0o755 });
   const cli = discover(p),
     old = golden('cli-discover', root);
+  // Host metadata describes the machine that runs the test, not the one that recorded the golden file: the contract
+  // is that it names this machine, so assert that and then compare the rest.
+  assert.equal(cli.machine, hostname());
+  assert.equal(cli.system, osType());
+  assert.equal(typeof cli.generated_at, 'number');
   cli.generated_at = old.generated_at;
+  cli.machine = old.machine;
+  cli.system = old.system;
   assert.deepEqual(JSON.parse(JSON.stringify(cli)), old);
   const name = 'team-builder';
   const doc = skillDoc(name);

@@ -1,7 +1,7 @@
 import './team-env.ts'; // first: the team root is read when modules load, and one process may run every test file
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { projections } from '../derived.ts';
@@ -34,3 +34,15 @@ for (const [agent, path] of cases)
     const expected = golden('fixture-' + agent, fixtures);
     assert.deepEqual(JSON.parse(String(rows[0].data)), expected);
   });
+
+test('golden placeholders are filled in values and keys, so a path with quotes or backslashes cannot break the file', (t) => {
+  const parent = mkdtempSync(join(tmpdir(), 'golden-path-'));
+  const root = join(parent, 'say "hi" \\ back {x}');
+  mkdirSync(root);
+  t.after(() => rmSync(parent, { recursive: true, force: true }));
+  const real = realpathSync(root);
+  const home = homedir();
+  const fixtures = join(import.meta.dirname, 'fixtures');
+  const shown = fixtures.startsWith(home + '/') ? '~' + fixtures.slice(home.length) : fixtures;
+  assert.deepEqual(golden('placeholders', root), { [root + '/key']: [root, real + '/x', shown + '/y', 'plain'] });
+});
