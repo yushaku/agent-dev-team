@@ -88,7 +88,8 @@
     "build",
     "verify",
     "deliver",
-    "gate2"
+    "gate2",
+    "close"
   ],
   "nodes": [
     {
@@ -180,7 +181,7 @@
       "col": 5,
       "type": "database",
       "label": "Orchestrator delivers",
-      "sublabel": "draft PR or branch"
+      "sublabel": "draft PR, app in DEV pane"
     },
     {
       "id": "gate2",
@@ -188,8 +189,16 @@
       "col": 5,
       "type": "frontend",
       "label": "Gate 2",
-      "sublabel": "PO reviews",
+      "sublabel": "PO tests in DEV pane",
       "tag": "PO decision"
+    },
+    {
+      "id": "close",
+      "lane": "orch",
+      "col": 5,
+      "type": "messagebus",
+      "label": "Metrics, retro*",
+      "sublabel": "retro only if the Run had problems"
     }
   ],
   "edges": [
@@ -253,7 +262,7 @@
       "id": "fix-loop",
       "from": "verify",
       "to": "build",
-      "label": "fix, max 2 rounds",
+      "label": "fix + re-review, max 2",
       "variant": "default",
       "role": "return"
     },
@@ -267,6 +276,12 @@
       "id": "deliver-gate",
       "from": "deliver",
       "to": "gate2"
+    },
+    {
+      "id": "gate-close",
+      "from": "gate2",
+      "to": "close",
+      "label": "approved"
     }
   ]
 }

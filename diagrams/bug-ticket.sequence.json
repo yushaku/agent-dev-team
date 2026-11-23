@@ -7,7 +7,7 @@
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
-        "legend": {
+    "legend": {
       "mode": "auto",
       "entries": {
         "emphasis": {
@@ -37,9 +37,9 @@
     },
     {
       "id": "support",
-      "type": "messagebus",
+      "type": "backend",
       "label": "Support Engineer",
-      "sublabel": "reads thread, drafts reply"
+      "sublabel": "long thread*, drafts reply"
     },
     {
       "id": "builder",
@@ -50,8 +50,8 @@
     {
       "id": "reviewer",
       "type": "external",
-      "label": "Verify",
-      "sublabel": "checks test evidence"
+      "label": "Reviewer",
+      "sublabel": "other agent"
     }
   ],
   "segments": [
@@ -90,14 +90,14 @@
       "from": "orch",
       "to": "support",
       "y": 268,
-      "label": "read the whole thread",
+      "label": "long thread*: summarise it",
       "variant": "default"
     },
     {
       "from": "support",
       "to": "orch",
       "y": 312,
-      "label": "expected vs actual",
+      "label": "requirement summary",
       "variant": "return"
     },
     {
@@ -118,7 +118,7 @@
       "from": "orch",
       "to": "reviewer",
       "y": 444,
-      "label": "Anti-AI, Security*, Review",
+      "label": "code-review, Anti-AI, Security*",
       "variant": "emphasis"
     },
     {

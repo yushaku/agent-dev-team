@@ -19,7 +19,7 @@
           "label": "Plan"
         },
         "backend": {
-          "label": "Build"
+          "label": "Worker"
         },
         "external": {
           "label": "Verify"
@@ -82,7 +82,7 @@
       "id": "q_a",
       "lane": "q",
       "col": 0,
-      "type": "messagebus",
+      "type": "backend",
       "label": "Read thread",
       "sublabel": "Support Engineer",
       "width": 132
@@ -91,7 +91,7 @@
       "id": "q_i",
       "lane": "q",
       "col": 1,
-      "type": "messagebus",
+      "type": "backend",
       "label": "Answer from code",
       "sublabel": "Support Engineer",
       "width": 132
@@ -109,18 +109,18 @@
       "id": "b_a",
       "lane": "b",
       "col": 0,
-      "type": "messagebus",
+      "type": "backend",
       "label": "Expected vs actual",
-      "sublabel": "Support Engineer",
+      "sublabel": "Builder",
       "width": 132
     },
     {
       "id": "b_i",
       "lane": "b",
       "col": 1,
-      "type": "messagebus",
+      "type": "backend",
       "label": "Root cause",
-      "sublabel": "Support Engineer",
+      "sublabel": "Builder, diagnosing-bugs",
       "width": 132
     },
     {
@@ -138,7 +138,7 @@
       "col": 3,
       "type": "external",
       "label": "Verify",
-      "sublabel": "check test evidence",
+      "sublabel": "Reviewer, test evidence",
       "width": 132
     },
     {
@@ -163,7 +163,7 @@
       "id": "c_a",
       "lane": "c",
       "col": 0,
-      "type": "messagebus",
+      "type": "backend",
       "label": "Clarify scope",
       "sublabel": "Support Engineer, G-Reply",
       "width": 132
@@ -172,7 +172,7 @@
       "id": "c_i",
       "lane": "c",
       "col": 1,
-      "type": "messagebus",
+      "type": "backend",
       "label": "Impact, estimate",
       "sublabel": "Support Engineer",
       "width": 132
