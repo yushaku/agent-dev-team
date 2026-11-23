@@ -86,6 +86,8 @@ let ingest: IngestApi | undefined
 let net: Net = { bound: [], busy: [] }
 /** Test hook: replaces the in-process API as the source of the Tasks snapshot. */
 let override: ((days: number) => Promise<Record<string, unknown>>) | undefined
+/** Test hook: replaces the API's routes, to drive the route-to-panel error conversion. */
+export const setApiRoutes = (routes?: Record<string, Handler>) => { apiRoutes = routes }
 export const setDataSource = (fn?: (days: number) => Promise<Record<string, unknown>>) => { override = fn }
 
 /** Why a dashboard request did not give a snapshot: the structured `loading` flag says "still loading", anything else is a failure. */
@@ -152,12 +154,16 @@ export function run(orca: Api): Promise<void> {
       const raw = env('TEAM_DASHBOARD_PORT')
       const port = raw === undefined || raw === '' ? API_PORT : Number(raw)
       if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`TEAM_DASHBOARD_PORT must be a port number, got "${raw}"`)
-      const [ing, ht] = await Promise.all([load<IngestApi>('ingest.ts'), load<HttpApi>('http.ts')])
+      // Modules first, before any resource is opened: the optional API import can fail or be slow, and a
+      // deactivation that arrives meanwhile must find nothing started.
+      const optional = load<ApiModule>('api.ts').then((m) => ({ m }), (e: unknown) => ({ e }))
+      const [ing, ht, api] = await Promise.all([load<IngestApi>('ingest.ts'), load<HttpApi>('http.ts'), optional])
       if (cancelled()) return
       await teardown() // the previous activation's host, if it got as far as starting one
       if (cancelled()) return
       const mynet: Net = (net = { bound: [], busy: [] })
-      const show = () => { const s = ing.status(); if (s && !cancelled()) { const r = report(s, mynet); bar(r.text, r.tone, r.tooltip) } }
+      let failed = false // a terminal listener error: the activation is being torn down, the status bar keeps saying why
+      const show = () => { const s = ing.status(); if (s && !cancelled() && !failed) { const r = report(s, mynet); bar(r.text, r.tone, r.tooltip) } }
       ingest = ing
       const state = ing.start({
         host: 'orca-plugin',
@@ -167,14 +173,14 @@ export function run(orca: Api): Promise<void> {
       // The dashboard API is a separate concern: if its module cannot load or it cannot start, ingest and /health still run.
       let routes: Record<string, Handler> = {}
       try {
-        const apiMod = await load<ApiModule>('api.ts')
+        if ('e' in api) throw api.e
         const web = pathOf(here('../dashboard-web'))
         const e = (globalThis as Env).process!.env
         e.AGENT_DASHBOARD_WEB ||= web
         e.AGENT_TEAM_HOME ||= `${env('HOME') ?? ''}/.agents/teams`
-        const api = apiMod.createApi(state.home)
-        apiHandle = api
-        routes = api.routes as Record<string, Handler>
+        const created = api.m.createApi(state.home)
+        apiHandle = created
+        routes = created.routes as Record<string, Handler>
         apiRoutes = routes
       } catch (e) {
         mynet.apiError = String(e).split('\n')[0]
@@ -190,8 +196,15 @@ export function run(orca: Api): Promise<void> {
           if (code === 'EADDRINUSE') {
             if (mynet.busy.includes(port)) return // still held: the retry is not news
             mynet.busy.push(port)
-          } else mynet.error = `${port} ${code}`
-          orca.log(`listener ${port} ${code}`); show()
+            orca.log(`listener ${port} ${code}`); show()
+            return
+          }
+          // Anything but a busy port is terminal: tear the whole activation down through the lifecycle chain.
+          mynet.error = `${port} ${code}`
+          failed = true
+          orca.log(`listener ${port} ${code}: tearing the host down`)
+          if (!cancelled()) bar('Ledger ✗ not started', 'danger', `The dashboard listener failed on port ${port} (${code}); the ledger host was stopped.`)
+          void enqueue(teardown).catch((again) => orca.log(`teardown after the listener error failed: ${again}`))
         },
         onListening: () => { mynet.busy = mynet.busy.filter((p) => p !== port); if (!mynet.bound.includes(port)) mynet.bound.push(port); show() }
       })

@@ -1,3 +1,4 @@
+import './team-env.ts'; // first: the team root is read when modules load, and one process may run every test file
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -45,7 +46,7 @@ test('dashboard routes share the plugin HTTP server with its JSON health route',
   assert.equal(page.headers.get('cache-control'), 'no-store');
   assert.deepEqual(
     Buffer.from(await page.arrayBuffer()),
-    await readFile(new URL('../../dashboard/web/index.html', import.meta.url)),
+    await readFile(new URL('../../dashboard-web/index.html', import.meta.url)),
   );
 
   const status = await new Promise<number | undefined>((resolve, reject) => {

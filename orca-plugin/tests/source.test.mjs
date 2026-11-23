@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { barView, makeFetch } from '../web/source.js'
+import { barView, makeFetch } from '../dashboard-web/js/orca-source.js'
 
 const fakeBar = () => {
   const classes = new Set()
@@ -54,7 +54,7 @@ test('other URLs go to the real fetch', async () => {
   assert.equal(await fetchLike('/api/cli-tools'), 'real')
 })
 
-import { makeAsk } from '../web/source.js'
+import { makeAsk } from '../dashboard-web/js/orca-source.js'
 
 const expired = () => Object.assign(new Error('snapshot expired'), { code: 'expired' })
 
@@ -86,4 +86,20 @@ test('ask: never mixes a chunk of another snapshot, and gives up after repeated 
   await assert.rejects(mixed(7), /expired|another snapshot/)
   const wrongRange = makeAsk(async () => ({ id: 'a.1', days: 7, chunks: 1 }))
   await assert.rejects(wrongRange(30), /not 30/)
+})
+
+test('an API error reaches the panel message unchanged: the loading wording and the failure wording stay distinct', async () => {
+  for (const [message, wording] of [['Dashboard API chưa sẵn sàng (HTTP 503, đang tải).', /đang tải/], ['Dashboard API chưa sẵn sàng (HTTP 503: Dashboard data is temporarily unavailable).', /temporarily unavailable/]]) {
+    let shown
+    const fetchLike = makeFetch({
+      real: async () => 'real', base: 'http://127.0.0.1:4747', cached: () => null, remember: () => {}, firstDays: 7, hasCharts: () => false, ok: () => {},
+      ask: makeAsk(async () => { throw Object.assign(new Error(message), { code: 'offline' }) }),
+      fail: (e) => { shown = e.message }
+    })
+    const r = await fetchLike('/api/data?days=7')
+    assert.equal(r.ok, false)
+    assert.equal(shown, message)
+    assert.match(shown, wording)
+    assert.doesNotMatch(shown, wording.source === 'đang tải' ? /temporarily/ : /đang tải/)
+  }
 })

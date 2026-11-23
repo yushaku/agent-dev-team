@@ -1,3 +1,4 @@
+import './team-env.ts'; // first: the team root is read when modules load, and one process may run every test file
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
