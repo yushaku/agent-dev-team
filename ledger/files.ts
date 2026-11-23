@@ -12,7 +12,10 @@ export function* files(root: string, kind: string, onError: (dir:string,error:un
   for (const entry of entries) {
     const path = join(root, entry.name);
     if (entry.isDirectory()) {
-      if (kind === 'copilot' && depth === 0) yield path;
+      if (kind === 'copilot' && depth === 0) {
+        if (entry.name.startsWith('.')) continue;
+        yield path;
+      }
       if (kind !== 'jcode' && (kind !== 'copilot' || depth === 0)) yield* files(path, kind, onError, depth+1);
     } else if (entry.isFile()) {
       if (kind === 'copilot' ? depth === 1 && ['events.jsonl','workspace.yaml'].includes(entry.name) :

@@ -15,7 +15,7 @@ import { join, resolve } from 'node:path';
 import { createServer, get } from 'node:http';
 import { once } from 'node:events';
 import { Store } from '../store.ts';
-import { ingestFile } from '../files.ts';
+import { files, ingestFile } from '../files.ts';
 import { projections, PARSER_VERSION } from '../derived.ts';
 import { parseFile, parseHermes } from '../session.ts';
 import { build } from '../dashboard.ts';
@@ -169,7 +169,9 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
     server.closeAllConnections();
     await new Promise((done) => server.close(done));
   });
-  const base = 'http://127.0.0.1:' + server.address().port;
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  const base = 'http://127.0.0.1:' + address.port;
   for (const path of ['/', '/js/main.js', '/vendor/marked.min.js'])
     assert.deepEqual(
       Buffer.from(await (await fetch(base + path)).arrayBuffer()),
@@ -364,4 +366,28 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
   for (let i = 0; i < 2; i++)
     assert.deepEqual(JSON.parse(JSON.stringify(build(store, 7).features.repositories.repo)), expected);
   assert.equal(store.db.prepare('SELECT count(*) n FROM dashboard_git').get().n, 1);
+});
+
+test('Copilot counts visible directories and restores sidecar metadata after deletion', (t) => {
+  const { root, store } = scratch(t),
+    dir = join(root, 'copilot');
+  for (const session of ['empty', 'active', '.hidden']) mkdirSync(join(dir, session), { recursive: true });
+  const event = {
+    type: 'session.usage_record',
+    timestamp: new Date().toISOString(),
+    data: { usage: { inputTokens: 10 } },
+  };
+  writeFileSync(join(dir, 'active', 'events.jsonl'), JSON.stringify(event) + '\n');
+  writeFileSync(join(dir, 'active', 'workspace.yaml'), 'id: archived\ncwd: /repo\nclient_name: test\n');
+  for (const path of files(dir, 'copilot', (_, e) => {
+    throw e;
+  }))
+    ingestFile(store, 'copilot', path);
+  rmSync(dir, { recursive: true });
+  projections(store)();
+  const data = build(store, 7);
+  assert.equal(data.copilot_dirs, 2);
+  assert.equal(data.sessions.length, 1);
+  assert.equal(data.sessions[0].id, 'archived');
+  assert.equal(data.sessions[0].originator, 'test');
 });

@@ -1,4 +1,5 @@
-import { dirname, relative, normalize } from 'node:path';
+import type { DashboardData } from './protocol.ts';
+import { basename, dirname, relative, normalize } from 'node:path';
 import type { Store } from './store.ts';
 import { PARSER_VERSION } from './derived.ts';
 import { featureData, featureDir, median, rounds } from './features.ts';
@@ -29,7 +30,7 @@ function assign(task, s) {
   if (!task && s.discussion) return [s.discussion, 'discussion'];
   return task ? ['worker', 'orca'] : ['chat trực tiếp', null];
 }
-function rtk(db, start) {
+function rtk(db, start): DashboardData['rtk'] {
   if (!db.prepare("SELECT 1 FROM sources WHERE kind='rtk' LIMIT 1").get()) return { available: false };
   const query = (columns, group = '') =>
     db
@@ -63,7 +64,7 @@ function rtk(db, start) {
     ).map((r) => ({ project: relative(home, r.project) || '.', n: r.n, saved: r.saved, pct: percent(r) })),
   };
 }
-export function build({ db }: Store, days: number, now = Date.now() / 1000) {
+export function build({ db }: Store, days: number, now = Date.now() / 1000): DashboardData {
   const begin = performance.now(),
     midnight = new Date(now * 1000);
   midnight.setHours(0, 0, 0, 0);
@@ -379,7 +380,8 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000) {
       FROM sources s WHERE kind='copilot'`,
         )
         .all()
-        .map((r) => (r.directory ? String(r.path) : dirname(String(r.path)))),
+        .map((r) => (r.directory ? String(r.path) : dirname(String(r.path))))
+        .filter((path) => !basename(path).startsWith('.')),
     ).size,
     orca: { available: orca.available, error: orca.error, fetched_at: orca.fetched_at, runs: orca.runs },
     ...roleConfig(),
