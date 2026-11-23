@@ -1134,3 +1134,40 @@ test('plugin host: an asynchronous bind failure tears the activation down throug
     assert.ok(await h.up(),'a fresh activation serves again');
   } finally { setModuleLoader(); await shutdown(); }
 });
+
+test("plugin host: a terminal listener error of an old activation does not tear down its replacement", async t => {
+  const f = fixture(t);
+  const h = hostEnv(t,f);
+  const { run, shutdown, setModuleLoader } = await import('../../src/ledger-host.ts');
+  let httpLoads = 0, apiLoads = 0, failOld: (() => void) | undefined, release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  setModuleLoader(async (file: string) => {
+    const real = await import(new URL('../'+file,import.meta.url).href);
+    if (file === 'api.ts' && ++apiLoads === 2) await gate; // the replacement is importing while the old listener fails
+    if (file === 'http.ts' && ++httpLoads === 1) {
+      return {...real,serve: (routes: unknown, options: {onError: (e: Error & {code?: string}) => void}) => {
+        const handle = real.serve(routes,options);
+        failOld = () => options.onError(Object.assign(new Error('listen EACCES'),{code:'EACCES'}));
+        return handle;
+      }};
+    }
+    return real;
+  });
+  try {
+    await run(h.orca); // the old activation
+    for (let i=0;i<200 && !(await h.up());i++) await sleep(25);
+    assert.ok(await h.up() && failOld,'the old activation serves');
+    const replacement = run(h.orca); // queued behind nothing, but still importing (gated)
+    await sleep(100);
+    failOld!(); // the old listener fails now, while the replacement is queued/importing
+    release();
+    await replacement;
+    for (let i=0;i<200 && !(await h.up());i++) await sleep(25);
+    await sleep(400); // a wrongly queued cleanup of the old activation would run by now
+    const health = await h.get('/health').then(r => r.json(),() => null) as {ok:boolean,lock:string} | null;
+    assert.equal(health?.lock,'held','the replacement is running');
+    assert.ok(health?.ok);
+    assert.ok(!h.bars.some(b => b.includes('✗ not started')),'the old error did not announce a failure: '+h.bars.join(' | '));
+    assert.equal((await h.get('/api/data?days=7')).status === 503 || (await h.get('/api/data?days=7')).status === 200,true,'the replacement API still answers');
+  } finally { setModuleLoader(); await shutdown(); }
+});

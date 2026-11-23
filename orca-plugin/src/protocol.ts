@@ -1,4 +1,4 @@
-// The panel <-> worker contract. The HTML panel (web/panel.js) calls these by name.
+// The panel <-> worker contract. The HTML panel (dashboard-web/js/orca-panel.js) calls these by name.
 export {}
 
 declare module 'orca' {

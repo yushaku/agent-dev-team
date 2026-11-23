@@ -2,8 +2,7 @@
 // workspace events), the dashboard API and web UI plus GET /health on 127.0.0.1:4747 (kept retrying while
 // another server holds it), and a status bar item that says whether the port is bound.
 //
-// The modules come from the plugin's own packaged copies (../ledger, ../dashboard-web: see scripts/sync-web.mjs),
-// never from the repository. They are Node-typed and Orca's plugin types carry no Node typings, so they are
+// The modules come from the plugin's own folders (../ledger, ../dashboard-web), never from outside it. They are Node-typed and Orca's plugin types carry no Node typings, so they are
 // loaded by a computed specifier (tsc does not follow it) and typed by ledger/types.ts, which needs none.
 import type { ApiModule, HttpApi, IngestApi, Pass, Status } from '../ledger/types.ts'
 
@@ -204,7 +203,9 @@ export function run(orca: Api): Promise<void> {
           failed = true
           orca.log(`listener ${port} ${code}: tearing the host down`)
           if (!cancelled()) bar('Ledger ✗ not started', 'danger', `The dashboard listener failed on port ${port} (${code}); the ledger host was stopped.`)
-          void enqueue(teardown).catch((again) => orca.log(`teardown after the listener error failed: ${again}`))
+          // Only this activation's host is cleaned up: when a newer activation (or a shutdown) exists, it owns the
+          // cleanup (it tears down what is left before it starts), and running ours now could close its listener.
+          void enqueue(async () => { if (!cancelled()) await teardown() }).catch((again) => orca.log(`teardown after the listener error failed: ${again}`))
         },
         onListening: () => { mynet.busy = mynet.busy.filter((p) => p !== port); if (!mynet.bound.includes(port)) mynet.bound.push(port); show() }
       })
