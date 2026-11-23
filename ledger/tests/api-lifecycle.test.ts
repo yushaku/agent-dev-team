@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { test, type TestContext } from 'node:test';
 import { createApi } from '../api.ts';
+import { Store } from '../store.ts';
 
 async function scratch(t: TestContext) {
   const dir = await mkdtemp(join(tmpdir(), 'dashboard-api-'));
@@ -77,6 +78,21 @@ test('a failed startup backs off before a recovered ledger is reopened', async (
     assert.deepEqual((await response.json()).projection, { errors: 0, lag: 0 });
   } finally {
     await api.close();
+  }
+});
+
+test('the data endpoint reports a quarantined source after the cursor catches up', async (t) => {
+  const store = new Store(await scratch(t));
+  const source = store.source('rtk', 'history.db');
+  store.record(source, 1, 'commands/1', Buffer.from('invalid JSON'));
+  const api = createApi(store);
+  try {
+    const result = await request(api, '/api/data');
+    assert.equal(result.status, 200);
+    assert.deepEqual((await result.json()).projection, { errors: 1, lag: 0 });
+  } finally {
+    await api.close();
+    store.db.close();
   }
 });
 
