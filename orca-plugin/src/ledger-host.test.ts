@@ -15,11 +15,22 @@ test('status bar waits while another host holds the lock', () => {
   assert.equal(report({ ...base, lock: 'waiting', lockedBy: 'launchd pid 9' }).text, 'Ledger waiting')
 })
 
-test('a /health listener failure shows in the status bar', () => {
-  const r = report({ ...base, lastPass: pass([]) }, 'EACCES')
+test('a listener failure shows in the status bar', () => {
+  const r = report({ ...base, lastPass: pass([]) }, { bound: [], busy: [], error: '4748 EACCES' })
   assert.match(r.text, /✓ ⚠$/)
   assert.equal(r.tone, 'warning')
-  assert.match(r.tooltip, /\/health is down: EACCES/)
+  assert.match(r.tooltip, /Listener error: 4748 EACCES/)
+})
+
+test('the status bar says which ports are bound and which wait for another server', () => {
+  const up = report({ ...base, lastPass: pass([]) }, { bound: [4748, 4747], busy: [] })
+  assert.match(up.text, /✓ 4747·4748$/)
+  assert.match(up.tooltip, /Listening on 127\.0\.0\.1: 4747, 4748/)
+  const waiting = report({ ...base, lastPass: pass([]) }, { bound: [4748], busy: [4747] })
+  assert.match(waiting.text, /✓ 4748 \(4747 busy\)$/)
+  assert.equal(waiting.tone, 'success', 'a busy 4747 is expected before the cutover, not a warning')
+  assert.match(waiting.tooltip, /Waiting for port 4747 \(in use by another server; retrying\)/)
+  assert.match(report({ ...base, lastPass: pass([]) }, { bound: [4748], busy: [], apiError: 'AGENT_DASHBOARD_WEB must contain index.html' }).text, /⚠$/)
 })
 
 test('a ledger that cannot run says so, not "waiting"', () => {
@@ -28,7 +39,8 @@ test('a ledger that cannot run says so, not "waiting"', () => {
   assert.equal(r.tone, 'danger')
 })
 
-test('health is ok only with a clean pass and the lock held', () => {
+test('health is ok only with a clean pass and the lock held, and says what is bound', () => {
+  assert.deepEqual(health({ ...base, lastPass: pass([]) }, { bound: [4748], busy: [4747] }).listening, { bound: [4748], waiting: [4747], error: undefined, apiError: undefined })
   assert.equal(health(undefined).ok, false)
   assert.equal(health({ ...base, lastPass: pass([]) }).ok, true)
   assert.equal(health({ ...base, lastPass: pass(['x']) }).ok, false)

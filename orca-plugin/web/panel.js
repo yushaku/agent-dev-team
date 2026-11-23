@@ -34,7 +34,7 @@ window.fetch = makeFetch({
   real: window.fetch.bind(window), base: DASHBOARD, ask, cached, remember, firstDays: state.days,
   hasCharts: () => !!document.querySelector('#c-tree svg'),
   ok: () => view.ok(),
-  fail: (e, hadCharts) => view.fail(e.code === 'offline' ? e.message + ' Chạy dashboard rồi bấm Thử lại.' : `Không tải được dữ liệu (${e.code || 'error'}: ${e.message}).`, hadCharts)
+  fail: (e, hadCharts) => view.fail(e.code === 'offline' ? e.message + ' Bấm Thử lại sau ít giây.' : `Không tải được dữ liệu (${e.code || 'error'}: ${e.message}).`, hadCharts)
 })
 
 /* A frame may refuse history.replaceState; dash.js only uses it to mirror the tab in the hash. */
