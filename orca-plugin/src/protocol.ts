@@ -3,7 +3,9 @@ export {}
 
 declare module 'orca' {
   interface PluginRequests {
-    /** The dashboard's /api/data snapshot, cut down to what the Tasks tab reads. */
-    'tasks.data': { input: { days: number }; output: Record<string, unknown> }
+    /** Fetches the dashboard's /api/data, cuts it to what the Tasks tab reads and holds it as numbered chunks. */
+    'tasks.open': { input: { days: number }; output: { id: string; chunks: number; bytes: number } }
+    /** One chunk of a snapshot from tasks.open, at most about 900 KB; joined in order they are the snapshot's JSON. */
+    'tasks.chunk': { input: { id: string; index: number }; output: { chunk: string } }
   }
 }

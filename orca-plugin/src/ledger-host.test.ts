@@ -15,6 +15,19 @@ test('status bar waits while another host holds the lock', () => {
   assert.equal(report({ ...base, lock: 'waiting', lockedBy: 'launchd pid 9' }).text, 'Ledger waiting')
 })
 
+test('a /health listener failure shows in the status bar', () => {
+  const r = report({ ...base, lastPass: pass([]) }, 'EACCES')
+  assert.match(r.text, /✓ ⚠$/)
+  assert.equal(r.tone, 'warning')
+  assert.match(r.tooltip, /\/health is down: EACCES/)
+})
+
+test('a ledger that cannot run says so, not "waiting"', () => {
+  const r = report({ ...base, lock: 'waiting', lastError: 'Error: EACCES: permission denied, mkdir /x', lastPass: pass(['Error: EACCES']) })
+  assert.match(r.text, /^Ledger ✗ not running/)
+  assert.equal(r.tone, 'danger')
+})
+
 test('health is ok only with a clean pass and the lock held', () => {
   assert.equal(health(undefined).ok, false)
   assert.equal(health({ ...base, lastPass: pass([]) }).ok, true)
