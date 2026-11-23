@@ -4,6 +4,7 @@ import re
 import statistics
 import subprocess
 from functools import lru_cache
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .parsers.common import loaded_skills, main_checkout
@@ -57,9 +58,17 @@ def report_rounds(directory):
                 if (m := re.search(r"-builder-r(\d+)(?!\d)", path.name))})
 
 
+GATE2_CONVENTION_START = datetime(2026, 11, 23, tzinfo=timezone.utc).timestamp()
+
+
 def gate_findings(directory):
     try:
-        return len(re.findall(r"^- Gate 2 finding:", (directory / "decisions.md").read_text(), re.M))
+        text = (directory / "decisions.md").read_text()
+        count = len(re.findall(r"^- Gate 2 finding:", text, re.M))
+        if count or re.search(r"^- Gate 2: no findings\s*$", text, re.M):
+            return count
+        # Files without the convention are unknown, including those before its cutoff.
+        return None
     except (OSError, TypeError):
         return None
 
@@ -71,7 +80,7 @@ def measurement_rounds(runs):
     return len(rounds)
 
 
-def build_features(sessions, runs):
+def build_features(sessions, runs, orca_loaded=True):
     groups, run_map, refs = {}, {r["id"]: r for r in runs}, {}
     for s in sessions:
         branch = (s.get("branch") or "").strip()
@@ -79,6 +88,7 @@ def build_features(sessions, runs):
             continue
         groups.setdefault((s["repo"], branch), []).append(s)
     features = []
+    assigned_parts = set()
     for (repo, branch), rows in groups.items():
         checkout = next((p for s in rows if (p := main_checkout(s.get("cwd")))), None)
         checkout_source = "git" if checkout else "unavailable"
@@ -104,19 +114,23 @@ def build_features(sessions, runs):
                 rounds, source = measurement_rounds(linked), "measurement" if linked else "code-review"
         first = min((s["start"] for s in rows if s.get("start")), default=None)
         last = max((s["end"] or s["start"] for s in rows if s.get("end") or s.get("start")), default=None)
-        total = sum(s["total"] for s in rows)
-        orch = sum(s["total"] for s in rows if s.get("run_id") and s.get("role") == "orchestrator")
+        branch_parts = {id(s) for s in rows}
+        token_rows = [s for s in sessions if id(s) in branch_parts or s.get("run_id") in ids]
+        assigned_parts.update(id(s) for s in token_rows)
+        total = sum(s["total"] for s in token_rows)
+        orch = sum(s["total"] for s in token_rows if s.get("run_id") and s.get("role") == "orchestrator")
         feature = dict(id=json.dumps([repo, branch], separators=(",", ":")),
-                       repo=repo, branch=branch, variant="orca" if ids else "direct", run_ids=ids,
+                       repo=repo, branch=branch, variant=("orca" if ids else "direct") if orca_loaded else None, orca_loading=not orca_loaded, run_ids=ids,
                        first_activity=first, last_activity=last, lead_seconds=last - first if first and last else None,
                        tokens=total, orchestrator_tokens=orch if ids else None, worker_tokens=total - orch if ids else None,
                        session_count=len({(s["agent"], s.get("session_id", s["id"])) for s in rows}),
                        agents=sorted({s["agent"] for s in rows}), loaded_skills=skills,
                        fix_rounds=dict(count=rounds, source=source), gate2_findings=gate_findings(directory),
                        delivered=delivered(checkout, branch, refs))
-        feature["sources"] = dict(checkout=checkout_source, tokens="session_usage", activity="branch_activity_bounds",
+        feature["sources"] = dict(checkout=checkout_source, tokens="branch_segments_and_linked_run_ids" if ids else "session_usage", activity="branch_activity_bounds",
                                   branch=sorted({s.get("branch_source", "session") for s in rows}),
                                   loaded_skills="session_skill_loads_and_hooks",
+                                  gate2_convention_start=GATE2_CONVENTION_START,
                                   gate2_findings="decisions" if feature["gate2_findings"] is not None else "unavailable",
                                   delivered="local_git_ancestry")
         feature["heuristics"] = ["repo_basename_identity", "branch_last_segment"]
@@ -146,6 +160,6 @@ def build_features(sessions, runs):
             median_fix_rounds=statistics.median([f["fix_rounds"]["count"] for f in rows]) if rows else None,
             gate2_findings=sum(findings) if findings else None, gate2_known=len(findings)))
     total = sum(s["total"] for s in sessions)
-    assigned = sum(f["tokens"] for f in features)
-    return dict(runs=sorted(features, key=lambda f: f["last_activity"] or 0, reverse=True), comparison=comparisons,
+    assigned = sum(s["total"] for s in sessions if id(s) in assigned_parts)
+    return dict(orca_loading=not orca_loaded, runs=sorted(features, key=lambda f: f["last_activity"] or 0, reverse=True), comparison=comparisons,
                 attribution=dict(total=total, assigned=assigned, unassigned=total-assigned))

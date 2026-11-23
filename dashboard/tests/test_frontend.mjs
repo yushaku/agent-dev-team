@@ -654,3 +654,10 @@ test("feature charts preserve fractional medians, round buckets and delivery mar
   assert.match(element("#feature-runs").innerHTML, /feat\/&lt;1&gt;/);
   C.state.repo = "";
 });
+
+test("feature comparison waits for Orca's first load", () => {
+  C.state.data = { features: { orca_loading: true, runs: [] } };
+  renderFeatures([]);
+  assert.match(element("#feature-tokens").innerHTML, /Đang tải dữ liệu Orca/);
+  assert.doesNotMatch(element("#feature-tokens").innerHTML, /<svg/);
+});

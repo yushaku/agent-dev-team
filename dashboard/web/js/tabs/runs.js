@@ -137,6 +137,11 @@ export function featureTimeline(rows, W) {
 }
 
 export function renderFeatures(S) {
+  if (C.state.data.features?.orca_loading) {
+    const note = '<p class="muted" role="status">Đang tải dữ liệu Orca để phân loại Run.</p>';
+    ["tokens", "fixes", "findings", "distribution", "time", "runs"].forEach(id => $("#feature-" + id).innerHTML = note);
+    return;
+  }
   const features = C.state.data.features?.runs || [];
   const keys = new Set(S.flatMap(s => (s.feature_segments || [s]).map(p => JSON.stringify([p.repo, p.branch]))));
   const rows = features.filter(f => (!C.state.repo || f.repo === C.state.repo) && keys.has(JSON.stringify([f.repo, f.branch])));

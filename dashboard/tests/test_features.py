@@ -88,10 +88,33 @@ class FeatureTests(unittest.TestCase):
         directory.mkdir(parents=True)
         path = directory / "decisions.md"
         path.write_text("No findings\n")
+        self.assertIsNone(gate_findings(directory))
+        path.write_text("- Gate 2: no findings\n")
         self.assertEqual(gate_findings(directory), 0)
         path.write_text("- Gate 2 finding: one\n - Gate 2 finding: ignored\n- Gate 2 finding: two\n")
         self.assertEqual(gate_findings(directory), 2)
         self.assertIsNone(gate_findings(None))
+
+    def test_waits_for_orca_before_classifying(self):
+        data = build_features([self.row()], [], orca_loaded=False)
+        self.assertTrue(data["orca_loading"])
+        self.assertIsNone(data["runs"][0]["variant"])
+        self.assertEqual([c["count"] for c in data["comparison"]], [0, 0])
+
+    def test_linked_run_tokens_include_other_branches_once(self):
+        branch = self.row()
+        branch.update(run_id="r", total=100)
+        orch = self.row("main")
+        orch.update(id="orch", run_id="r", role="orchestrator", total=6600000)
+        worker = self.row("other")
+        worker.update(id="worker", run_id="r", total=200)
+        data = build_features([branch, orch, worker], [dict(id="r", tasks=[])])
+        feature = next(f for f in data["runs"] if f["branch"] == branch["branch"])
+        self.assertEqual(feature["tokens"], 6600300)
+        self.assertEqual(feature["orchestrator_tokens"], 6600000)
+        self.assertEqual(feature["worker_tokens"], 300)
+        self.assertEqual(feature["sources"]["tokens"], "branch_segments_and_linked_run_ids")
+        self.assertEqual(data["attribution"]["unassigned"], 0)
 
     def test_delivery_merge_deleted_branch_and_cache_invalidation(self):
         self.git("checkout", "-b", "feat/example")

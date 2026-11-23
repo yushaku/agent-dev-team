@@ -250,7 +250,8 @@ def build(days):
             if count is not None and count >= (rr.get("fix_rounds") or {}).get("count", -1):
                 rr["fix_rounds"] = dict(count=count, source="reports")
         runs.append(rr)
-    features = build_features([part for s in sessions for part in s["feature_segments"]], runs)
+    features = build_features([part for s in sessions for part in s["feature_segments"]], runs,
+                              orca_loaded=orca_mod.orca_state.get("loaded", orca_mod.orca_state["available"] is True))
     installed = sorted(d for d in os.listdir(SKILLS_DIR)
                        if os.path.isfile(os.path.join(SKILLS_DIR, d, "SKILL.md"))) if os.path.isdir(SKILLS_DIR) else []
     return {
