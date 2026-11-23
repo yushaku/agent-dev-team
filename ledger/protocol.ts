@@ -220,7 +220,7 @@ export interface CliTools {
   })[];
 }
 export interface DashboardEndpoints {
-  '/api/data': DashboardData;
+  '/api/data': DashboardData & { projection: { errors: number; lag: number } };
   '/api/agent/summary': AgentSummary;
   '/api/agent/run': AgentRun;
   '/api/team/skill': TeamSkill;
