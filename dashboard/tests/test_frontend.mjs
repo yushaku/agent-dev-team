@@ -661,3 +661,20 @@ test("feature comparison waits for Orca's first load", () => {
   assert.match(element("#feature-tokens").innerHTML, /Đang tải dữ liệu Orca/);
   assert.doesNotMatch(element("#feature-tokens").innerHTML, /<svg/);
 });
+
+test("escaped defect charts preserve unknowns and escape fix subjects", () => {
+  C.state.repo = "";
+  const known = { repo: "r", branch: "feat/test", variant: "direct", tokens: 10,
+    fix_rounds: { count: 0, source: "reports" }, loaded_skills: {}, run_ids: [], agents: [], session_count: 1,
+    escaped_defects: 2, median_days_to_surface: 4, source: "szz",
+    fix_commits: [{ sha: "abcdef", subject: "fix: <unsafe>", date: "2026-11-23", days_after_merge: 1, source: "szz" },
+      { sha: "fedcba", subject: "fix: explicit", date: "2026-11-23", days_after_merge: 7, source: "trailer" }] };
+  C.state.data = { features: { runs: [known, { ...known, variant: "orca", branch: "feat/unknown", escaped_defects: null, fix_commits: [] }] } };
+  renderFeatures(C.state.data.features.runs);
+  assert.match(element("#feature-escaped").innerHTML, /ước tính SZZ/);
+  assert.match(element("#feature-escaped").innerHTML, /Có Orca: 0\/1 Run có dữ liệu/);
+  assert.match(element("#feature-surface").innerHTML, /1 đến &lt;7 ngày/);
+  assert.match(element("#feature-runs").innerHTML, /2 lỗi · 4 ngày/);
+  assert.match(element("#feature-runs").innerHTML, /fix: &lt;unsafe&gt;/);
+  assert.doesNotMatch(element("#feature-runs").innerHTML, /<unsafe>|NaN|undefined/);
+});

@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.features import build_features, delivered, feature_dir, gate_findings, report_rounds
-from backend.insights import check_fix_rounds, run_summary
+from backend.insights import check_fix_rounds, run_summary, feature_scope
 from backend.parsers.common import main_checkout, repo_of
 
 
@@ -115,6 +115,15 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(feature["worker_tokens"], 300)
         self.assertEqual(feature["sources"]["tokens"], "branch_segments_and_linked_run_ids")
         self.assertEqual(data["attribution"]["unassigned"], 0)
+
+    def test_agent_feature_scope_preserves_metrics_and_repo_fixes(self):
+        feature = dict(repo="project", branch="feat/example", run_ids=["r"], escaped_defects=2,
+                       fix_commits=[dict(sha="abc", source="szz")], median_days_to_surface=1.5)
+        data = dict(features=dict(runs=[feature], repositories={"project": dict(unattributed_fix_commits=["fix"]), "other": {}}))
+        scope = feature_scope(data, run="r")
+        self.assertEqual(scope["runs"], [feature])
+        self.assertEqual(list(scope["repositories"]), ["project"])
+        self.assertEqual(feature_scope(data, repo="other")["runs"], [])
 
     def test_delivery_merge_deleted_branch_and_cache_invalidation(self):
         self.git("checkout", "-b", "feat/example")

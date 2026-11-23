@@ -81,6 +81,8 @@ def measurement_rounds(runs):
 
 
 def build_features(sessions, runs, orca_loaded=True):
+    from .escaped import default_head, repo_defects
+
     groups, run_map, refs = {}, {r["id"]: r for r in runs}, {}
     for s in sessions:
         branch = (s.get("branch") or "").strip()
@@ -89,6 +91,7 @@ def build_features(sessions, runs, orca_loaded=True):
         groups.setdefault((s["repo"], branch), []).append(s)
     features = []
     assigned_parts = set()
+    repositories = {}
     for (repo, branch), rows in groups.items():
         checkout = next((p for s in rows if (p := main_checkout(s.get("cwd")))), None)
         checkout_source = "git" if checkout else "unavailable"
@@ -98,6 +101,10 @@ def build_features(sessions, runs, orca_loaded=True):
             checkout = candidate if os.path.isdir(candidate) else None
             if checkout:
                 checkout_source = "orca_project"
+        if repo not in repositories:
+            head = default_head(checkout) if checkout else None
+            repositories[repo] = repo_defects(checkout, head) if head else dict(features={}, unattributed_fix_commits=[], error="default_branch_unavailable")
+        defects = repositories[repo]
         directory = feature_dir(checkout, branch)
         ids = sorted({s["run_id"] for s in rows if s.get("run_id")})
         linked = [run_map[rid] for rid in ids if rid in run_map]
@@ -127,6 +134,9 @@ def build_features(sessions, runs, orca_loaded=True):
                        agents=sorted({s["agent"] for s in rows}), loaded_skills=skills,
                        fix_rounds=dict(count=rounds, source=source), gate2_findings=gate_findings(directory),
                        delivered=delivered(checkout, branch, refs))
+        feature.update(defects["features"].get(branch, dict(escaped_defects=None, fix_commits=[], median_days_to_surface=None, source=None)))
+        if branch in defects["features"]:
+            feature["delivered"] = True
         feature["sources"] = dict(checkout=checkout_source, tokens="branch_segments_and_linked_run_ids" if ids else "session_usage", activity="branch_activity_bounds",
                                   branch=sorted({s.get("branch_source", "session") for s in rows}),
                                   loaded_skills="session_skill_loads_and_hooks",
@@ -161,5 +171,5 @@ def build_features(sessions, runs, orca_loaded=True):
             gate2_findings=sum(findings) if findings else None, gate2_known=len(findings)))
     total = sum(s["total"] for s in sessions)
     assigned = sum(s["total"] for s in sessions if id(s) in assigned_parts)
-    return dict(orca_loading=not orca_loaded, runs=sorted(features, key=lambda f: f["last_activity"] or 0, reverse=True), comparison=comparisons,
+    return dict(repositories=repositories, orca_loading=not orca_loaded, runs=sorted(features, key=lambda f: f["last_activity"] or 0, reverse=True), comparison=comparisons,
                 attribution=dict(total=total, assigned=assigned, unassigned=total-assigned))

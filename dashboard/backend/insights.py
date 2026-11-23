@@ -382,6 +382,16 @@ def find_issues(data, sessions, runs, cards=None):
 
 # ---- reports
 
+def feature_scope(data, repo=None, run=None):
+    features = data.get("features") or {}
+    rows = [f for f in features.get("runs", []) if (not repo or f["repo"] == repo)
+            and (not run or run in f["run_ids"])]
+    repos = {f["repo"] for f in rows}
+    return dict(orca_loading=features.get("orca_loading", False), runs=rows,
+                repositories={name: metrics for name, metrics in features.get("repositories", {}).items()
+                              if (not repo or repo == name) and (not run or name in repos)})
+
+
 def summary(data, repo=None, run=None, role=None, agent=None, cards=None):
     sessions = filter_sessions(data, repo, run, role, agent)
     # Run-level checks follow repo/run only; a role/agent filter narrows sessions, not Runs.
@@ -393,6 +403,7 @@ def summary(data, repo=None, run=None, role=None, agent=None, cards=None):
                        "assigned_tokens": sum(s.get("total") or 0 for s in sessions if s.get("run_id")),
                        "in": sum(s.get("fin") or 0 for s in sessions), "cache_read": sum(s.get("cr") or 0 for s in sessions),
                        "cache_write": sum(s.get("cw") or 0 for s in sessions), "out": sum(s.get("out") or 0 for s in sessions)},
+            "features": feature_scope(data, repo, run),
             "tokens_by_role": tokens_by_role(sessions),
             "search_by_role": search_by_role(sessions),
             "skills_by_role": skills_by_role(sessions),
@@ -428,7 +439,7 @@ def run_detail(data, rid, cards=None):
     gates = [{"id": g["id"], "kind": g["kind"], "stage": g.get("stage"), "task": g.get("task"),
               "wait_seconds": ((g.get("resolved") or now) - g["created"]) if g.get("created") else None,
               "question": (g.get("question") or "")[:120]} for g in r.get("gates") or []]
-    return {"run": run_summary(r), "tasks": tasks, "gates": gates,
+    return {"run": run_summary(r), "features": feature_scope(data, run=rid), "tasks": tasks, "gates": gates,
             "issues": find_issues(data, sessions, [r], cards), "skills_window_days": data.get("days")}
 
 
@@ -478,7 +489,10 @@ def summary_md(s):
                      [[r["id"], r["repo"], r["stage"], ", ".join("%s %d" % kv for kv in sorted(r["kinds"].items())),
                        r["fix_rounds"], dur(r["gate_wait_seconds"]), dur(r["lead_seconds"]), fmt(r["worker_tokens"]),
                        fmt(r["orchestrator_tokens"]), (r["objective"] or "")[:60]] for r in s["runs"]]) if s["runs"] else "No Runs in scope.")
-    out += ["", "## Issues (%d)" % len(s["issues"]), "", issues_md(s["issues"]), ""]
+    out += ["", "## Feature Runs", "",
+            table(["Repo / branch", "Variant", "Escaped defects", "Median days", "Source"],
+                  [[f["repo"] + " / " + f["branch"], f["variant"], f.get("escaped_defects"), f.get("median_days_to_surface"), f.get("source")]
+                   for f in s["features"]["runs"]]), "", "## Issues (%d)" % len(s["issues"]), "", issues_md(s["issues"]), ""]
     return "\n".join(out)
 
 
