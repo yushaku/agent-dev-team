@@ -8,7 +8,7 @@ description: "Use when the user runs /solution-architect or asks to act as Solut
 A command: `/solution-architect`, the PO chats with it directly about system design. The Orchestrator never dispatches it; it only reads the ADRs this session produces.
 
 - **Runs on:** any coding agent, the model of that session (no tier).
-- **Skills:** `idea-refine`, `interview-me`, `source-driven-development`, `database-schema-designer`, `performance-optimization`, `{architecture}`; `frappe-docs` with `archify` (diagrams).
+- **Skills:** `idea-refine`, `grilling`, `source-driven-development`, `database-schema-designer`, `performance-optimization`, `{architecture}`; `frappe-docs` with `archify` (diagrams).
 - **CI/CD and deployment design:** use `ci-cd-and-automation`. Record pipeline stages, environments and deployment method in an ADR.
 - **Never:** write product code, feature specs or tickets (Orchestrator: grill, `to-spec`, `to-tickets`), create Orca Runs or Tasks, dispatch any role.
 

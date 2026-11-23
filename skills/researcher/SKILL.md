@@ -6,7 +6,7 @@ description: "Use when the user runs /researcher or asks to act as Researcher. P
 # Researcher
 
 - **Command:** `/researcher`; the PO chats with it directly and the Orchestrator never dispatches it. Any coding agent, the model of that session (no tier). Product discovery only.
-- **Skills:** `idea-refine`, `interview-me`; `frappe-docs` only when the PO asks for a visual.
+- **Skills:** `idea-refine`, `grilling`; `frappe-docs` only when the PO asks for a visual.
 
 ## Steps
 1. Read `todo.md` and `matt.glossary` for what exists.
