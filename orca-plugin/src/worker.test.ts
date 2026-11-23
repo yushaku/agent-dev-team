@@ -2,7 +2,7 @@ import { assert, mountWorker, test } from 'orca/testing'
 import * as main from './worker'
 import { setDataSource } from './ledger-host'
 
-// The ledger host (real ingest, port 4748) stays off in tests.
+// The ledger host (real ingest, port 4747) stays off in tests.
 ;(globalThis as any).process.env.TEAM_DASHBOARD_NO_LEDGER = '1'
 
 const CAP = 1_048_576
