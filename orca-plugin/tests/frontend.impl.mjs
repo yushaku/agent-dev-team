@@ -22,14 +22,14 @@ globalThis.localStorage = { getItem() { return null; }, setItem() {} };
 globalThis.location = { hash: "" };
 globalThis.history = { replaceState() {} };
 
-const C = await import("../web/js/lib/charts.js");
-const { repoTree } = await import("../web/js/tabs/repos.js");
-const { renderRoles, roleStats } = await import("../web/js/tabs/roles.js");
-const { renderRoleSkills } = await import("../web/js/tabs/role-skills.js");
-const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures, featureTimeline } = await import("../web/js/tabs/runs.js");
-const { renderOverall } = await import("../web/js/tabs/overall.js");
-const { renderCliTools, showCliTools } = await import("../web/js/tabs/cli-tools.js");
-const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../web/js/tabs/search.js");
+const C = await import("../dashboard-web/js/lib/charts.js");
+const { repoTree } = await import("../dashboard-web/js/tabs/repos.js");
+const { renderRoles, roleStats } = await import("../dashboard-web/js/tabs/roles.js");
+const { renderRoleSkills } = await import("../dashboard-web/js/tabs/role-skills.js");
+const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures, featureTimeline } = await import("../dashboard-web/js/tabs/runs.js");
+const { renderOverall } = await import("../dashboard-web/js/tabs/overall.js");
+const { renderCliTools, showCliTools } = await import("../dashboard-web/js/tabs/cli-tools.js");
+const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../dashboard-web/js/tabs/search.js");
 
 test("CLI inventory groups actual sources, filters and escapes machine filenames", () => {
   const data = { warnings: [], tools: [
@@ -243,7 +243,7 @@ test("Tasks role chart tooltip shows symbol rg lookups without drawing or counti
 test("load distinguishes fetch failures from render failures and recovers", async () => {
   let renderError;
   const rendered = [];
-  const dash = new SourceTextModule(await readFile(new URL("../web/js/dash.js", import.meta.url), "utf8"));
+  const dash = new SourceTextModule(await readFile(new URL("../dashboard-web/js/dash.js", import.meta.url), "utf8"));
   await dash.link(specifier => {
     const exports = specifier === "./lib/charts.js" ? C : {
       renderFeatures() { rendered.push("features"); }, renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
@@ -575,7 +575,7 @@ test("Codegraph percentage ignores file reads", () => {
 });
 
 test("issues section renders severity rows with filter hints and an empty state", async () => {
-  const { renderIssues } = await import("../web/js/tabs/overview.js");
+  const { renderIssues } = await import("../dashboard-web/js/tabs/overview.js");
   renderIssues([{ id: "a", severity: "high", title: "Tiêu đề <b>", evidence: "bằng chứng 1", suggestion: "gợi ý", filter: { run: "r1", role: "builder" } },
     { id: "b", severity: "low", title: "Khác", evidence: "e", suggestion: "s", filter: {} }]);
   const html = element("#issues").innerHTML;

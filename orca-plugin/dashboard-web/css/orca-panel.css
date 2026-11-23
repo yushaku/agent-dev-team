@@ -1,4 +1,5 @@
-/* The plugin's own styles on top of the dashboard's css/app.css (synced, never edited here). */
+/* Styles for the dashboard inside Orca's HTML panel. Everything here is scoped to html.orca (set by main.js when
+   window.orca exists) or html.light (set by Orca itself), so the page in a normal browser is unchanged. */
 
 /* Orca puts `light` or `dark` on <html>. app.css is Catppuccin Frappe (dark); light uses Latte with the same token names. */
 html.light {
@@ -13,8 +14,9 @@ html.light {
 }
 
 /* A sidebar is narrow: tighter gutter, no top bar to clear. */
-:root { --gutter: var(--s-3); --header-offset: 0px; }
-main.wrap { padding-top: var(--s-3); padding-bottom: var(--s-5); }
+html.orca { --gutter: var(--s-3); --header-offset: 0px; }
+html.orca .topbar { display: none; }
+html.orca main.wrap { padding-top: var(--s-3); padding-bottom: var(--s-5); }
 
 #plugin-bar {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2);

@@ -1,5 +1,5 @@
 /* Skill side panel: a click on any [data-skill] opens #sheet with the SKILL.md body from /api/team/skill. */
-import { esc, lex, shift, parse, decorate } from "/js/md.js";
+import { esc, lex, shift, parse, decorate } from "./md.js";
 
 const $ = s => document.querySelector(s);
 const ORIGIN = {

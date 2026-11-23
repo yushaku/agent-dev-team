@@ -1,8 +1,8 @@
-// Boots the dashboard's own dash.js inside an Orca HTML panel. A panel cannot fetch the network,
+// Boots the dashboard's own dash.js inside an Orca HTML panel (main.js loads this when window.orca exists). A panel cannot fetch the network,
 // so dash.js's fetch("/api/data?days=N") is answered by the plugin worker through plugin.request.
-import { show } from './js/dash.js'
-import { state } from './js/lib/charts.js'
-import { barView, makeAsk, makeFetch } from './source.js'
+import { show } from './dash.js'
+import { state } from './lib/charts.js'
+import { barView, makeAsk, makeFetch } from './orca-source.js'
 
 const DASHBOARD = 'http://127.0.0.1:4747'
 const VIEW = 'tk-theo-repo' // the Tasks tab

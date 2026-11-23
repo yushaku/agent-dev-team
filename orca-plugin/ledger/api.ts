@@ -1,37 +1,35 @@
 import { Worker } from 'node:worker_threads';
 import { teamRoot, webRoot } from './roots.ts';
-import { dirname, join } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 import { readFile } from 'node:fs/promises';
+import { readdirSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { hostAllowed, sendResponse, type Routes } from './http.ts';
 import type { Store } from './store.ts';
 
-const staticFiles = new Map([
-  ['/', 'text/html'],
-  ['/index.html', 'text/html'],
-  ['/css/app.css', 'text/css'],
-  ...[
-    'js/main',
-    'js/sheet',
-    'js/dash',
-    'js/md',
-    'js/lib/charts',
-    'vendor/marked.min',
-    ...[
-      'overview',
-      'roles',
-      'repos',
-      'runs',
-      'sessions',
-      'skills',
-      'tokens',
-      'search',
-      'overall',
-      'role-skills',
-      'cli-tools',
-    ].map((t) => 'js/tabs/' + t),
-  ].map((n): [string, string] => ['/' + n + '.js', 'text/javascript']),
-]);
+const mime: Record<string, string> = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
+};
+/** Every regular file of the web bundle becomes a route, so a new asset needs no list to update (links and dot files are skipped). */
+function bundleRoutes(root: string) {
+  const routes = new Map<string, string>([['/', 'text/html']]);
+  const walk = (dir: string, prefix: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.') || entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) walk(join(dir, entry.name), prefix + entry.name + '/');
+      else if (mime[extname(entry.name)]) routes.set('/' + prefix + entry.name, mime[extname(entry.name)]);
+    }
+  };
+  walk(root, '');
+  return routes;
+}
 const apiPaths = new Set([
   '/api/data',
   '/api/agent/summary',
@@ -43,6 +41,7 @@ type WorkerReply = [number, string, string | Buffer];
 const loading: WorkerReply = [503, 'application/json', JSON.stringify({ loading: true })];
 export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
   const assets = webRoot();
+  const staticFiles = bundleRoutes(assets);
   teamRoot();
   const home =
     typeof ledger === 'string'

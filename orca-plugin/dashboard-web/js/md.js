@@ -1,5 +1,5 @@
 /* Markdown helpers for the skill panel: one vendored renderer (marked), raw HTML escaped, headings shifted. */
-import { Marked } from "/vendor/marked.min.js";
+import { Marked } from "../vendor/marked.min.js";
 
 export const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 

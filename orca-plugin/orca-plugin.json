@@ -16,7 +16,7 @@
         "id": "tasks",
         "title": "Tasks",
         "icon": "bar-chart-3",
-        "entry": "web/panel.html",
+        "entry": "dashboard-web/index.html",
         "ui": "html"
       }
     ],
