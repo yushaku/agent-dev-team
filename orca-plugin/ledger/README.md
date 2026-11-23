@@ -45,7 +45,7 @@ the plugin. Wire types for dashboard JSON responses are in `ledger/protocol.ts`.
 
 Set `AGENT_DASHBOARD_WEB` to a directory containing `index.html` for an
 installed frontend. Set `AGENT_TEAM_HOME` to the team checkout containing
-`skills/`. The defaults are the plugin's `dashboard-web/` and the repository root (two levels above `ledger/`). Every file of the web directory is served; there is no list to update.
+`skills/`. The defaults are the plugin's `dashboard-web/` and the repository root (two levels above `ledger/`). Which files of that directory are served, under which URLs, and which are never served (links, dot files, other file types) is the static route contract in `orca-plugin/README.md` (Layout, `dashboard-web/`).
 Startup errors name the missing root or the occupied listen address.
 
 The query worker checks the ingest log every second. During catch-up it

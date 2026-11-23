@@ -7,6 +7,7 @@ document.documentElement.classList.add("js");
 /* Inside Orca's HTML panel the plugin boots the Tasks view instead (orca-panel.js: data from the worker, a status bar). */
 if (window.orca) {
   document.documentElement.classList.add("orca");
+  initSheet(); /* the skill side panel works here too: its fetch goes through the worker (orca-panel.js) */
   await import("./orca-panel.js");
 } else {
 

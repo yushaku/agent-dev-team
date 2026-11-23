@@ -1,0 +1,19 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<title>Agents tools</title>
+<style>
+  body { margin: 0; padding: 16px; font: 13px system-ui, sans-serif; color: var(--orca-foreground, #c6d0f5); background: var(--orca-background, #303446); }
+  button { font: inherit; margin-top: 8px; }
+</style>
+<!-- The Agents tools panel's entry: js/orca-launcher.js loads the shared page into this document and names the view. -->
+<p id="state">Đang tải dashboard…</p>
+<button id="retry" type="button" hidden>Thử lại</button>
+<script type="module">
+  import { launch } from './js/orca-launcher.js'
+  launch({ fetch: window.fetch.bind(window), doc: document, target: window, view: 'tk-agents-tools' })
+</script>
+<script>
+  // If the module itself cannot load (a missing file), say so instead of showing "loading" forever.
+  addEventListener('error', (e) => { if (e.target && e.target.tagName === 'SCRIPT') { document.getElementById('state').textContent = 'Không tải được dashboard (thiếu js/orca-launcher.js).' } }, true)
+</script>

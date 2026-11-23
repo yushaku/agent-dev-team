@@ -1,5 +1,5 @@
 // The web bundle the dashboard serves: which files are routes, under which URLs, and how one is read.
-import { constants, realpathSync, readdirSync } from 'node:fs';
+import { constants, lstatSync, readdirSync, realpathSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { extname, join, sep } from 'node:path';
 
@@ -48,15 +48,26 @@ export function scanBundle(root: string): Map<string, Asset> {
 
 /**
  * Reads a registered asset, refusing anything that is no longer the regular file that was scanned: a parent
- * directory or the file itself replaced by a link since the scan, or a path that now resolves outside the bundle.
+ * directory or the file itself replaced by a link since the scan, a special file (a FIFO would block a plain
+ * open forever), or a path that now resolves outside the bundle. The file is opened without following a link
+ * and without blocking, the descriptor itself is validated before a byte is read, and the path is checked again
+ * after the open and must lead to that same file, so a parent replaced while the open was under way is caught.
  */
 export async function readAsset(root: string, asset: Asset): Promise<Buffer> {
   const real = realpathSync(root);
-  if (realpathSync(asset.file) !== join(real, ...asset.rel.split('/'))) throw new Error('asset moved or linked: ' + asset.rel);
-  if (!asset.file.startsWith(real + sep)) throw new Error('asset outside the bundle: ' + asset.rel);
-  const handle = await open(asset.file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const expected = join(real, ...asset.rel.split('/'));
+  const confined = () => {
+    if (asset.file !== expected || !asset.file.startsWith(real + sep)) throw new Error('asset outside the bundle: ' + asset.rel);
+    if (realpathSync(asset.file) !== expected) throw new Error('asset moved or linked: ' + asset.rel);
+  };
+  confined();
+  const handle = await open(asset.file, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
-    if (!(await handle.stat()).isFile()) throw new Error('asset is not a regular file: ' + asset.rel);
+    const opened = await handle.stat();
+    if (!opened.isFile()) throw new Error('asset is not a regular file: ' + asset.rel);
+    confined();
+    const now = lstatSync(expected);
+    if (now.dev !== opened.dev || now.ino !== opened.ino) throw new Error('asset replaced while opening: ' + asset.rel);
     return await handle.readFile();
   } finally {
     await handle.close();

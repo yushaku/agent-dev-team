@@ -2,12 +2,21 @@
 // and tells the status bar what happened. No DOM or Orca globals here, so scripts/source.test.mjs can run it.
 
 /** @param {{ real: typeof fetch, base: string, ask(days: number): Promise<object>, cached(days: number): object | null,
- *  remember(days: number, data: object): void, firstDays: number, hasCharts(): boolean,
+ *  remember(days: number, data: object): void, firstDays: number, extra?: Record<string, (url: URL) => Promise<object>>, hasCharts(): boolean,
  *  ok(): void, fail(error: Error & { code?: string }, hadCharts: boolean): void }} d */
 export function makeFetch(d) {
   let fromCache = d.cached(d.firstDays) ? d.firstDays : 0
   return async (input, init) => {
     const url = new URL(String(input), d.base)
+    const extra = d.extra?.[url.pathname]
+    if (extra) {
+      try {
+        const data = await extra(url)
+        return { ok: true, status: 200, json: async () => data }
+      } catch (e) {
+        return { ok: false, status: Number(/^http_(\d+)$/.exec(e.code ?? '')?.[1]) || (e.code === 'too_large' ? 413 : 503), json: async () => ({}) }
+      }
+    }
     if (url.pathname !== '/api/data') return d.real(input, init)
     const days = Number(url.searchParams.get('days')) || 7
     if (fromCache === days) {
@@ -59,4 +68,9 @@ export function makeAsk(request) {
       }
     }
   }
+}
+
+/** Whether the view this panel shows has drawn a chart: the offline bar hides the empty frames only when it has not. */
+export function viewHasCharts(doc, viewId) {
+  return !!doc.querySelector('#' + viewId + ' svg')
 }

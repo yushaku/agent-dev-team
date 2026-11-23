@@ -208,3 +208,14 @@ test('an unreadable directory keeps the rest of the inventory and says so', (t) 
   assert.deepEqual(data.tools.map((tool) => tool.name), ['visible']);
   assert.ok(data.warnings.some((w) => w.includes(locked)) || process.getuid?.() === 0);
 });
+
+test('a login shell that cannot even be found falls back to this process PATH with a warning', (t) => {
+  const saved = process.env.PATH;
+  process.env.PATH = '/server/bin';
+  t.after(() => { process.env.PATH = saved; });
+  const data = discover(undefined, () => { throw new Error('cannot resolve the effective user'); });
+  assert.deepEqual(data.directories, ['/server/bin']);
+  assert.ok(data.warnings.length > 0);
+  // With an explicit PATH the shell is never needed, so nothing about it can fail the call.
+  assert.deepEqual(discover('/server/bin', () => { throw new Error('never called'); }).warnings, []);
+});

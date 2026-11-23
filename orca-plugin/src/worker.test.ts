@@ -23,11 +23,13 @@ async function read(worker: Awaited<ReturnType<typeof mountWorker>>, days = 7) {
 }
 
 test('hands the trimmed dashboard snapshot over in chunks', async () => {
-  dashboard(() => Response.json({ generated_at: 1, rtk: {}, sessions: [{ id: 's', ctx: [1] }], orca: { runs: [] } }))
+  dashboard(() => Response.json({ generated_at: 1, rtk: { available: true }, skills_installed: ['tdd'], features: { big: 1 }, sessions: [{ id: 's', ctx: [1] }], orca: { runs: [] } }))
   const worker = await mountWorker(main)
   const { data } = await read(worker)
   assert.deepEqual(data.sessions, [{ id: 's' }])
-  assert.equal(data.rtk, undefined)
+  assert.deepEqual(data.rtk, { available: true }, 'the Agents tools view reads rtk and the installed skills')
+  assert.deepEqual(data.skills_installed, ['tdd'])
+  assert.equal(data.features.big, undefined, 'a key the panels do not read is still cut')
   assert.deepEqual(worker.refusals, [])
   await worker.deactivate()
   setDataSource()
@@ -91,6 +93,40 @@ test('a loading API and a failing API give the panel different messages', async 
     await assert.rejects(worker.request('tasks.open', { days: 7 }), /HTTP 500: Dashboard request failed/)
     setApiRoutes(route(() => Response.json({ generated_at: 1, sessions: [], orca: { runs: [] } })))
     assert.equal(((await worker.request('tasks.open', { days: 7 })) as { chunks: number }).chunks, 1)
+  } finally {
+    setApiRoutes()
+    await worker.deactivate()
+  }
+})
+
+test('the skill sheet reads a skill document through the worker, and a refusal keeps its HTTP status', async () => {
+  const doc = { name: 'team-builder', body: '# Builder', origin: 'own' }
+  const worker = await mountWorker(main)
+  try {
+    setApiRoutes({ '/api/team/skill': async (_req, url) => (url.searchParams.get('name') === 'team-builder' ? Response.json(doc) : new Response('bad name', { status: 400 })) })
+    assert.deepEqual(await worker.request('team.skill', { name: 'team-builder' }), doc)
+    await assert.rejects(worker.request('team.skill', { name: '..' }), (e: unknown) => /bad name/.test(String((e as Error).message)) && (e as { code?: string }).code === 'http_400')
+    setApiRoutes()
+    await assert.rejects(worker.request('team.skill', { name: 'team-builder' }), /chưa sẵn sàng/)
+  } finally {
+    setApiRoutes()
+    await worker.deactivate()
+  }
+})
+
+test('a skill document over the reply limit is a specific error; one under it goes through', async () => {
+  const worker = await mountWorker(main)
+  try {
+    const doc = (size: number) => ({ name: 'big-skill', body: 'ế'.repeat(size), origin: 'own' }) // 3 bytes per character
+    setApiRoutes({ '/api/team/skill': async () => Response.json(doc(400_000)) }) // about 1.2 MB of UTF-8
+    await assert.rejects(worker.request('team.skill', { name: 'big-skill' }), (e: unknown) => {
+      const error = e as { code?: string; message: string }
+      return error.code === 'too_large' && /quá lớn/.test(error.message) && /900000/.test(error.message)
+    })
+    setApiRoutes({ '/api/team/skill': async () => Response.json(doc(200_000)) }) // about 600 KB
+    const ok = (await worker.request('team.skill', { name: 'big-skill' })) as { body: string }
+    assert.equal(ok.body.length, 200_000)
+    assert.ok(size({ output: ok }) < 1_048_576)
   } finally {
     setApiRoutes()
     await worker.deactivate()

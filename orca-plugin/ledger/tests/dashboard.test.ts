@@ -268,7 +268,7 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
       env: { ...process.env, GIT_AUTHOR_DATE: when, GIT_COMMITTER_DATE: when, GIT_AUTHOR_NAME: 'A', GIT_AUTHOR_EMAIL: 'a@example.test', GIT_COMMITTER_NAME: 'A', GIT_COMMITTER_EMAIL: 'a@example.test' },
     }).trim();
   }
-  git('init', '-b', 'main');
+  git('init', '--object-format=sha1', '-b', 'main');
   git('config', 'user.name', 'A');
   git('config', 'user.email', 'a@example.test');
   const content = join(repo, 'file');
