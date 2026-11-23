@@ -1,20 +1,22 @@
 import json
 import os
 
-from .common import (note_search, TASK_RE, cmd_text, finish_first, hook_skill, note_orca, skills_in, ts_of)
+from .common import (note_search, TASK_RE, cmd_text, finish_first, hook_skill, note_orca, skills_in, ts_of, note_branch)
 from ..roles import note_discussion_tool
 
-def codex_call(ts, model, eff, u):
+def codex_call(ts, model, eff, u, context):
     inp = u.get("input_tokens") or 0
     cached = u.get("cached_input_tokens") or 0
     return [ts, model or "?", eff, max(inp - cached, 0), cached, u.get("cache_write_input_tokens") or 0,
-            u.get("output_tokens") or 0, u.get("reasoning_output_tokens") or 0, None]
+            u.get("output_tokens") or 0, u.get("reasoning_output_tokens") or 0, None, 0, context]
 
 def parse_codex(path):
     s = {"agent": "codex", "cwd": None, "branch": None, "start": None, "end": None,
          "first": None, "id": None, "originator": None, "skills": [], "hooks": {}, "subagent": False,
          "tasks": [], "dispatcher": False}
     turns = {}
+    contexts = {}
+    context = dict(cwd=None, branch=None)
     cur = (None, None)
     records = []
     counts = []
@@ -40,21 +42,25 @@ def parse_codex(path):
                 s["cwd"] = p.get("cwd")
                 s["originator"] = p.get("originator")
                 s["branch"] = (p.get("git") or {}).get("branch")
+                context = note_branch(s, ts, p.get("cwd"), s["branch"], source="session")
             elif t == "turn_context":
                 cur = (p.get("model"), p.get("effort") or p.get("reasoning_effort"))
                 if p.get("turn_id"):
                     turns[p["turn_id"]] = cur
                 s["cwd"] = s["cwd"] or p.get("cwd")
+                context = note_branch(s, ts, p.get("cwd"), (p.get("git") or {}).get("branch"))
+                if p.get("turn_id"):
+                    contexts[p["turn_id"]] = context
             elif t == "token_usage_record":
                 u = p.get("usage") or {}
                 model, eff = turns.get(p.get("turn_id"), cur)
-                records.append(codex_call(ts, model, eff, u))
+                records.append(codex_call(ts, model, eff, u, contexts.get(p.get("turn_id"), context)))
             elif t == "event_msg" and p.get("type") == "token_count":
                 info = p.get("info") or {}
                 tot = (info.get("total_token_usage") or {}).get("total_tokens")
                 if info.get("last_token_usage") and tot != last_total:
                     last_total = tot
-                    counts.append(codex_call(ts, cur[0], cur[1], info["last_token_usage"]))
+                    counts.append(codex_call(ts, cur[0], cur[1], info["last_token_usage"], context))
             elif t == "response_item":
                 pt = p.get("type")
                 if pt == "message" and p.get("role") == "developer":

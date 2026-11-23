@@ -14,7 +14,7 @@ function element(id) {
 }
 globalThis.document = {
   querySelector: element,
-  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-theo-repo", "tk-agents-tools", "tk-cli-tools", "tk-cach-tinh"].map(element) : [],
+  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-features", "tk-theo-repo", "tk-agents-tools", "tk-cli-tools", "tk-cach-tinh"].map(element) : [],
   addEventListener() {},
 };
 globalThis.window = { innerWidth: 1000, addEventListener() {} };
@@ -26,7 +26,7 @@ const C = await import("../web/js/lib/charts.js");
 const { repoTree } = await import("../web/js/tabs/repos.js");
 const { renderRoles, roleStats } = await import("../web/js/tabs/roles.js");
 const { renderRoleSkills } = await import("../web/js/tabs/role-skills.js");
-const { runDetail, renderRunTimeline, communicationDiagram } = await import("../web/js/tabs/runs.js");
+const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures, featureTimeline } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
 const { renderCliTools, showCliTools } = await import("../web/js/tabs/cli-tools.js");
 const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../web/js/tabs/search.js");
@@ -246,7 +246,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
   const dash = new SourceTextModule(await readFile(new URL("../web/js/dash.js", import.meta.url), "utf8"));
   await dash.link(specifier => {
     const exports = specifier === "./lib/charts.js" ? C : {
-      renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
+      renderFeatures() { rendered.push("features"); }, renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
       renderRoles() { rendered.push("roles"); }, renderRoleSkills() { rendered.push("role-skills"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
       showSession() {}, showCliTools() { rendered.push("cli-tools"); }, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); }, toggleSearchKind() { return true; },
     };
@@ -585,4 +585,96 @@ test("issues section renders severity rows with filter hints and an empty state"
   assert.match(html, /data-issue="\{&quot;run&quot;:&quot;r1&quot;,&quot;role&quot;:&quot;builder&quot;\}"/);
   renderIssues([]);
   assert.match(element("#issues").innerHTML, /Không phát hiện vấn đề nào trong khoảng này\./);
+});
+
+
+test("feature Runs compare variants, preserve unknowns and escape branch and skill names", () => {
+  C.state.repo = "";
+  const feature = { repo: "sample", branch: "feat/<example>", variant: "direct", tokens: 100,
+    first_activity: 10, last_activity: 20, lead_seconds: 10, session_count: 2, agents: ["codex"],
+    loaded_skills: { "<skill>": 1 }, run_ids: [], fix_rounds: { count: 0, source: "code-review" },
+    gate2_findings: null, delivered: null };
+  C.state.data = { features: { runs: [feature, { ...feature, branch: "feat/orca", variant: "orca",
+    tokens: 300, gate2_findings: 0, delivered: false, orchestrator_tokens: 50, worker_tokens: 250 }] } };
+  const sessions = C.state.data.features.runs.map(f => ({ repo: f.repo, branch: f.branch }));
+  renderFeatures(sessions);
+  assert.match(element("#feature-tokens").innerHTML, /Trực tiếp/);
+  assert.match(element("#feature-tokens").innerHTML, /Có Orca/);
+  assert.match(element("#feature-findings").innerHTML, /Chưa rõ/);
+  assert.match(element("#feature-findings").innerHTML, /Trực tiếp: 0\/1 Run có dữ liệu/);
+  const html = element("#feature-runs").innerHTML;
+  assert.match(html, /feat\/&lt;example&gt;/);
+  assert.match(html, /&lt;skill&gt;/);
+  assert.match(html, /Chưa merge/);
+  assert.match(html, /Điều phối: 50/);
+  assert.doesNotMatch(html, /<skill>|<example>|undefined|NaN/);
+  renderFeatures([sessions[0]]);
+  assert.doesNotMatch(element("#feature-runs").innerHTML, /feat\/orca/);
+  renderFeatures([]);
+  assert.match(element("#feature-runs").innerHTML, /Không có Run/);
+  for (const id of ["tokens", "fixes", "findings", "distribution", "time"]) {
+    assert.doesNotMatch(element("#feature-" + id).innerHTML, /<svg/);
+    assert.match(element("#feature-" + id).innerHTML, /Không có dữ liệu/);
+  }
+});
+
+test("feature charts preserve fractional medians, round buckets and delivery mark states", () => {
+  C.state.repo = "";
+  const rows = [0, 1, 2, 3, 7].map((count, i) => ({
+    repo: "r", branch: "feat/<" + i + ">", variant: i < 2 ? "direct" : "orca", tokens: (i + 1) * 100,
+    last_activity: 1795265470 + i * 86400, fix_rounds: { count, source: "reports" }, gate2_findings: i,
+    delivered: [true, false, null, false, true][i], loaded_skills: {}, run_ids: [], agents: [], session_count: 1,
+  }));
+  C.state.data = { features: { runs: rows } };
+  renderFeatures(rows);
+  assert.match(element("#feature-fixes").innerHTML, />0\.5<\/text>/);
+  assert.match(element("#feature-tokens").innerHTML, /Trực tiếp: 2 Run · Có Orca: 3 Run/);
+  const distribution = element("#feature-distribution").innerHTML;
+  assert.match(distribution, /3\+ vòng sửa/);
+  assert.match(distribution, /Có Orca: 2 Run/);
+  assert.equal((distribution.match(/<rect /g) || []).length, 4);
+  const time = featureTimeline(rows, 500);
+  assert.equal((time.match(/class="feature-point"/g) || []).length, 5);
+  assert.equal((time.match(/tabindex="0"/g) || []).length, 5);
+  assert.equal((time.match(/fill:var\(--mantle\)/g) || []).length, 3);
+  assert.equal((time.match(/stroke-dasharray:2 2/g) || []).length, 1);
+  assert.match(time, /feat\/&lt;0&gt;/);
+  assert.match(time, /Vòng sửa: 7 · report Builder/);
+  assert.match(time, /Lỗi Gate 2: 4/);
+  assert.doesNotMatch(time, /NaN|undefined|Infinity/);
+  assert.doesNotMatch(featureTimeline([{ ...rows[0], tokens: 0 }], 280), /NaN|Infinity/);
+  renderFeatures([{ repo: "r", branch: "main", feature_segments: [rows[1]] }]);
+  assert.match(element("#feature-runs").innerHTML, /feat\/&lt;1&gt;/);
+  assert.doesNotMatch(element("#feature-runs").innerHTML, /feat\/&lt;2&gt;/);
+  C.state.data.sessions = [{ repo: "original", feature_segments: [rows[1]] }];
+  Object.assign(C.state, { repo: "r", agent: "", role: "", wt: "", runF: "", taskF: "" });
+  assert.equal(C.sessionsF().length, 0);
+  assert.equal(C.sessionsF(true).length, 1);
+  renderFeatures(C.sessionsF(true));
+  assert.match(element("#feature-runs").innerHTML, /feat\/&lt;1&gt;/);
+  C.state.repo = "";
+});
+
+test("feature comparison waits for Orca's first load", () => {
+  C.state.data = { features: { orca_loading: true, runs: [] } };
+  renderFeatures([]);
+  assert.match(element("#feature-tokens").innerHTML, /Đang tải dữ liệu Orca/);
+  assert.doesNotMatch(element("#feature-tokens").innerHTML, /<svg/);
+});
+
+test("escaped defect charts preserve unknowns and escape fix subjects", () => {
+  C.state.repo = "";
+  const known = { repo: "r", branch: "feat/test", variant: "direct", tokens: 10,
+    fix_rounds: { count: 0, source: "reports" }, loaded_skills: {}, run_ids: [], agents: [], session_count: 1,
+    escaped_defects: 2, median_days_to_surface: 4, source: "szz",
+    fix_commits: [{ sha: "abcdef", subject: "fix: <unsafe>", date: "2026-11-23", days_after_merge: 1, source: "szz" },
+      { sha: "fedcba", subject: "fix: explicit", date: "2026-11-23", days_after_merge: 7, source: "trailer" }] };
+  C.state.data = { features: { runs: [known, { ...known, variant: "orca", branch: "feat/unknown", escaped_defects: null, fix_commits: [] }] } };
+  renderFeatures(C.state.data.features.runs);
+  assert.match(element("#feature-escaped").innerHTML, /ước tính SZZ/);
+  assert.match(element("#feature-escaped").innerHTML, /Có Orca: 0\/1 Run có dữ liệu/);
+  assert.match(element("#feature-surface").innerHTML, /1 đến &lt;7 ngày/);
+  assert.match(element("#feature-runs").innerHTML, /2 lỗi · 4 ngày/);
+  assert.match(element("#feature-runs").innerHTML, /fix: &lt;unsafe&gt;/);
+  assert.doesNotMatch(element("#feature-runs").innerHTML, /<unsafe>|NaN|undefined/);
 });

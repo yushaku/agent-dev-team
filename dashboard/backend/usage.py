@@ -4,11 +4,12 @@ import re
 import statistics
 import time
 
+from .features import build_features, feature_dir, report_rounds
 from . import cache
 from . import orca as orca_mod
 from .parsers import hermes
 from .config import COPILOT_GLOB, HOME, SKILLS_DIR, TEAMS
-from .parsers.common import local_date, parse_rtk, repo_of
+from .parsers.common import branch_at, local_date, main_checkout, parse_rtk, repo_of
 from .roles import TEAM_PREFIX, assign_role, known_roles
 
 
@@ -63,7 +64,7 @@ def build(days):
         run_events = [(ts or s["start"] or 0, rid) for rid, ts in s.get("runs") or []]
         aggregate = s.get("aggregate", False)
         s_disp = disp_index.get((s["agent"], os.path.normpath(s["cwd"])), []) if s["cwd"] else []
-        rows = {}
+        rows, feature_parts = {}, {}
         for c in sorted(s["calls"], key=lambda c: c[0] or 0):
             ts, model, eff, fin, cr, cw, out, reason, mid = c[:9]
             if mid:
@@ -133,15 +134,28 @@ def build(days):
             key = (rid, task["id"] if task else None, role, source, routing["dispatch"] if routing else None)
             if key not in rows:
                 rows[key] = {"id": s["id"], "session_id": s["id"], "agent": s["agent"], "repo": repo,
-                    "worktree": wt, "branch": s.get("branch"), "role": role, "role_src": role_src,
+                    "worktree": wt, "branch": s.get("branch"), "cwd": s["cwd"], "role": role, "role_src": role_src,
                     "originator": (s.get("originator") or "?") + (" (subagent)" if s.get("subagent") else ""),
                     "start": s["start"], "end": s["end"], "preview": s["preview"], "title": s.get("title") or "",
                     "task_id": task["id"] if task else None, "task_title": task["title"] if task else None,
                     "run_id": rid, "attribution": source, "aggregate": aggregate, "routing": routing,
                     "calls": 0, "fin": 0, "cr": 0, "cw": 0, "out": 0, "reason": 0, "prem": 0,
                     "snapshot": s.get("snapshot"), "ctx": [], "days": {}, "hours": {}, "t0": None,
-                    "mix": {}, "models": {}, "skills": {}, "search": {}}
+                    "mix": {}, "models": {}, "skills": {}, "search": {}, "feature_segments": []}
             row = rows[key]
+            context = c[10] if len(c) > 10 else dict(cwd=s["cwd"], branch=s.get("branch"))
+            feature_key = (key, context["cwd"], context["branch"], context.get("branch_source", "session"))
+            if feature_key not in feature_parts:
+                part = dict(id=s["id"], session_id=s["id"], agent=s["agent"], cwd=context["cwd"],
+                            repo=repo_of(context["cwd"])[0], branch=context["branch"], run_id=rid, role=role,
+                            start=ts if len(c) > 10 else s["start"], end=ts if len(c) > 10 else s["end"],
+                            total=0, skills={}, hooks={}, branch_source=context.get("branch_source", "session"))
+                feature_parts[feature_key] = part
+                row["feature_segments"].append(part)
+            part = feature_parts[feature_key]
+            part["total"] += tot
+            part["start"] = min(part["start"] or ts, ts)
+            part["end"] = max(part["end"] or ts, ts)
             row["calls"] += 1
             prem = c[9] if len(c) > 9 else 0
             for field, value in (("fin", fin), ("cr", cr), ("cw", cw), ("out", out), ("reason", reason), ("prem", prem)):
@@ -170,6 +184,14 @@ def build(days):
                 value = target["skills"].setdefault(name, [0, 0])
                 value[0] += 1
                 value[1] = max(value[1], ts)
+                context = branch_at(s, ts)
+                part = next((p for p in target["feature_segments"] if p["cwd"] == context["cwd"]
+                             and p["branch"] == context["branch"]
+                             and p["branch_source"] == context.get("branch_source", "session")), None)
+                if part:
+                    value = part["skills"].setdefault(name, [0, 0])
+                    value[0] += 1
+                    value[1] = max(value[1], ts)
         for kind, ts in s.get("search") or []:
             ts = ts or s["start"]
             if not ts or ts < start:
@@ -184,6 +206,12 @@ def build(days):
             if len(rows) > 1:
                 row["id"] += ":part:" + str(i)
             row["hooks"] = {n: h[1] for n, h in (s.get("hooks") or {}).items() if h[0] and h[0] >= start}
+            for j, part in enumerate(row["feature_segments"]):
+                part["id"] = row["id"] + ":branch:" + str(j)
+                part["hooks"] = {n: h[1] for n, h in (s.get("hooks") or {}).items() if h[0] and h[0] >= start
+                                 and branch_at(s, h[0])["cwd"] == part["cwd"]
+                                 and branch_at(s, h[0])["branch"] == part["branch"]
+                                 and branch_at(s, h[0]).get("branch_source", "session") == part["branch_source"]}
             row["model"] = max(row["models"], key=row["models"].get)
             effs = {}
             for k, v in row["mix"].items():
@@ -197,6 +225,7 @@ def build(days):
             row["total"] = row["fin"] + row["cr"] + row["cw"] + row["out"]
             sessions.append(row)
     sessions.sort(key=lambda r: r["start"] or 0, reverse=True)
+    checkouts = {repo_of(s["cwd"])[0]: root for s in parsed if (root := main_checkout(s["cwd"]))}
     runs = []
     for r in orca_mod.orca_state["runs"]:
         rr = dict(r)
@@ -215,13 +244,20 @@ def build(days):
                 counts = rr["fix_tokens_by_cause"].setdefault(cause, {})
                 for agent, value in t["tokens"].items():
                     counts[agent] = counts.get(agent, 0) + value
+        for task in rr["tasks"]:
+            directory = feature_dir(checkouts.get(task.get("repo")), task.get("worktree"))
+            count = report_rounds(directory)
+            if count is not None and count >= (rr.get("fix_rounds") or {}).get("count", -1):
+                rr["fix_rounds"] = dict(count=count, source="reports")
         runs.append(rr)
+    features = build_features([part for s in sessions for part in s["feature_segments"]], runs,
+                              orca_loaded=orca_mod.orca_state.get("loaded", orca_mod.orca_state["available"] is True))
     installed = sorted(d for d in os.listdir(SKILLS_DIR)
                        if os.path.isfile(os.path.join(SKILLS_DIR, d, "SKILL.md"))) if os.path.isdir(SKILLS_DIR) else []
     return {
         "generated_at": now, "days": days, "range_start": start,
         "dates": [local_date(start + 86400 * i + 3600) for i in range(days)],
-        "sessions": sessions, "attribution": attribution,
+        "sessions": sessions, "attribution": attribution, "features": features,
         "copilot_dirs": len(glob.glob(os.path.join(HOME, ".copilot", "session-state", "*", ""))),
         "orca": {"available": orca_mod.orca_state["available"], "error": orca_mod.orca_state["error"],
                  "fetched_at": orca_mod.orca_state["fetched_at"], "runs": runs},

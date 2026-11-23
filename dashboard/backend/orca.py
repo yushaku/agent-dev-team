@@ -279,7 +279,7 @@ def refresh_orca():
         if known != cache.cache["dispatch"]:
             cache.cache["dispatch"] = known
             cache.cache_dirty = True
-        orca_state.update(available=True, runs=out_runs, tasks=tasks, dispatches=dispatches,
+        orca_state.update(available=True, loaded=True, runs=out_runs, tasks=tasks, dispatches=dispatches,
                           fetched_at=time.time(), error=("Thiếu dữ liệu Orca: " + ", ".join(errors)) if errors else None)
 
 def orca_loop():

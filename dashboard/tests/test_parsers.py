@@ -79,6 +79,28 @@ class ParserTests(unittest.TestCase):
             message=dict(content=[dict(type="tool_use", name="Bash", input=dict(command="orca orchestration run-use --id run_aaa"))]))])
         self.assertEqual(result["runs"][0][0], "run_aaa")
 
+    def test_codex_token_count_context_survives_missing_branch_metadata(self):
+        events = [dict(type="session_meta", payload=dict(id="s", cwd="/repo/main", git=dict(branch="main")))]
+        for i, branch in enumerate(("main", "feat/new", None)):
+            events.append(dict(type="turn_context", timestamp=f"2026-11-13T00:00:0{i}Z",
+                               payload=dict(cwd="/repo/main", git=dict(branch=branch))))
+            events.append(dict(type="event_msg", timestamp=f"2026-11-13T00:00:0{i}Z", payload=dict(
+                type="token_count", info=dict(total_token_usage=dict(total_tokens=i + 1),
+                                             last_token_usage=dict(input_tokens=10)))))
+        result = self.parse(parse_codex, events)
+        self.assertEqual([c[10]["branch"] for c in result["calls"]], ["main", "feat/new", "feat/new"])
+        self.assertEqual(result["branch"], "main")
+
+    def test_codex_session_branch_provenance_and_unknown_repo_switch(self):
+        events = [dict(type="session_meta", payload=dict(id="s", cwd="/repo/main", git=dict(branch="feat/one")))]
+        for cwd in ("/repo/main", "/other/main"):
+            events += [dict(type="turn_context", payload=dict(cwd=cwd)),
+                       dict(type="token_usage_record", payload=dict(usage=dict(input_tokens=10)))]
+        result = self.parse(parse_codex, events)
+        self.assertEqual(result["calls"][0][10]["branch_source"], "session")
+        self.assertIsNone(result["calls"][1][10]["branch"])
+        self.assertEqual((result["cwd"], result["branch"]), ("/repo/main", "feat/one"))
+
 
 if __name__ == "__main__":
     unittest.main()

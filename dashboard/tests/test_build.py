@@ -16,7 +16,7 @@ class BuildTests(unittest.TestCase):
                 "generated_at", "days", "range_start", "dates", "sessions",
                 "copilot_dirs", "orca",
                 "roles_cfg", "known_roles", "skills_installed",
-                "rtk", "attribution",
+                "rtk", "attribution", "features",
             },
         )
         for session in data["sessions"]:
