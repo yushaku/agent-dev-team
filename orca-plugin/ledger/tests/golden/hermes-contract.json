@@ -1,0 +1,63 @@
+[
+ {
+  "id": "h",
+  "title": "hello",
+  "started_at": 100,
+  "ended_at": 102,
+  "input_tokens": 5,
+  "output_tokens": 7,
+  "cache_read_tokens": 2,
+  "cache_write_tokens": 1,
+  "reasoning_tokens": 3,
+  "cwd": "/repo",
+  "git_branch": "main",
+  "model": "model",
+  "source": "cli"
+ },
+ [
+  {
+   "session_id": "h",
+   "role": "user",
+   "content": "hello",
+   "tool_name": null,
+   "tool_calls": null,
+   "timestamp": 101,
+   "active": 1
+  }
+ ],
+ {
+  "agent": "hermes",
+  "cwd": "/repo",
+  "branch": "main",
+  "start": 100,
+  "end": 102,
+  "sid": "h",
+  "originator": "hermes:cli",
+  "skills": [],
+  "subagent": false,
+  "id": "h",
+  "title": "hello",
+  "dispatcher": false,
+  "runs": [],
+  "aggregate": true,
+  "search": [],
+  "discussion_read": null,
+  "calls": [
+   [
+    100,
+    "model",
+    null,
+    5,
+    2,
+    1,
+    7,
+    3,
+    null
+   ]
+  ],
+  "preview": "hello",
+  "role_line": null,
+  "discussion": null,
+  "tasks": []
+ }
+]

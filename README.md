@@ -111,7 +111,7 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 - `templates/`: file templates for projects
 - `diagrams/`: architecture diagrams
 - `docs/`: Vietnamese docs site (GitHub Pages); diagrams are `?embed=1` iframes sized from `style="--w; --h"` (the diagram's viewBox); update both when a re-render changes the viewBox
-- `dashboard/`: local dashboard
+- `orca-plugin/`: the Orca plugin `local.team-dashboard`: the history ledger, the dashboard API and web UI served on 127.0.0.1:4747, and the Tasks panel (see `orca-plugin/README.md`)
 
 ## Metrics
 
@@ -126,4 +126,4 @@ The dashboard computes metrics per feature Run (repo + branch), for direct sessi
 
 The local dashboard shows feature Run metrics and token usage. For the process itself, see the [Vietnamese docs site](https://yushaku.github.io/agent-dev-team/).
 
-`python3 dashboard/server.py`, then open http://127.0.0.1:4747. See `dashboard/README.md`.
+The Orca plugin `local.team-dashboard` serves it while Orca runs: open http://127.0.0.1:4747, or the plugin's sidebar panel (`orca plugin open local.team-dashboard --panel tasks`). Layout, how to run and how to verify (tests, `orca plugin check`, type check): `orca-plugin/README.md`, the only place those commands are written down.

@@ -1,0 +1,78 @@
+[
+ [
+  {
+   "timestamp": "1970-01-01",
+   "rtk_cmd": "rg",
+   "project_path": "/repo",
+   "input_tokens": 40,
+   "output_tokens": 20,
+   "saved_tokens": 20,
+   "exec_time_ms": 3
+  },
+  {
+   "timestamp": "1970-01-01",
+   "rtk_cmd": "rg",
+   "project_path": "/repo",
+   "input_tokens": 60,
+   "output_tokens": 10,
+   "saved_tokens": 50,
+   "exec_time_ms": 8
+  },
+  {
+   "timestamp": "1970-01-01",
+   "rtk_cmd": "git",
+   "project_path": "",
+   "input_tokens": 100,
+   "output_tokens": 5,
+   "saved_tokens": 95,
+   "exec_time_ms": 10
+  }
+ ],
+ {
+  "available": true,
+  "summary": {
+   "commands": 3,
+   "input": 200,
+   "output": 35,
+   "saved": 165,
+   "pct": 82.5,
+   "time_ms": 21
+  },
+  "by_cmd": [
+   {
+    "cmd": "git",
+    "n": 1,
+    "saved": 95,
+    "input": 100,
+    "output": 5,
+    "pct": 95
+   },
+   {
+    "cmd": "rg",
+    "n": 2,
+    "saved": 70,
+    "input": 100,
+    "output": 30,
+    "pct": 70
+   }
+  ],
+  "daily": [
+   {
+    "date": "1970-01-01",
+    "n": 3,
+    "saved": 165,
+    "input": 200,
+    "output": 35,
+    "pct": 82.5
+   }
+  ],
+  "by_project": [
+   {
+    "project": "../../repo",
+    "n": 2,
+    "saved": 70,
+    "pct": 70
+   }
+  ]
+ }
+]

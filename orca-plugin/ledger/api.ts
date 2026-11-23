@@ -1,37 +1,11 @@
 import { Worker } from 'node:worker_threads';
 import { teamRoot, webRoot } from './roots.ts';
-import { dirname, join } from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { readAsset, scanBundle } from './assets.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { hostAllowed, sendResponse, type Routes } from './http.ts';
 import type { Store } from './store.ts';
 
-const staticFiles = new Map([
-  ['/', 'text/html'],
-  ['/index.html', 'text/html'],
-  ['/css/app.css', 'text/css'],
-  ...[
-    'js/main',
-    'js/sheet',
-    'js/dash',
-    'js/md',
-    'js/lib/charts',
-    'vendor/marked.min',
-    ...[
-      'overview',
-      'roles',
-      'repos',
-      'runs',
-      'sessions',
-      'skills',
-      'tokens',
-      'search',
-      'overall',
-      'role-skills',
-      'cli-tools',
-    ].map((t) => 'js/tabs/' + t),
-  ].map((n): [string, string] => ['/' + n + '.js', 'text/javascript']),
-]);
 const apiPaths = new Set([
   '/api/data',
   '/api/agent/summary',
@@ -43,6 +17,7 @@ type WorkerReply = [number, string, string | Buffer];
 const loading: WorkerReply = [503, 'application/json', JSON.stringify({ loading: true })];
 export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
   const assets = webRoot();
+  const staticFiles = scanBundle(assets);
   teamRoot();
   const home =
     typeof ledger === 'string'
@@ -103,11 +78,8 @@ export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
   async function route(req: { method?: string; headers?: IncomingMessage['headers'] }, url: URL) {
     if (req.method !== 'GET') return response([405, 'text/plain', 'method not allowed']);
     try {
-      const type = staticFiles.get(url.pathname);
-      if (type) {
-        const path = url.pathname === '/' ? '/index.html' : url.pathname;
-        return response([200, type + '; charset=utf-8', await readFile(join(assets, path))]);
-      }
+      const asset = staticFiles.get(url.pathname);
+      if (asset) return response([200, asset.type + '; charset=utf-8', await readAsset(assets, asset)]);
       if (!apiPaths.has(url.pathname)) return response([404, 'text/plain', 'not found']);
       return response(await dispatch(url.pathname + url.search));
     } catch {

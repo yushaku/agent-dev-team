@@ -1,0 +1,135 @@
+{
+ "agent": "claude",
+ "cwd": "/repo/main",
+ "branch": "main",
+ "start": 1794528000,
+ "end": 1794528008,
+ "sid": "claude-switch",
+ "originator": null,
+ "skills": [
+  [
+   "code-review",
+   1794528001
+  ],
+  [
+   "code-review",
+   1794528003
+  ]
+ ],
+ "hooks": {},
+ "tasks": [],
+ "dispatcher": false,
+ "branch_segments": [
+  {
+   "cwd": "/repo/main",
+   "branch": "main",
+   "branch_source": "message_context",
+   "at": 1794528000
+  },
+  {
+   "cwd": "/repo/main",
+   "branch": "feat/switch",
+   "branch_source": "message_context",
+   "at": 1794528002
+  },
+  {
+   "cwd": "/repo/second",
+   "branch": "feat/second",
+   "branch_source": "message_context",
+   "at": 1794528005
+  },
+  {
+   "cwd": "/repo/main",
+   "branch": "main",
+   "branch_source": "message_context",
+   "at": 1794528008
+  }
+ ],
+ "discussion_read": null,
+ "tool_count": 2,
+ "search": [
+  [
+   "read_full",
+   1794528001
+  ],
+  [
+   "read_full",
+   1794528003
+  ]
+ ],
+ "calls": [
+  [
+   1794528001,
+   "test",
+   null,
+   100,
+   20,
+   5,
+   10,
+   0,
+   "m1",
+   0,
+   {
+    "cwd": "/repo/main",
+    "branch": "main",
+    "branch_source": "message_context"
+   }
+  ],
+  [
+   1794528004,
+   "test",
+   null,
+   200,
+   30,
+   10,
+   25,
+   0,
+   "m2",
+   0,
+   {
+    "cwd": "/repo/main",
+    "branch": "feat/switch",
+    "branch_source": "message_context"
+   }
+  ],
+  [
+   1794528006,
+   "test",
+   null,
+   50,
+   0,
+   0,
+   5,
+   0,
+   "m3",
+   0,
+   {
+    "cwd": "/repo/second",
+    "branch": "feat/second",
+    "branch_source": "message_context"
+   }
+  ],
+  [
+   1794528008,
+   "test",
+   null,
+   10,
+   0,
+   0,
+   1,
+   0,
+   "m4",
+   0,
+   {
+    "cwd": "/repo/main",
+    "branch": "main",
+    "branch_source": "message_context"
+   }
+  ]
+ ],
+ "subagent": false,
+ "id": "claude-switch",
+ "preview": "Review the plan",
+ "role_line": null,
+ "discussion": null
+}

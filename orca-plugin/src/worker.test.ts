@@ -1,6 +1,6 @@
 import { assert, mountWorker, test } from 'orca/testing'
 import * as main from './worker'
-import { setDataSource } from './ledger-host'
+import { setApiRoutes, setDataSource } from './ledger-host'
 
 // The ledger host (real ingest, port 4747) stays off in tests.
 ;(globalThis as any).process.env.TEAM_DASHBOARD_NO_LEDGER = '1'
@@ -76,4 +76,23 @@ test('snapshot ids are unique across worker lifetimes: an old id never resolves 
   assert.equal(piece.id, fresh.id)
   await second.deactivate()
   setDataSource()
+})
+
+/** The two 503 answers of the API, driven through the real route-to-panel conversion (dashboardData then tasks.open). */
+test('a loading API and a failing API give the panel different messages', async () => {
+  const route = (res: () => Response) => ({ '/api/data': async () => res() })
+  const worker = await mountWorker(main)
+  try {
+    setApiRoutes(route(() => new Response(JSON.stringify({ loading: true }), { status: 503, headers: { 'Content-Type': 'application/json' } })))
+    await assert.rejects(worker.request('tasks.open', { days: 7 }), (e: unknown) => /đang tải/.test(String((e as Error).message)) && !/temporarily unavailable/.test(String((e as Error).message)))
+    setApiRoutes(route(() => new Response('Dashboard data is temporarily unavailable', { status: 503, headers: { 'Content-Type': 'text/plain' } })))
+    await assert.rejects(worker.request('tasks.open', { days: 7 }), (e: unknown) => /HTTP 503: Dashboard data is temporarily unavailable/.test(String((e as Error).message)) && !/đang tải/.test(String((e as Error).message)))
+    setApiRoutes(route(() => new Response('Dashboard request failed', { status: 500 })))
+    await assert.rejects(worker.request('tasks.open', { days: 7 }), /HTTP 500: Dashboard request failed/)
+    setApiRoutes(route(() => Response.json({ generated_at: 1, sessions: [], orca: { runs: [] } })))
+    assert.equal(((await worker.request('tasks.open', { days: 7 })) as { chunks: number }).chunks, 1)
+  } finally {
+    setApiRoutes()
+    await worker.deactivate()
+  }
 })

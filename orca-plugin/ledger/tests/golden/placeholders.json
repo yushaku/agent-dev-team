@@ -1,0 +1,3 @@
+{
+ "$ROOT/key": ["$ROOT", "$REALROOT/x", "$FIXTURES/y", "plain"]
+}

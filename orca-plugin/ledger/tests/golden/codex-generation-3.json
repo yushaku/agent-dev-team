@@ -1,0 +1,112 @@
+{
+ "agent": "codex",
+ "cwd": null,
+ "branch": null,
+ "start": 1793494801,
+ "end": 1793494804,
+ "id": "first",
+ "originator": null,
+ "skills": [],
+ "hooks": {},
+ "subagent": false,
+ "tasks": [],
+ "dispatcher": false,
+ "branch_segments": [
+  {
+   "cwd": null,
+   "branch": null,
+   "branch_source": "unavailable",
+   "at": null
+  }
+ ],
+ "calls": [
+  [
+   1793494801,
+   "?",
+   null,
+   1,
+   0,
+   0,
+   0,
+   0,
+   null,
+   0,
+   {
+    "cwd": null,
+    "branch": null,
+    "branch_source": "unavailable"
+   }
+  ],
+  [
+   1793494802,
+   "?",
+   null,
+   2,
+   0,
+   0,
+   0,
+   0,
+   null,
+   0,
+   {
+    "cwd": null,
+    "branch": null,
+    "branch_source": "unavailable"
+   }
+  ],
+  [
+   1793494802,
+   "?",
+   null,
+   2,
+   0,
+   0,
+   0,
+   0,
+   null,
+   0,
+   {
+    "cwd": null,
+    "branch": null,
+    "branch_source": "unavailable"
+   }
+  ],
+  [
+   1793494803,
+   "?",
+   null,
+   3,
+   0,
+   0,
+   0,
+   0,
+   null,
+   0,
+   {
+    "cwd": null,
+    "branch": null,
+    "branch_source": "unavailable"
+   }
+  ],
+  [
+   1793494804,
+   "?",
+   null,
+   4,
+   0,
+   0,
+   0,
+   0,
+   null,
+   0,
+   {
+    "cwd": null,
+    "branch": null,
+    "branch_source": "unavailable"
+   }
+  ]
+ ],
+ "preview": "",
+ "role_line": null,
+ "discussion": null
+}

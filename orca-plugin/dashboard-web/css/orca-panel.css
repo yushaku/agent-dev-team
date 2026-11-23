@@ -1,0 +1,30 @@
+/* Styles for the dashboard inside Orca's HTML panel. Everything here is scoped to html.orca (set by main.js when
+   window.orca exists) or html.light (set by Orca itself), so the page in a normal browser is unchanged. */
+
+/* Orca puts `light` or `dark` on <html>. app.css is Catppuccin Frappe (dark); light uses Latte with the same token names. */
+html.light {
+  color-scheme: light;
+  --crust: #dce0e8; --mantle: #e6e9ef; --base: #eff1f5;
+  --surface0: #ccd0da; --surface1: #bcc0cc; --surface2: #acb0be;
+  --overlay0: #9ca0b0; --overlay1: #8c8fa1; --overlay2: #7c7f93;
+  --subtext0: #6c6f85; --subtext1: #5c5f77; --text: #4c4f69;
+  --lavender: #7287fd; --blue: #1e66f5; --green: #40a02b; --yellow: #df8e1d; --red: #d20f39; --mauve: #8839ef;
+  --sky: #04a5e5; --pink: #ea76cb; --peach: #fe640b; --sapphire: #209fb5; --teal: #179299;
+  --maroon: #e64553; --flamingo: #dd7878; --rosewater: #dc8a78;
+}
+
+/* A sidebar is narrow: tighter gutter, no top bar to clear. */
+html.orca { --gutter: var(--s-3); --header-offset: 0px; }
+html.orca .topbar { display: none; }
+html.orca main.wrap { padding-top: var(--s-3); padding-bottom: var(--s-5); }
+
+#plugin-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2);
+  margin-bottom: var(--s-3); padding: var(--s-2) var(--s-3);
+  background: var(--mantle); border: var(--hairline); border-radius: var(--r-2, 6px);
+  font-size: var(--fs-1); color: var(--subtext1);
+}
+#plugin-bar.error { border-color: var(--red); color: var(--text); }
+#plugin-bar .msg { flex: 1 1 14em; }
+#plugin-bar button { font: inherit; }
+#plugin-bar.empty ~ .dash-view { display: none; }

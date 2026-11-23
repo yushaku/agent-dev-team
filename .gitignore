@@ -1,5 +1,4 @@
 __pycache__/
 *.pyc
 *.profraw
-dashboard/.cache/
 .DS_Store
