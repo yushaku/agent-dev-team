@@ -76,3 +76,52 @@ test('imports that would leave js/ or could not load from the panel are refused 
     }
   } finally { rmSync(root, { recursive: true }) }
 })
+
+import { lstatSync, readdirSync, symlinkSync } from 'node:fs'
+
+test('a symlinked output directory is refused, and its target is left intact', () => {
+  const { root, src, out } = scratch()
+  try {
+    sync({ src, out })
+    const outside = join(root, 'precious')
+    mkdirSync(join(outside, 'tabs'), { recursive: true })
+    writeFileSync(join(outside, 'keep.txt'), 'mine')
+    writeFileSync(join(outside, 'tabs', 'stale.js'), 'would be pruned as stale')
+    rmSync(join(out, 'js'), { recursive: true })
+    symlinkSync(outside, join(out, 'js'))
+    assert.throws(() => sync({ src, out }), /symbolic link/)
+    assert.throws(() => drift({ src, out }), /symbolic link/)
+    assert.deepEqual(readdirSync(outside).sort(), ['keep.txt', 'tabs'])
+    assert.equal(readFileSync(join(outside, 'keep.txt'), 'utf8'), 'mine')
+    assert.equal(readFileSync(join(outside, 'tabs', 'stale.js'), 'utf8'), 'would be pruned as stale')
+    assert.ok(lstatSync(join(out, 'js')).isSymbolicLink(), 'the link itself is not replaced either')
+  } finally { rmSync(root, { recursive: true }) }
+})
+
+test('a symlinked file or directory inside the output, and a symlinked output root, are refused', () => {
+  const { root, src, out } = scratch()
+  try {
+    sync({ src, out })
+    const outside = join(root, 'precious')
+    mkdirSync(outside)
+    writeFileSync(join(outside, 'target.js'), 'original')
+    rmSync(join(out, 'js/dash.js'))
+    symlinkSync(join(outside, 'target.js'), join(out, 'js/dash.js'))
+    assert.throws(() => sync({ src, out }), /symbolic link/)
+    assert.equal(readFileSync(join(outside, 'target.js'), 'utf8'), 'original', 'nothing was written through the link')
+    const linkedRoot = join(root, 'linked-out')
+    symlinkSync(out, linkedRoot)
+    assert.throws(() => sync({ src, out: linkedRoot }), /symbolic link/)
+  } finally { rmSync(root, { recursive: true }) }
+})
+
+test('a symlinked source file or directory is refused', () => {
+  const { root, src, out } = scratch()
+  try {
+    const outside = join(root, 'elsewhere.js')
+    writeFileSync(outside, 'export const z = 1\n')
+    rmSync(join(src, 'js/tabs/tokens.js'))
+    symlinkSync(outside, join(src, 'js/tabs/tokens.js'))
+    assert.throws(() => sync({ src, out }), /symbolic link/)
+  } finally { rmSync(root, { recursive: true }) }
+})

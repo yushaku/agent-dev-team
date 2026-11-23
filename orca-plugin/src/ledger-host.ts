@@ -53,8 +53,14 @@ const load = <T>(file: string): Promise<T> => import(/* @vite-ignore */ LEDGER +
 
 let http: { close(): Promise<void> } | undefined
 let ingest: IngestApi | undefined
-let startup: Promise<void> | undefined
+/** Activation and shutdown run one after another on this chain, so neither can start while the other drains. */
+let chain: Promise<void> = Promise.resolve()
 let generation = 0
+function enqueue(step: () => Promise<void>): Promise<void> {
+  const done = chain.then(step)
+  chain = done.catch(() => {}) // a failed step does not block the next one; the caller still sees it
+  return done
+}
 
 /** Tests mount the worker for the panel handler only; they must not start a real ingest or bind 4748. */
 const disabled = () => env('TEAM_DASHBOARD_NO_LEDGER') === '1'
@@ -67,18 +73,16 @@ async function teardown() {
 }
 
 /**
- * Starts the host. Activations are serialized: a new one first waits for the previous startup and tears down
+ * Starts the host. Activations are serialized: a new one first waits for earlier steps (a shutdown included) and tears down
  * whatever it left running (ingest, the /health listener), so two activations never overlap. Deactivating, or
  * activating again, while modules still load cancels the older activation; its event handlers go inert.
  */
 export function run(orca: Api): Promise<void> {
   const mine = ++generation
   const cancelled = () => mine !== generation
-  const prior = startup
   const bar = (text: string, tone: Report['tone'], tooltip: string) =>
     void orca.host.call('statusBar.update', { id: 'ledger', text, tone, tooltip }).catch((e) => orca.log(`statusBar.update failed: ${e}`))
-  startup = (async () => {
-    await prior?.catch(() => {})
+  return enqueue(async () => {
     if (disabled()) return
     try {
       const [ing, ht] = await Promise.all([load<IngestApi>('ingest.ts'), load<HttpApi>('http.ts')])
@@ -103,13 +107,11 @@ export function run(orca: Api): Promise<void> {
       orca.log(`ledger host failed to start: ${e}`)
       if (!cancelled()) bar('Ledger ✗ not started', 'danger', `The ledger host could not start: ${String(e).split('\n')[0]}`)
     }
-  })()
-  return startup
+  })
 }
 
-/** Waits for a startup in progress, then stops ingest (a pass in flight drains first) and closes the listener. */
-export async function shutdown() {
+/** Deactivates: cancels an activation still loading, then (after any step ahead of it) stops ingest and the listener. Overlapping calls finish in order. */
+export function shutdown(): Promise<void> {
   generation++
-  await startup?.catch(() => {})
-  await teardown()
+  return enqueue(teardown)
 }

@@ -2,7 +2,7 @@
 //   node scripts/sync-web.mjs          write web/ and delete generated files the dashboard no longer has
 //   node scripts/sync-web.mjs --check  exit 1 when web/ differs from what dashboard/web produces
 // web/panel.js, panel.css and source.js are the plugin's own and are never touched.
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -11,6 +11,22 @@ export const SRC = join(here, '..', '..', 'dashboard', 'web')
 export const OUT = join(here, '..', 'web')
 const ENTRY = 'js/dash.js' // the module the panel boots
 const GENERATED_DIRS = ['css', 'js']
+
+/**
+ * Never follow a link: a symlinked source or destination could make the sync read from, write to or delete
+ * files outside the two trees. `rel` is checked component by component with lstat, and so is the root itself.
+ */
+function plain(root, rel = '') {
+  let at = root
+  for (const part of ['', ...rel.split(/[\\/]/).filter(Boolean)]) {
+    at = part ? join(at, part) : at
+    let info
+    try { info = lstatSync(at) } catch (error) { if (error.code === 'ENOENT') return at; throw error }
+    if (info.isSymbolicLink()) throw new Error(`${at} is a symbolic link; the sync never follows links (replace it with a real file or directory)`)
+  }
+  return at
+}
+const readSource = (src, file) => readFileSync(plain(src, file), 'utf8')
 
 /** Code without block comments and whole-line comments, so a commented-out import is not a dependency. */
 const code = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '')
@@ -31,13 +47,13 @@ export function sources(src = SRC) {
     const file = queue.pop()
     if (seen.has(file)) continue
     seen.add(file)
-    const text = code(readFileSync(join(src, file), 'utf8'))
+    const text = code(readSource(src, file))
     for (const pattern of IMPORTS) {
       for (const [, spec] of text.matchAll(pattern)) {
         if (!spec.startsWith('./') && !spec.startsWith('../')) throw new Error(`${file} imports "${spec}": only relative imports inside js/ are supported by the panel`)
         const target = relative(src, resolve(src, dirname(file), spec))
         if (!target.startsWith('js' + sep) || target.split(sep).includes('..')) throw new Error(`${file} imports "${spec}", which resolves outside dashboard/web/js`)
-        if (!existsSync(join(src, target))) throw new Error(`${file} imports "${spec}", which is not in dashboard/web`)
+        if (!existsSync(plain(src, target))) throw new Error(`${file} imports "${spec}", which is not in dashboard/web`)
         queue.push(target.split(sep).join('/'))
       }
     }
@@ -52,7 +68,7 @@ function swap(html, from, to) {
 
 /** The page: index.html minus the top bar and its script, plus the panel's own files. */
 function panelHtml(src) {
-  let html = readFileSync(join(src, 'index.html'), 'utf8')
+  let html = readSource(src, 'index.html')
   html = swap(html, '<meta name="color-scheme" content="dark">', '<meta name="color-scheme" content="dark light">')
   html = swap(html, '<link rel="stylesheet" href="/css/app.css">', '<link rel="stylesheet" href="css/app.css">\n<link rel="stylesheet" href="panel.css">')
   const bar = html.match(/<header class="topbar">[\s\S]*?<\/header>\n?/)
@@ -62,16 +78,17 @@ function panelHtml(src) {
 }
 
 export function build(src = SRC) {
-  const files = new Map(sources(src).map((f) => [f, readFileSync(join(src, f), 'utf8')]))
+  const files = new Map(sources(src).map((f) => [f, readSource(src, f)]))
   files.set('panel.html', panelHtml(src))
   return files
 }
 
 function listed(out, dir = out) {
-  if (!existsSync(dir)) return []
-  return readdirSync(dir).flatMap((n) => {
-    const p = join(dir, n)
-    return statSync(p).isDirectory() ? listed(out, p) : [relative(out, p)]
+  if (!existsSync(plain(dir, ''))) return []
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const p = join(dir, entry.name)
+    if (entry.isSymbolicLink()) plain(p, '') // throws, naming the link
+    return entry.isDirectory() ? listed(out, p) : [relative(out, p)]
   })
 }
 
@@ -79,7 +96,7 @@ function listed(out, dir = out) {
 export function drift({ src = SRC, out = OUT } = {}) {
   const want = build(src), problems = []
   for (const [f, text] of want) {
-    const p = join(out, f)
+    const p = plain(out, f)
     if (!existsSync(p)) problems.push(`missing ${f}`)
     else if (readFileSync(p, 'utf8') !== text) problems.push(`changed ${f}`)
   }
@@ -90,20 +107,21 @@ export function drift({ src = SRC, out = OUT } = {}) {
 /** Writes every generated file and removes stale ones (and directories they leave empty). */
 export function sync({ src = SRC, out = OUT } = {}) {
   const want = build(src)
+  plain(out) // the output root itself
   for (const [f, text] of want) {
-    const p = join(out, f)
-    mkdirSync(dirname(p), { recursive: true })
-    writeFileSync(p, text)
+    plain(out, f) // refuses a link anywhere on the way before anything is created or written
+    mkdirSync(dirname(join(out, f)), { recursive: true })
+    writeFileSync(plain(out, f), text)
   }
   for (const d of GENERATED_DIRS) {
-    for (const f of listed(out, join(out, d))) if (!want.has(f)) rmSync(join(out, f))
-    pruneEmpty(join(out, d))
+    for (const f of listed(out, join(out, d))) if (!want.has(f)) rmSync(plain(out, f))
+    pruneEmpty(join(out, d), out)
   }
 }
-function pruneEmpty(dir) {
+function pruneEmpty(dir, out) {
   if (!existsSync(dir)) return
-  for (const n of readdirSync(dir)) if (statSync(join(dir, n)).isDirectory()) pruneEmpty(join(dir, n))
-  if (!readdirSync(dir).length && dir !== join(OUT)) rmSync(dir, { recursive: true })
+  for (const entry of readdirSync(dir, { withFileTypes: true })) if (entry.isDirectory()) pruneEmpty(join(dir, entry.name), out)
+  if (!readdirSync(dir).length) rmSync(plain(out, relative(out, dir)), { recursive: true })
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
