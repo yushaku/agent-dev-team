@@ -121,7 +121,7 @@ test('standalone reports an occupied port and exits', async (t) => {
   t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
   const address = server.address();
   assert.ok(address && typeof address !== 'string');
-  const child = spawn(process.execPath, ['ledger/serve.ts', '--port', String(address.port)], {
+  const child = spawn(process.execPath, [new URL('../serve.ts', import.meta.url).pathname, '--port', String(address.port)], {
     env: { ...process.env, AGENT_LEDGER_HOME: home },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
