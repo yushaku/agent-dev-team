@@ -23,11 +23,13 @@ async function read(worker: Awaited<ReturnType<typeof mountWorker>>, days = 7) {
 }
 
 test('hands the trimmed dashboard snapshot over in chunks', async () => {
-  dashboard(() => Response.json({ generated_at: 1, rtk: {}, sessions: [{ id: 's', ctx: [1] }], orca: { runs: [] } }))
+  dashboard(() => Response.json({ generated_at: 1, rtk: { available: true }, skills_installed: ['tdd'], features: { big: 1 }, sessions: [{ id: 's', ctx: [1] }], orca: { runs: [] } }))
   const worker = await mountWorker(main)
   const { data } = await read(worker)
   assert.deepEqual(data.sessions, [{ id: 's' }])
-  assert.equal(data.rtk, undefined)
+  assert.deepEqual(data.rtk, { available: true }, 'the Agents tools view reads rtk and the installed skills')
+  assert.deepEqual(data.skills_installed, ['tdd'])
+  assert.equal(data.features.big, undefined, 'a key the panels do not read is still cut')
   assert.deepEqual(worker.refusals, [])
   await worker.deactivate()
   setDataSource()
