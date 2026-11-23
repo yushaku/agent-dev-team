@@ -24,6 +24,7 @@ description: "Use only when an Orchestrator Task assigns the Reviewer role or th
 - **Tests that prove nothing:** an expected value computed the way the code computes it, a mock that returns what the assertion checks, or an assertion that still passes with the behavior removed. Should fix by default.
 - **Spec axis:** requirements missing or partial; behavior in the diff nobody asked for; requirements that look implemented but are wrong. Quote the requirement or rule/AC ID when available. A diff that changes the assertion or expected behavior of a test with a spec ID while its spec line is unchanged is a `spec gap`.
 - **Tags:** `mechanical` on a Standards finding a linter, type rule, CI job or pre-commit hook could catch; add `recurring` when an earlier reviewer report of the repo (`.team/*/reports/*-reviewer*.md`) has the same class.
+- **Retro Task:** follow the `retro` skill instead of the Steps above; edit nothing. Each candidate names its evidence path and the cheapest fix: a lint, hook or CI check before a rule line; a rule line goes in the one team skill or project doc that owns it.
 - **Evidence:** each finding names the failing scenario with a reproduction, failing assertion or code path. Confirm or withdraw disputed findings with evidence.
 
 ## Done when

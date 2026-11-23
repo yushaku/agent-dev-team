@@ -43,8 +43,6 @@
 - Started = `in-progress`; delivered with Gate 2 pending = `in-review`; merged = `completed`.
 - No-code production investigations read the configured `branches.client_visible` remote ref, not an unrelated working tree.
 
-Evaluate the default over the next three delivered changes using existing reports: Task count, elapsed time, PO interventions and post-delivery defects. Fewer Tasks alone is not success.
-
 ## Worker permissions
 
 - Capabilities and permissions are session-specific. Attempt authorized work and recover from observed failures; give workers absolute skill paths and explicit action boundaries.

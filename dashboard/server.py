@@ -7,6 +7,7 @@ GET /api/team/skill?name=N  SKILL.md body for the side panel, see backend/team_d
 GET /api/agent/summary?days=N[&repo=&run=&role=&agent=&format=json]  compact summary + issues for agents
 GET /api/agent/run?id=RUN[&days=N&format=json]  one Run in detail (404 for an unknown id)
 GET /api/data?days=N  aggregated JSON snapshot, refreshed in the background.
+GET /api/cli-tools  executable inventory from this machine's PATH and local metadata.
 
 Sources (read only): ~/.claude/projects/**/*.jsonl, ~/.codex/sessions/**/*.jsonl,
 ~/.copilot/session-state/<uuid>/{workspace.yaml,events.jsonl} (GitHub Copilot CLI),
@@ -18,6 +19,7 @@ Python 3.9 stdlib only.
 """
 
 import os
+import json
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -27,7 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-from backend import cache, config, insights, orca, snapshots, team_docs
+from backend import cache, cli_tools, config, insights, orca, snapshots, team_docs
 
 # ---------------------------------------------------------------- http
 class Handler(BaseHTTPRequestHandler):
@@ -61,6 +63,9 @@ class Handler(BaseHTTPRequestHandler):
             res = insights.handle(u.path, parse_qs(u.query))
             if res:
                 return self.send(*res)
+        if u.path == "/api/cli-tools":
+            body = json.dumps(cli_tools.discover(), ensure_ascii=True).encode("utf-8")
+            return self.send(200, body, "application/json")
         if u.path == "/api/data":
             try:
                 days = int(parse_qs(u.query).get("days", ["7"])[0])

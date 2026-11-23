@@ -113,14 +113,13 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 - `docs/`: Vietnamese docs site (GitHub Pages)
 - `dashboard/`: local dashboard
 
-## Metrics (from Orca history, monthly)
+## Metrics
 
-- Lead time: idea to delivery.
-- Fix rounds per task (target: 1 or fewer).
-- Escaped defects found after merge.
-- PO touch time outside the gates.
-- Doc weight: committed docs and lines in `docs/` grow with capabilities, not features.
-- Tokens per delivered Task, and the Orchestrator's share versus workers (team dashboard, 127.0.0.1:4747).
+One row per delivered objective in each repo's `.team/metrics.md`, written by the Orchestrator after Gate 2 (`skills/orchestrator/references/delivery.md` "Metrics"). Compare rows before changing the process.
+
+- Fix rounds: count of `.team/<feature>/reports/*-builder-r*.md` (target: 1 or fewer).
+- Gate 2 findings: problems the PO raised while testing at Gate 2 that sent work back (target: 0).
+- Tokens: worker and Orchestrator totals from `localhost:4747/api/agent/run?id=<run>`.
 
 ## Dashboard
 

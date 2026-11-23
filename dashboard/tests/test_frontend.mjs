@@ -7,14 +7,14 @@ const elements = new Map();
 function element(id) {
   if (!elements.has(id)) elements.set(id, {
     id, style: {}, innerHTML: "", textContent: "", title: "", listeners: {},
-    showModal() { this.open = true; }, close() { this.open = false; },
+    showModal() { this.open = true; }, close() { this.open = false; }, focus() {},
     setAttribute() {}, addEventListener(event, fn) { this.listeners[event] = fn; },
   });
   return elements.get(id);
 }
 globalThis.document = {
   querySelector: element,
-  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-theo-repo", "tk-skills", "tk-search", "tk-cach-tinh"].map(element) : [],
+  querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-theo-repo", "tk-agents-tools", "tk-cli-tools", "tk-cach-tinh"].map(element) : [],
   addEventListener() {},
 };
 globalThis.window = { innerWidth: 1000, addEventListener() {} };
@@ -28,7 +28,156 @@ const { renderRoles, roleStats } = await import("../web/js/tabs/roles.js");
 const { renderRoleSkills } = await import("../web/js/tabs/role-skills.js");
 const { runDetail, renderRunTimeline, communicationDiagram } = await import("../web/js/tabs/runs.js");
 const { renderOverall } = await import("../web/js/tabs/overall.js");
+const { renderCliTools, showCliTools } = await import("../web/js/tabs/cli-tools.js");
 const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../web/js/tabs/search.js");
+
+test("CLI inventory groups actual sources, filters and escapes machine filenames", () => {
+  const data = { warnings: [], tools: [
+    { name: "<new-tool>", description: 'Inspect <projects> & files', description_source: 'npm · "example"', source: "npm", package: "@local/example", version: "1.2", path: "/bin/<new-tool>", resolved_path: "/packages/<new-tool>", alternatives: [{ path: "/old/<new-tool>", source: "Homebrew" }] },
+    { name: "another", source: "/custom/bin", package: "", version: "", path: "/custom/bin/another", resolved_path: "/custom/bin/another", alternatives: [] },
+    { name: "hidden-brew", source: "/opt/homebrew/bin" },
+    { name: "hidden-cloud", source: "/opt/homebrew/share/google-cloud-sdk/bin" },
+  ] };
+  renderCliTools(data);
+  assert.equal(element("#cli-message").hidden, true);
+  assert.match(element("#cli-list").innerHTML, /&lt;new-tool&gt;/);
+  assert.doesNotMatch(element("#cli-list").innerHTML, /<new-tool>/);
+  assert.match(element("#cli-list").innerHTML, /Inspect &lt;projects&gt; &amp; files/);
+  assert.match(element("#cli-list").innerHTML, /title="npm · &quot;example&quot;"/);
+  assert.doesNotMatch(element("#cli-list").innerHTML, /Chi tiết đường dẫn|cli-card-paths/);
+  assert.match(element("#cli-list").innerHTML, /<article class="cli-card cli-package-card">/);
+  assert.doesNotMatch(element("#cli-list").innerHTML, /<table/);
+  assert.doesNotMatch(element("#cli-list").innerHTML, /hidden-brew|hidden-cloud/);
+  renderCliTools(data, " EXAMPLE ", "npm");
+  assert.match(element("#cli-list").innerHTML, /&lt;new-tool&gt;/);
+  assert.doesNotMatch(element("#cli-list").innerHTML, /another/);
+  renderCliTools(data, "inspect <projects>");
+  assert.match(element("#cli-list").innerHTML, /&lt;new-tool&gt;/);
+  assert.doesNotMatch(element("#cli-list").innerHTML, /another/);
+  renderCliTools(data, "missing");
+  assert.match(element("#cli-list").innerHTML, /Không tìm thấy/);
+  renderCliTools(data, "", "/opt/homebrew/bin", true);
+  assert.match(element("#cli-list").innerHTML, /Không tìm thấy/);
+});
+
+test("Homebrew hides only confirmed dependencies by default and labels each installation", () => {
+  const tool = (name, source, install_kind) => ({ name, source, install_kind, package: name, version: "1", path: "/bin/" + name, resolved_path: "/bin/" + name, alternatives: [] });
+  const inventory = { warnings: [], tools: [
+    tool("requested-tool", "Homebrew", "app"),
+    tool("automatic-library", "Homebrew", "dependency"),
+    tool("legacy-tool", "Homebrew", "unknown"),
+    tool("other-tool", "npm", "dependency"),
+  ] };
+  renderCliTools(inventory);
+  let html = element("#cli-list").innerHTML;
+  assert.match(html, /requested-tool/);
+  assert.match(html, /Cài trực tiếp/);
+  assert.match(html, /legacy-tool/);
+  assert.match(html, /Chưa rõ cách cài/);
+  assert.match(html, /other-tool/);
+  assert.doesNotMatch(html, /automatic-library/);
+  assert.doesNotMatch(html, /Gom theo package|cli-package-intro/);
+  assert.match(html, /id="cli-homebrew"[^]*?<label class="cli-dependencies">/);
+  renderCliTools(inventory, "", "Homebrew", true);
+  html = element("#cli-list").innerHTML;
+  assert.match(html, /automatic-library/);
+  assert.match(html, /Dependency/);
+  assert.doesNotMatch(html, /other-tool/);
+  renderCliTools(inventory, "automatic-library", "Homebrew");
+  assert.match(element("#cli-list").innerHTML, /Không tìm thấy/);
+  assert.match(element("#cli-list").innerHTML, /id="cli-dependencies"/);
+});
+
+test("Homebrew groups package versions, keeps sibling commands in search and expands long command lists", () => {
+  const tools = Array.from({ length: 8 }, (_, i) => ({
+    name: `command-${i}`, source: "Homebrew", package: '<suite>', version: '2.0',
+    install_kind: "app", path: `/bin/command-${i}`, description: i === 0 ? "Suite utilities" : "",
+    description_source: "Homebrew · suite",
+  }));
+  tools.push({ ...tools[0], name: "old-command", version: "1.0" });
+  const inventory = { warnings: [], tools };
+  renderCliTools(inventory);
+  let html = element("#cli-list").innerHTML;
+  assert.equal((html.match(/class="cli-card cli-package-card"/g) || []).length, 2);
+  assert.match(html, /\(2 package\)/);
+  assert.match(html, /&lt;suite&gt;/);
+  assert.doesNotMatch(html, /<suite>/);
+  assert.match(html, /2 lệnh khác/);
+  assert.match(html, /class="cli-package-more"><summary>/);
+  renderCliTools(inventory, "command-7", "Homebrew");
+  html = element("#cli-list").innerHTML;
+  assert.equal((html.match(/class="cli-card cli-package-card"/g) || []).length, 1);
+  assert.match(html, /command-0/);
+  assert.match(html, /command-7/);
+  assert.match(html, /class="cli-package-more" open/);
+  assert.match(html, /Suite utilities/);
+  assert.doesNotMatch(html, /old-command/);
+});
+
+test("all CLI sources share package cards without merging sources or unnamed commands", () => {
+  const tool = (name, source, pkg = "shared-suite") => ({
+    name, source, package: pkg, version: "1.0", path: `/bin/${name}`,
+    description: `${source} description`, description_source: `${source} · metadata`,
+  });
+  const inventory = { warnings: [], tools: [
+    tool("npm-main", "npm"), tool("npm-helper", "npm"),
+    tool("uv-main", "uv"), tool("local-a", "/local/bin", ""), tool("local-b", "/local/bin", ""),
+  ] };
+  renderCliTools(inventory);
+  let html = element("#cli-list").innerHTML;
+  assert.equal((html.match(/class="cli-card cli-package-card"/g) || []).length, 4);
+  assert.doesNotMatch(html, /Cài trực tiếp|Chưa rõ cách cài|Dependency/);
+  assert.match(html, /2 mục/);
+  renderCliTools(inventory, "npm-helper", "npm");
+  html = element("#cli-list").innerHTML;
+  assert.equal((html.match(/class="cli-card cli-package-card"/g) || []).length, 1);
+  assert.match(html, /npm-main/);
+  assert.match(html, /npm-helper/);
+  assert.doesNotMatch(html, /uv-main|local-a|local-b/);
+  assert.match(html, /npm description/);
+});
+
+test("CLI inventory loads independently, retries failures and rescans new commands", async () => {
+  const originalFetch = globalThis.fetch;
+  element("#cli-query").value = "";
+  element("#cli-source").value = "";
+  const data = { machine: "local", system: "Darwin", generated_at: 1, directories: ["/bin"], warnings: [], sources: {}, tools: [] };
+  try {
+    globalThis.fetch = async url => { assert.equal(url, "/api/cli-tools"); return { ok: false, status: 503 }; };
+    await showCliTools();
+    assert.equal(element("#cli-message").hidden, false);
+    assert.match(element("#cli-message").textContent, /Không quét được.*503/);
+    assert.equal(element("#cli-refresh").disabled, false);
+    globalThis.fetch = async () => ({ ok: true, json: async () => data });
+    await element("#cli-refresh").listeners.click();
+    assert.equal(element("#cli-message").hidden, true);
+    assert.match(element("#cli-list").innerHTML, /Không tìm thấy/);
+    data.tools.push({ name: "brand-new", source: "custom", package: "", version: "", path: "/bin/brand-new", resolved_path: "/bin/brand-new", alternatives: [] });
+    data.sources.custom = 1;
+    data.sources["/opt/homebrew/bin"] = 1;
+    data.sources["/opt/homebrew/share/google-cloud-sdk/bin"] = 5;
+    element("#cli-source").value = "/opt/homebrew/bin";
+    await element("#cli-refresh").listeners.click();
+    assert.match(element("#cli-list").innerHTML, /brand-new/);
+    assert.doesNotMatch(element("#cli-source").innerHTML, /\/opt\/homebrew/);
+    assert.equal(element("#cli-source").value, "");
+    data.tools.push({ name: "dependency-only", source: "Homebrew", package: "lib", install_kind: "dependency" });
+    data.sources.Homebrew = 1;
+    await element("#cli-refresh").listeners.click();
+    assert.doesNotMatch(element("#cli-list").innerHTML, /dependency-only/);
+    element("#cli-list").listeners.change({ target: { id: "cli-dependencies", checked: true } });
+    assert.match(element("#cli-list").innerHTML, /dependency-only/);
+    assert.match(element("#cli-list").innerHTML, /type="checkbox" checked/);
+    element("#cli-list").listeners.change({ target: { id: "cli-dependencies", checked: false } });
+    assert.doesNotMatch(element("#cli-list").innerHTML, /dependency-only/);
+    globalThis.fetch = async () => { throw new Error("offline"); };
+    await element("#cli-refresh").listeners.click();
+    assert.match(element("#cli-message").textContent, /giữ kết quả lần quét trước/);
+    assert.match(element("#cli-list").innerHTML, /brand-new/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("role charts resolve model colours after rebuilding the palette", () => {
   const sessions = ["a", "b"].map(model => ({
@@ -99,7 +248,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     const exports = specifier === "./lib/charts.js" ? C : {
       renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
       renderRoles() { rendered.push("roles"); }, renderRoleSkills() { rendered.push("role-skills"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
-      showSession() {}, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); }, toggleSearchKind() { return true; },
+      showSession() {}, showCliTools() { rendered.push("cli-tools"); }, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); }, toggleSearchKind() { return true; },
     };
     return new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
@@ -138,14 +287,22 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     dash.namespace.showView("tk-theo-repo", { hash: false });
     assert.deepEqual(rendered.sort(), ["repos", "role-skills", "roles", "sessions", "task-search", "timeline"]);
     rendered.length = 0;
+    dash.namespace.showView("tk-agents-tools", { hash: false });
+    assert.deepEqual(rendered, ["skills", "search", "rtk-commands"]);
+    rendered.length = 0;
     dash.namespace.showView("tk-skills", { hash: false });
-    assert.deepEqual(rendered, ["skills"]);
+    assert.deepEqual(rendered, ["skills", "search", "rtk-commands"]);
     rendered.length = 0;
     dash.namespace.showView("tk-search", { hash: false });
-    assert.deepEqual(rendered.sort(), ["rtk-commands", "search"]);
+    assert.deepEqual(rendered, ["skills", "search", "rtk-commands"]);
     rendered.length = 0;
     dash.namespace.showView("tk-cach-tinh", { hash: false });
     assert.deepEqual(rendered, []);
+    dash.namespace.showView("tk-cli-tools", { hash: false });
+    assert.deepEqual(rendered, ["cli-tools"]);
+    assert.equal(element(".dash-head").hidden, true);
+    dash.namespace.showView("tk-tong-quan", { hash: false });
+    assert.equal(element(".dash-head").hidden, false);
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalError;

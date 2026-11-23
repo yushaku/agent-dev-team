@@ -239,6 +239,51 @@ tr[hidden] { display: none; }
 }
 .dash { display: grid; gap: var(--s-7); min-width: 0; }
 .dash-head { display: grid; gap: var(--s-3); }
+.dash-head[hidden] { display: none; }
+#tk-cli-tools { grid-template-columns: minmax(0, 1fr); gap: var(--s-5); }
+#tk-cli-tools-h { font-size: var(--fs-5); }
+.cli-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: var(--s-3); }
+.cli-controls label { display: grid; gap: var(--s-2); min-width: 0; max-width: 100%; font-size: var(--fs-1); }
+.cli-controls select { min-width: 0; width: 100%; }
+.dash .cli-controls input[type="search"] { min-width: 0; width: 100%; }
+.cli-controls button { white-space: nowrap; }
+.cli-dependencies { display: flex; align-items: center; gap: var(--s-2); width: fit-content; margin-top: var(--s-3); font-size: var(--fs-1); cursor: pointer; }
+.cli-dependencies input { margin: 0; accent-color: var(--lavender); }
+.cli-install-kind { color: var(--subtext0); }
+#cli-refresh { display: grid; place-items: center; min-height: 28px; }
+@media (prefers-reduced-motion: no-preference) {
+  #cli-refresh[aria-busy="true"] svg { animation: cli-spin 0.8s linear infinite; }
+}
+@keyframes cli-spin { to { transform: rotate(360deg); } }
+#cli-message[hidden] { display: none; }
+#cli-list { display: grid; gap: var(--s-3); min-width: 0; }
+.cli-group { min-width: 0; }
+.cli-group > summary { overflow-wrap: anywhere; font-weight: 600; cursor: pointer; padding: var(--s-2) 0; }
+.cli-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); align-items: start; gap: var(--s-3); padding-top: var(--s-3); }
+.cli-card { display: grid; gap: var(--s-2); min-width: 0; padding: var(--s-4); background: var(--mantle); border-radius: var(--r-2); overflow-wrap: anywhere; }
+.cli-card h2 { font-size: var(--fs-3); }
+.cli-card h2 code { background: none; padding: 0; font-size: inherit; }
+.cli-description { font-size: var(--fs-2); }
+.cli-command-path { color: var(--subtext1); }
+.cli-package-section { gap: var(--s-3); margin-top: var(--s-5); }
+.cli-package-section-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s-3); font-size: var(--fs-3); }
+.cli-package-section-title .small { font-weight: 400; }
+.cli-package-cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); padding-top: 0; align-items: stretch; }
+.cli-package-card { grid-template-rows: auto 1fr auto; gap: var(--s-3); }
+.cli-package-card-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s-2); justify-content: space-between; }
+.cli-package-card-head h3 { font-size: var(--fs-3); min-width: 0; }
+.cli-package-card-head code { background: none; padding: 0; font-size: inherit; }
+.cli-package-version { color: var(--subtext0); font-variant-numeric: tabular-nums; }
+.cli-package-command-list { display: grid; gap: var(--s-2); }
+.cli-package-commands { display: flex; flex-wrap: wrap; gap: var(--s-2); list-style: none; padding: 0; }
+.cli-package-commands li { min-width: 0; max-width: 100%; }
+.cli-package-commands code { display: block; font-size: var(--fs-1); padding: var(--s-1) var(--s-2); }
+.cli-package-more { font-size: var(--fs-1); color: var(--subtext1); }
+.cli-package-more > summary { cursor: pointer; width: fit-content; padding: var(--s-1) 0; }
+.cli-package-more[open] > summary { margin-bottom: var(--s-2); }
+@media (max-width: 640px) {
+  #tk-cli-tools-h { font-size: var(--fs-4); }
+}
 .dash-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
 .dash #overall-timeline, .dash #overall-run-list { min-width: 0; }
 .tk-sync { display: inline-flex; align-items: center; gap: var(--s-1); margin-left: auto; }
@@ -329,7 +374,7 @@ details.tbl[open] > summary { margin-bottom: var(--s-3); }
   .topbar .wrap { flex-wrap: wrap; gap: var(--s-2); }
   .topbar .doc-link { margin-left: auto; }
   #tk-nav { order: 1; flex: 0 0 100%; flex-wrap: nowrap; overflow-x: auto; }
-  #tk-nav [data-view] { flex: none; white-space: nowrap; min-height: 44px; }
+  #tk-nav [data-view] { flex: none; white-space: nowrap; min-height: 44px; padding-inline: var(--s-1); }
   .dash input[type="search"] { min-width: 0; width: 100%; }
   figure.chart { padding: var(--s-4); }
   .big { font-size: var(--fs-5); }

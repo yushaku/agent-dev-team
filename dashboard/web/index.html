@@ -12,14 +12,14 @@
 
 <header class="topbar">
   <div class="wrap">
-    <a class="brand" href="#tk-tong-quan" aria-label="Orca team dashboard, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>Orca team dashboard</span></a>
-    <nav id="tk-nav" aria-label="Mục token"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-repo">Tasks</button><button type="button" data-view="tk-skills">Skill đã dùng</button><button type="button" data-view="tk-search">Tools</button></nav>
+    <a class="brand" href="#tk-tong-quan" aria-label="orca team, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>orca team</span></a>
+    <nav id="tk-nav" aria-label="Mục dashboard"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-repo">Tasks</button><button type="button" data-view="tk-agents-tools">Agents tools</button><button type="button" data-view="tk-cli-tools">CLI tools</button></nav>
     <a class="doc-link" href="https://yushaku.github.io/agent-dev-team/docs/" target="_blank" rel="noopener">Tài liệu</a>
   </div>
 </header>
 
 <main class="wrap">
-<section id="token" aria-label="Số liệu token">
+<section id="token" aria-label="Dashboard">
 <div class="dash">
   <div class="dash-head">
     <div class="dash-filters" role="group" aria-label="Bộ lọc">
@@ -89,24 +89,41 @@
     <figure class="chart" id="c-heat"></figure>
   </section>
 
-  <section class="dash-view" id="tk-skills" aria-labelledby="tk-skills-h" hidden>
+  <section class="dash-view" id="tk-agents-tools" aria-labelledby="tk-agents-tools-h" hidden>
     <div class="panel-head">
-      <h3 id="tk-skills-h">Skill đã dùng</h3>
+      <h3 id="tk-agents-tools-h">Agents tools</h3>
     </div>
-    <figure class="chart" id="c-skills"></figure>
+    <section aria-labelledby="agent-skills-h">
+      <h3 id="agent-skills-h">Skill đã dùng</h3>
+      <figure class="chart" id="c-skills"></figure>
+    </section>
+    <section aria-labelledby="agent-codegraph-h">
+      <div class="panel-head">
+        <h3 id="agent-codegraph-h">Codegraph</h3>
+        <p class="lead">Số lần agent gọi codegraph (MCP hoặc CLI) so với rg, grep, find và đọc file. Tỉ lệ codegraph (% cg) tính trên codegraph, rg, grep và find, không tính đọc file. Tỉ lệ thấp ở một vai hay worktree là dấu hiệu agent chưa dùng index.</p>
+      </div>
+      <section aria-label="Theo agent"><figure class="chart" id="c-search-agent"></figure></section>
+      <section aria-label="Theo vai"><figure class="chart" id="c-search-role"></figure></section>
+      <section aria-label="Theo repo / worktree"><figure class="chart" id="c-search-wt"></figure></section>
+    </section>
+    <section aria-labelledby="agent-rtk-h">
+      <h3 id="agent-rtk-h">RTK</h3>
+      <section aria-label="RTK theo lệnh"><figure class="chart" id="c-rtk-cmd"></figure></section>
+    </section>
   </section>
 
-  <section class="dash-view" id="tk-search" aria-labelledby="tk-search-h" hidden>
+  <section class="dash-view" id="tk-cli-tools" aria-labelledby="tk-cli-tools-h" hidden>
     <div class="panel-head">
-      <h3 id="tk-search-h">Tools</h3>
-      <p class="lead">Số lần agent gọi codegraph (MCP hoặc CLI) so với rg, grep, find và đọc file. Tỉ lệ codegraph (% cg) tính trên codegraph, rg, grep và find, không tính đọc file. Tỉ lệ thấp ở một vai hay worktree là dấu hiệu agent chưa dùng index.</p>
+      <h1 id="tk-cli-tools-h">CLI tools</h1>
+      <p class="lead">Các lệnh cài thêm trên máy, nhóm theo nguồn cài đặt. Mở một nguồn hoặc tìm lệnh bên dưới. Các bản cài thêm trùng tên được gộp theo thứ tự PATH.</p>
     </div>
-    <h3>Codegraph</h3>
-    <section aria-label="Theo agent"><figure class="chart" id="c-search-agent"></figure></section>
-    <section aria-label="Theo vai"><figure class="chart" id="c-search-role"></figure></section>
-    <section aria-label="Theo repo / worktree"><figure class="chart" id="c-search-wt"></figure></section>
-    <h3>RTK</h3>
-    <section aria-label="RTK theo lệnh"><figure class="chart" id="c-rtk-cmd"></figure></section>
+    <div class="cli-controls">
+      <label>Tìm lệnh<input id="cli-query" type="search" placeholder="Tên lệnh, mô tả, package"></label>
+      <label>Nguồn cài đặt<select id="cli-source"><option value="">Mọi nguồn</option></select></label>
+      <button id="cli-refresh" type="button" aria-label="Quét lại" title="Quét lại"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9"/></svg></button>
+    </div>
+    <div id="cli-message" class="muted small" role="status" hidden></div>
+    <div id="cli-list"></div>
   </section>
 
   <section class="dash-view" id="tk-cach-tinh" aria-labelledby="tk-cach-tinh-h" hidden>

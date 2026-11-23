@@ -144,6 +144,18 @@
       "sourceType": "github",
       "skillPath": "skills/react-best-practices/SKILL.md",
       "computedHash": "7991ed4fbecdac23f47c1a40c243e00a212a9e7f3604db93959b3ae11dffe299"
+    },
+    "retro": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/retro/SKILL.md",
+      "computedHash": "e260aefb7b75b3548a3ee9883afbf8808e521f2e86feec92399617894f83b7c2"
+    },
+    "writing-for-agents": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/writing-for-agents/SKILL.md",
+      "computedHash": "e79a2476b2417b228922453478d9505a6b9af19f3a412e560728ce62ed3555ca"
     }
   }
 }

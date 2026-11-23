@@ -11,6 +11,7 @@ import { renderSkills } from "./tabs/skills.js";
 import { renderRtkCommands } from "./tabs/tokens.js";
 import { renderSearch, renderTaskRoleSearch, toggleSearchKind } from "./tabs/search.js";
 import { renderOverall } from "./tabs/overall.js";
+import { showCliTools } from "./tabs/cli-tools.js";
 
 async function load() {
   C.state.loading = true; setAuto();
@@ -51,8 +52,7 @@ function render() {
   if (view === "tk-tong-quan") renderOverview(S);
   else if (view === "tk-theo-repo") {
     renderOverall(S); renderRoles(S); renderRoleSkills(S); renderRepos(S); renderTaskRoleSearch(S); renderSessionCharts(S);
-  } else if (view === "tk-skills") renderSkills(S);
-  else if (view === "tk-search") { renderSearch(S); renderRtkCommands(); }
+  } else if (view === "tk-agents-tools") { renderSkills(S); renderSearch(S); renderRtkCommands(); }
 }
 
 /* ---------- cross filter ---------- */
@@ -161,10 +161,13 @@ const views = [...document.querySelectorAll(".dash-view")];
 const viewBtns = [...document.querySelectorAll("#tk-nav [data-view]")];
 const VKEY = "team-app:token-view";
 export function showView(id, { hash = true } = {}) {
+  if (id === "tk-skills" || id === "tk-search") id = "tk-agents-tools";
   if (id === "tk-toan-dien" || id === "tk-theo-vai") id = "tk-theo-repo";
   if (id === "tk-runs" || id === "tk-dang-chay") id = "tk-theo-repo";
   if (!views.some(v => v.id === id)) id = views[0].id;
   views.forEach(v => { v.hidden = v.id !== id; });
+  $(".dash-head").hidden = id === "tk-cli-tools";
+  if (id === "tk-cli-tools") showCliTools();
   viewBtns.forEach(b => { const on = b.dataset.view === id; if (b.tagName === "A") { if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); } else b.setAttribute("aria-pressed", String(on)); });
   try { localStorage.setItem(VKEY, id); } catch (e) {}
   if (hash && location.hash !== "#" + id) history.replaceState(null, "", "#" + id);

@@ -37,11 +37,9 @@ license: MIT
 
 ## Prose
 
-- Load the `humanizer` skill for prose changes.
-- Lead with the point, no staged openers.
-- Avoid inflated words: robust, seamless, comprehensive, leverage, powerful, crucial, delve.
-- No not-X-but-Y contrasts, forced groups of three, or one-line closers.
-- No em or en dashes, in prose, comments, test names and error messages. Keep UI glyphs matching the house style of untouched files (empty-value placeholder, date-range separator), strings that tests or generated text assert, and ticket keys in test names (`<KEY>: ...`). In HTML, check added lines for `&mdash;` and `&ndash;` with `git diff -U0 | grep '^+' | grep -E '&mdash;|&ndash;'`; check raw dashes separately.
+- When the diff changes prose (docs, PR body, commit body, drafts), load the `humanizer` skill in embedded mode; it owns the prose patterns. Code-only diffs skip it.
+- The rules below are team additions; where they conflict with `humanizer`, these win.
+- No em or en dashes, in prose, comments, test names and error messages, even when a writing sample uses them (overrides `humanizer` §8). Keep UI glyphs matching the house style of untouched files (empty-value placeholder, date-range separator), strings that tests or generated text assert, and ticket keys in test names (`<KEY>: ...`). In HTML, check added lines for `&mdash;` and `&ndash;` with `git diff -U0 | grep '^+' | grep -E '&mdash;|&ndash;'`; check raw dashes separately.
 - Use bold, headers and bullets only where the existing docs use them.
 - Prefer the concrete: file, function, number, ticket key.
 - Generated artifacts: edit the source and re-render, never hand-edit the output.
