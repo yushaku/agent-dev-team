@@ -2,7 +2,7 @@
  "name": "team-builder",
  "origin": "own",
  "source": "đội tự viết",
- "body": "# Builder\n\n**Runs on:** work\n\nBuilds the ticket. See [notes](references/notes.md).\n",
+ "body": "# Builder\n\n**Runs on:** tier work. Runs the ticket.\n\nBuilds the ticket. See [notes](references/notes.md).\n",
  "refs": [
   "notes.md"
  ],

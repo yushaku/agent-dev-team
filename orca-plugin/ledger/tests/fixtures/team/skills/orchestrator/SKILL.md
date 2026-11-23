@@ -4,6 +4,6 @@ description: Coordinates the team.
 ---
 # Orchestrator
 
-**Runs on:** top
+**Runs on:** tier top. Reviews the diff.
 
 Coordinates.

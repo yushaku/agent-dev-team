@@ -14,7 +14,8 @@ function metadata(path: string) {
     return '';
   }
 }
-function install(path: string) {
+/** Where a command came from, by its resolved path and local package metadata: [source, package, version]. */
+export function install(path: string) {
   const parts = path.split('/');
   for (const m of ['Cellar', 'Caskroom']) {
     const i = parts.indexOf(m);
@@ -87,12 +88,10 @@ function details(t) {
         ?.replaceAll('\\"', '"') || '';
   if (t.source === 'npm')
     try {
-      desc =
-        JSON.parse(
-          metadata(
-            join(parts.slice(0, parts.lastIndexOf('node_modules') + 1).join('/'), t.package, 'package.json'),
-          ),
-        ).description || '';
+      const value = JSON.parse(
+        metadata(join(parts.slice(0, parts.lastIndexOf('node_modules') + 1).join('/'), t.package, 'package.json')),
+      ).description;
+      desc = typeof value === 'string' ? value : ''; // a package.json can hold anything: only text is a description
     } catch {}
   if (['uv', 'pipx'].includes(t.source)) {
     const lib = join(dirname(dirname(path)), 'lib');
@@ -112,13 +111,14 @@ function details(t) {
   }
   return [desc.trim().replace(/\s+/g, ' ').slice(0, 500), desc ? t.source + ' · ' + t.package : ''];
 }
-export function discover(pathEnv?: string): CliTools {
+/** Inventory of the commands on a PATH (the login shell's plus this process's when none is given; `shell` is only for tests). */
+export function discover(pathEnv?: string, shell = userInfo().shell || '/bin/sh'): CliTools {
   const warnings: string[] = [];
   if (pathEnv === undefined) {
     pathEnv = process.env.PATH || '';
     try {
       const out = execFileSync(
-        userInfo().shell || '/bin/sh',
+        shell,
         ['-ilc', 'printf "\\n__TEAM_DASHBOARD_PATH__%s\\n" "$PATH"'],
         { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] },
       );

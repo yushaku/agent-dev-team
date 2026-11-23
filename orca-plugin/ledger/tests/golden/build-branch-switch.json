@@ -425,13 +425,13 @@
    "roles": {
     "builder": {
      "agent": null,
-     "tier": null,
-     "text": "work"
+     "tier": "work",
+     "text": "tier work. Runs the ticket."
     },
     "reviewer": {
      "agent": null,
-     "tier": null,
-     "text": "top"
+     "tier": "top",
+     "text": "tier top. Reviews the diff."
     }
    }
   },

@@ -4,6 +4,6 @@ description: Independent two-axis review of a diff.
 ---
 # Reviewer
 
-**Runs on:** top
+**Runs on:** tier top. Reviews the diff.
 
 Reviews a diff.
