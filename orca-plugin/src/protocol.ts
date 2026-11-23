@@ -1,15 +1,9 @@
-// The panel <-> worker contract, declared once: src/panel.tsx and src/worker.ts both read it.
+// The panel <-> worker contract. The HTML panel (web/panel.js) calls these by name.
 export {}
 
 declare module 'orca' {
   interface PluginRequests {
-    /** The total the worker keeps in storage. */
-    'counter.get': { output: { total: number } }
-    /** Adds `by` to the stored total and answers the new total. */
-    'counter.add': { input: { by: number }; output: { total: number } }
-  }
-  interface PluginPanelEvents {
-    /** Posted to every open panel after the total changes. */
-    'counter.changed': { total: number }
+    /** The dashboard's /api/data snapshot, cut down to what the Tasks tab reads. */
+    'tasks.data': { input: { days: number }; output: Record<string, unknown> }
   }
 }
