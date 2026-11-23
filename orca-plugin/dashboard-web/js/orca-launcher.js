@@ -4,6 +4,9 @@
 // retry, and it only replaces itself (document.open) once it holds a real page. Pure of globals: agents-tools.html
 // passes them in, and tests pass stubs.
 
+/** index.html carries this meta tag; nothing else the launcher could be handed does. */
+export const MARKER = /<meta\s+name="team-dashboard"\s+content="page"\s*\/?>/i
+
 /** @param {{ fetch: typeof fetch, doc: { getElementById(id: string): any, open(): void, write(html: string): void, close(): void },
  *  target: { __orcaView?: string }, view: string, page?: string }} env */
 export function launch({ fetch, doc, target, view, page = 'index.html' }) {
@@ -15,7 +18,8 @@ export function launch({ fetch, doc, target, view, page = 'index.html' }) {
       const res = await fetch(page, { cache: 'no-store' })
       if (!res.ok) throw new Error('HTTP ' + res.status)
       const html = await res.text()
-      if (!/^\s*<!doctype html/i.test(html)) throw new Error('not the dashboard page')
+      // Only the dashboard's own page is accepted: any server or fallback page can start with a doctype.
+      if (!MARKER.test(html)) throw new Error('not the dashboard page')
       target.__orcaView = view
       doc.open()
       doc.write(html)

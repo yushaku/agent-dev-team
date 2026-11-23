@@ -28,6 +28,7 @@ test('each panel opens the view it is named for, and the page has those views', 
   assert.match(launcher, /id="retry"/)
   assert.match(launcher, /\.\/js\/orca-launcher\.js/)
   assert.match(module, /fetch\(page/)
+  assert.match(module, /MARKER\.test\(html\)/, 'only a page with the dashboard marker is accepted')
   assert.match(module, /target\.__orcaView = view/)
   for (const source of [launcher, module]) assert.doesNotMatch(source, /location\.replace|location\.href|location\.assign/, 'navigating away would lose window.orca')
   assert.match(boot, /window\.__orcaView/)
