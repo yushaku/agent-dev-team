@@ -11,9 +11,16 @@ const ORIGIN = {
 
 async function getJSON(url) {
   const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(url + ": HTTP " + r.status);
+  if (!r.ok) {
+    /* A refusal may explain itself ({error}): the panel's worker says when a document is too large for it. Shown as text. */
+    let reason = "";
+    try { const body = await r.json(); if (body && typeof body.error === "string") reason = body.error; } catch (e) {}
+    throw Object.assign(new Error(reason || url + ": HTTP " + r.status), { status: r.status });
+  }
   return r.json();
 }
+
+const DASHBOARD = "http://127.0.0.1:4747/#tk-agents-tools";
 
 function mdBlock(tokens) {
   const div = document.createElement("div");
@@ -38,7 +45,13 @@ function openSheet(title, build) {
   dlg.scrollTop = 0;
   $("#sheet-close").focus();
   Promise.resolve().then(build).then(nodes => { if ($("#sheet-title").textContent === title) body.replaceChildren(...nodes); })
-    .catch(e => body.replaceChildren(Object.assign(document.createElement("p"), { className: "muted", textContent: "Lỗi: " + e.message })));
+    .catch(e => {
+      const nodes = [Object.assign(document.createElement("p"), { className: "muted", textContent: "Lỗi: " + e.message })];
+      /* Inside Orca's panel a document the panel cannot carry (HTTP 413) can still be read in the browser. */
+      if (e.status === 413 && globalThis.orca?.shell?.openExternal)
+        nodes.push(Object.assign(document.createElement("button"), { type: "button", textContent: "Mở trên trình duyệt ↗", onclick: () => globalThis.orca.shell.openExternal(DASHBOARD) }));
+      body.replaceChildren(...nodes);
+    });
 }
 
 function openSkill(name) {
