@@ -4,7 +4,7 @@ Use `start.md` for team selection; add a Support Engineer only for a named gap e
 
 ## Intake
 
-- Read only the title, description and the last few comments: enough to classify the type below and pick the team. A long or contradictory thread goes to a Support Engineer (`roles/support.md` step 1); use its requirement summary, never the full thread, in the Orchestrator context. Manual access: the PO supplies the thread.
+- Read only the title, description and the last few comments: enough to classify the type below and pick the team. A long or contradictory thread goes to a Support Engineer (`skills/team-support-engineer/SKILL.md` step 1); use its requirement summary, never the full thread, in the Orchestrator context. Manual access: the PO supplies the thread.
 - Link related tickets and deduplicate before investigating. The ticket remains the external record; keep internal evidence in the Run reports.
 - Poll only on an authorized schedule using the configured query. Waiting for the client is a waiting status; resume when an answer arrives.
 - Prioritize incidents, overdue tickets, client-blocked work, then tracker priority and due date.

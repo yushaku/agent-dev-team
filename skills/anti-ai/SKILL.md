@@ -10,9 +10,15 @@ license: MIT
 - Run this as a separate pass, preferably in a fresh context.
 - For docs work in progress, give writing agents the prose rules before work, then run a separate fresh-context pass on the finished diff.
 
+## Team runs
+
+- **Reviewer:** first pass of `verify` on the build diff and each scoped re-review of fix commits. Style findings go in `## Standards`, never blocking; prose edits stay inside the branch diff.
+- **Writer:** the session that wrote a PR description, commit message or outgoing draft runs it at delivery and before every reply gate.
+- A pass that only edits prose needs factual and formatting checks, not the full test suite.
+
 ## Guardrails
 
-- Do not change behaviour. Run tests after the pass; if any fail, revert that edit.
+- Do not change behaviour. Run the checks the edit affects after the pass; if any fail, revert that edit.
 - Follow the surrounding code style.
 - Never invent facts, names, history or reasons.
 - Check factual claims in changed prose against the code; narrow false absolutes to what the code supports.
@@ -35,7 +41,7 @@ license: MIT
 - Lead with the point, no staged openers.
 - Avoid inflated words: robust, seamless, comprehensive, leverage, powerful, crucial, delve.
 - No not-X-but-Y contrasts, forced groups of three, or one-line closers.
-- No em or en dashes. In HTML, check added lines for `&mdash;` and `&ndash;` with `git diff -U0 | grep '^+' | grep -E '&mdash;|&ndash;'`; check raw dashes separately.
+- No em or en dashes, in prose, comments, test names and error messages. Keep UI glyphs matching the house style of untouched files (empty-value placeholder, date-range separator), strings that tests or generated text assert, and ticket keys in test names (`<KEY>: ...`). In HTML, check added lines for `&mdash;` and `&ndash;` with `git diff -U0 | grep '^+' | grep -E '&mdash;|&ndash;'`; check raw dashes separately.
 - Use bold, headers and bullets only where the existing docs use them.
 - Prefer the concrete: file, function, number, ticket key.
 - Generated artifacts: edit the source and re-render, never hand-edit the output.

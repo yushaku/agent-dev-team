@@ -98,12 +98,12 @@ models:
     top: [deep-review]
   roles:
     builder: {tier: work, prefer: [implementation]}
-    designer: {tier: top}     # override: role card default is work
+    designer: {tier: top}     # override: role skill default is work
 ```
 
 - `catalog.<alias>`: required `agent`; `model` and `effort` are strings or null. Null/omitted means omit that launch flag and use the agent's setting, not a guessed model. Optional `enabled: false` removes the entry from routing. Provider/account configuration and secrets stay in the agent; `provider` describes the intended backend without switching it.
 - `tiers`: ordered alias lists, cheapest/preferred first as chosen by the PO. Every alias must exist in `catalog`; supported tier names are `fast`, `work`, `top`. Use separate aliases for different effort settings. Model names and provider names do not establish quality, price or availability.
-- `roles`: optional role-id mappings; ids are the worker cards in `roles/` (`tech-lead`, `builder`, `reviewer`, `designer`, `support`). A check in `checks/` runs inside its host worker's Task and takes that Task's tier. `tier` overrides the role's default; `prefer` reorders eligible entries within that tier. Missing keys retain the role default and tier order. A referenced alias must belong to the selected tier.
+- `roles`: optional role-id mappings; ids are the worker skills `skills/team-*` without the `team-` prefix (`tech-lead`, `builder`, `reviewer`, `designer`, `support-engineer`); the same ids prefix Task titles and the dashboard role. A check (`anti-ai`, a reviewer or builder reference) runs inside its host worker's Task and takes that Task's tier. Retired ids `support` and `investigator`: rename to `support-engineer`. `tier` overrides the role's default; `prefer` reorders eligible entries within that tier. Missing keys retain the role default and tier order. A referenced alias must belong to the selected tier.
 - Existing `models.agents` and per-agent tier maps are legacy inputs to the interview, not dispatch settings. Show their proposed translation for PO agreement; preserve explicit disabled-agent choices. Missing old model/effort values remain unanswered rather than being filled from a deleted registry.
 
 ## Code search setup

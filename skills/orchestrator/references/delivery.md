@@ -26,4 +26,4 @@
 - `commands.verify` green.
 - A feature calling an external service (push, mail, payments): one real end-to-end call with its evidence in the delivery; mocked tests do not count.
 - UI changes: screenshots in the delivery only when the visual loop ran; otherwise "UI check: PO" under Human steps.
-- Delivered per `delivery.mode` with the Builder report’s `## Commit body` (`roles/builder.md` "Body").
+- Delivered per `delivery.mode` with the Builder report’s `## Commit body` (`skills/team-builder/references/delivery.md` "Body").

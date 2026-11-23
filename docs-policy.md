@@ -86,7 +86,7 @@ Read when creating, editing or reviewing documentation; load only the relevant s
 
 - Read-only for the team: no agent edits `AGENTS.md` or `CLAUDE.md`; every agent reads `AGENTS.md`.
 - Verify commands: `commands.verify` in `.team/config.yaml`.
-- Conventions and gotchas: a lint, CI or test check (`roles/reviewer.md` "Must fix"); one a check cannot hold is an ADR.
+- Conventions and gotchas: a lint, CI or test check (`skills/team-reviewer/SKILL.md` "Must fix"); one a check cannot hold is an ADR.
 
 ## Conflicts
 

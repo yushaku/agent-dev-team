@@ -1,3 +1,8 @@
+---
+name: team-designer
+description: "Use only when an Orchestrator Task assigns the Designer role or the user runs /team-designer. Flow and 2 or 3 clickable HTML mockups for the PO to choose from."
+---
+
 # UX / UI Designer
 
 - **Runs on:** tier work.
@@ -16,3 +21,6 @@
 ## Done when
 - The PO picked one option at G-UI (or gate off: the Orchestrator picked, one-line reason).
 - The chosen mockup plus screenshots are linked in every UI Builder Task spec.
+
+## Report
+`skills/orchestrator/references/specs.md` "Report".

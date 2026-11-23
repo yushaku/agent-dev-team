@@ -3,7 +3,7 @@
 New Task: use this template and pass the spec's absolute path per the Orca guide. Same-Task clarifications may point to the existing spec; a new Task must carry its own metadata even when reusing the file.
 
 ```text
-Role: <role id>
+Role: <role id: tech-lead|builder|reviewer|designer|support-engineer>
 Measurement: {"kind":"build","round":null,"cause":null}
 Routing: {"tier":"work","catalog":"<alias>","agent":"<agent-id>","model":null,"effort":null}
 Routing-log: <absolute .team/<feature>/routing.jsonl path>
@@ -12,13 +12,15 @@ Goal: <observable result; relevant rule/AC IDs when available>
 Scope: <entry points, editable paths, source spec/decisions by path>
 Peers: <related same-Run Task IDs, roles and current Dispatch IDs when known>
 Constraints: <project rules, protected user files, branch/delivery rules, human_only>
-Skills: <absolute SKILL.md paths; load conditional skills only when needed>
+Skills: <load skill team-<role> first, then other absolute SKILL.md paths; load conditional skills only when needed>
+Refs: <references of team-<role> to read for this Task, e.g. ui, data; none>
 Evidence: <acceptance checks and commands.verify; serial if configured>
 Output: <report path and raw-log paths under .team/<feature>/>
 ```
 
 - Title: `<role>: <what>`. `Role`, `Measurement`, `Routing` and `Routing-log` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
 - `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `spec`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
+- Choose `Refs:` from the plan and Task content using the trigger lines in the role skill's "References"; the worker reads only those.
 - Include resolved skills and config values, not the whole config. Resolve models from `.team/config.yaml` via `routing.md` "Model routing" and record each Dispatch under "Routing history" below. For output, workers read "Report"; for doc changes/review, relevant `docs-policy.md` sections.
 - Include an absolute pointer to "Worker communication" below in each Task's Constraints; supply related peer Dispatch IDs when available and refresh them after reassignment.
 - With `codegraph: on`, add to Constraints: "Code search: codegraph first (`codegraph_explore` MCP or `codegraph explore|callers|impact` CLI) for symbols, callers and impact; `rg` only for literal text. Do not `cat` whole files to find a symbol." (`skills/init-team/references/config-schema.md` "Code search setup").
@@ -63,7 +65,7 @@ Messages point to files. Store all Run files under `.team/<feature>/` via the wo
 | `shots/` | Designer, Builder (visual loop) | Screenshots per viewport and colour scheme |
 | `design/` | Designer | `flow.md`, `option-a.html`... |
 | `decisions.md` | Orchestrator | Numbered PO decisions: Gate 1 answers, scope cuts, Orchestrator defaults |
-| `plan.md` | Assigned author, only when a separate plan is needed | `roles/tech-lead.md` |
+| `plan.md` | Assigned author, only when a separate plan is needed | `skills/team-tech-lead/references/plan.md` |
 | `walkthrough.html` | Orchestrator | Gate 1 HTML for the PO |
 | `handoff.md` | Orchestrator | `skills/orchestrator/SKILL.md` |
 

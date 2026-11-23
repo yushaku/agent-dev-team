@@ -53,9 +53,9 @@ jq -r '.skills | to_entries | group_by(.value.source)[]
   skills-lock.json | sh
 ```
 
-Every downloaded skill a role card or `skills/init-team/references/config-schema.md` names is pinned in `skills-lock.json` and never edited in place. Add one by running `npx skills add <repo> -s <name> -a claude-code -y` in a scratch git dir and copying its `skills-lock.json` entry here.
+Every downloaded skill a worker skill or `skills/init-team/references/config-schema.md` names is pinned in `skills-lock.json` and never edited in place. Add one by running `npx skills add <repo> -s <name> -a claude-code -y` in a scratch git dir and copying its `skills-lock.json` entry here.
 
-4. Link the team's own skills (`init-team`, `orchestrator`, `anti-ai`, `frappe-docs`).
+4. Link the team's own skills (`init-team`, `orchestrator`, `team-*`, `anti-ai`, `frappe-docs`, ...).
 
 ```sh
 cd ~/.agents/teams
@@ -86,17 +86,22 @@ No `missing:` lines means every skill is in place.
 2. Run `/init-team`: it reads the repo, asks a few questions one at a time and writes `.team/config.yaml` (local, never committed).
 3. Run `/orchestrator <job>`, for example `/orchestrator add CSV export to the reports page`.
 
-## Roles, checks and commands
+## Workers and commands
 
-- **Workers** (`roles/`: tech-lead, builder, reviewer, designer, support): the Orchestrator dispatches each as its own worker session and Task.
-- **Checks** (`checks/`: security, perf-a11y, anti-ai): checklists a worker runs inside its own session, never as a separate worker.
-- **Commands** (`skills/`: `/orchestrator`, `/researcher`, `/solution-architect`, `/init-team`): sessions the PO starts and chats with directly; the Orchestrator never dispatches them.
+- **Workers** (`skills/team-*`, dispatched by the Orchestrator as their own session and Task; each loads its skill plus the `references/` its Task spec lists in `Refs:`):
+  - `team-tech-lead`: business spec and plan.
+  - `team-builder`: diagnosis, implementation, tests, related docs, delivery evidence.
+  - `team-reviewer`: independent review; security and perf/a11y checks are its references.
+  - `team-designer`: flow and mockups.
+  - `team-support-engineer`: read-only ticket and production investigation.
+- **Commands** (`/orchestrator`, `/researcher`, `/solution-architect`, `/init-team`): sessions the PO starts and chats with directly; the Orchestrator never dispatches them.
+
+Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` skill; they run inside a worker's session, never as a separate worker. Role ids (Task title prefix, `models.roles`, dashboard): `tech-lead`, `builder`, `reviewer`, `designer`, `support-engineer`.
 
 ## Layout
 
 - `workflow.md`: short overview, decision boundaries and reading index
-- `roles/`: worker cards (see "Roles, checks and commands" below)
-- `checks/`: check cards
+- `skills/team-*/`: worker skills (see "Workers and commands" above), each with `references/`
 - `skills/orchestrator/`: the Orchestrator skill; `references/` holds its step files, coding agents and ticket mode; Orca commands come from the version-matched skills
 - `skills/init-team/references/config-schema.md`: project config schema and defaults; platform and model presets live beside it
 - `skills/orchestrator/references/routing.md`: model routing and skill slots

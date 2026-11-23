@@ -20,9 +20,9 @@ The user's message is the job. Team files are relative to `$AGENT_TEAM_HOME` (`w
 | Preflight, resume, dispatch and recovery | `references/start.md` |
 | Load the project | `<main checkout>/.team/config.yaml`; missing or unknown key: `skills/init-team/references/config-schema.md`; no config: `skills/init-team/SKILL.md` |
 | Ticket in production | `references/tickets.md` |
-| Role responsibilities | Selected `roles/<role>.md`; triggered checks `checks/<check>.md` |
+| Role responsibilities | Selected `skills/team-<role>/SKILL.md` and the `references/` its Task needs |
 | Agent/model selection and fallback | `.team/config.yaml` `models`, `references/routing.md` "Model routing" |
-| Each worker spec | `references/specs.md`, `roles/<role>.md` (and the `checks/<check>.md` the Task runs) with slots resolved (`references/routing.md` "Skill slots") |
+| Each worker spec | `references/specs.md`, skill `team-<role>` with its `Refs:` and slots resolved (`references/routing.md` "Skill slots") |
 | Gates, worker questions, changed decisions, escalation | `references/gates.md` |
 | Verification, fix rounds, UI rounds | `references/review.md` |
 | Delivery, Definition of Done, merge on request, cleanup | `references/delivery.md` |
