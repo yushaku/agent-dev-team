@@ -16,7 +16,7 @@ Production tickets from a client tracker. Slice tickets written by `to-tickets` 
 |---|---|
 | Question | Evidence-backed answer and draft; G-Reply, then the PO posts it |
 | Bug | Confirm expected vs actual behavior; failing reproduction then fix and regression evidence; G-PR; draft fix report for G-Reply |
-| Change request | G-Scope approves scope and estimate before work; update business spec when rules change; normal feature checks and G-PR; report through G-Reply |
+| Change request | G-Scope approves scope and estimate before work; new tickets and a spec update when rules change (`start.md` "Plan"); normal feature checks and G-PR; report through G-Reply |
 | Incident | Notify PO immediately; reviewed mitigation through fast-track G-PR; record follow-up root-cause/regression work |
 
 - Unclear expected behavior: draft a question for G-Reply before changing it. Never promise dates or effort before G-Scope.

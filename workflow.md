@@ -4,15 +4,15 @@ The PO gives a software change to the Orchestrator. The team delivers a reviewed
 
 ## Default flow
 
-One Builder diagnoses, implements, tests, measures the changed behavior, updates related docs and prepares delivery. One independent Reviewer checks requirements, code, evidence and risks. The Builder resolves blocking findings in the fix round. The Orchestrator delivers the reviewed change at Gate 2.
+The Orchestrator and the PO run `grill-with-docs`, `to-spec` and `to-tickets` (Gate 1: spec and seams, then tickets and blocking edges). Each ticket becomes one Orca Task; blocking edges are Task dependencies. One Builder builds the tickets test-first, measures the changed behavior, updates related docs and prepares delivery. One independent Reviewer on a different agent runs `code-review` on tickets, code, evidence and risks. The Builder resolves blocking findings in the fix round. The Orchestrator delivers the reviewed change at Gate 2.
 
 The Orchestrator adds specialists only for a named decision or evidence gap. Project requirements and risk-triggered checks remain in force when responsibilities are combined.
 
 ## Decisions and evidence
 
-- The PO owns scope, business rules and acceptance of delivery. Gate 1 covers new/changed business rules; G-UI applies when configured. Ticket reply/scope gates are in `gates.md` below.
+- The PO owns scope, business rules and acceptance of delivery. Gate 1 covers the spec and tickets; G-UI applies when a prototype ran. Ticket reply/scope gates are in `gates.md` below.
 - Within approved scope, agents choose implementation details. New scope or unresolved risks return to the PO.
-- Orca holds status, ownership and dependencies. Code/tests explain implementation; approved business specs state intended behavior. Reports link execution evidence rather than claiming "done".
+- Orca holds status, ownership and dependencies. Code/tests explain implementation; the approved spec and tickets state intended behavior. Reports link execution evidence rather than claiming "done".
 
 ## Read by responsibility
 
@@ -20,7 +20,7 @@ Paths below are relative to the team root; workers receive their Task and role s
 
 | Need | Source |
 |---|---|
-| Coordinate, select team, resume | `skills/orchestrator/references/start.md` |
+| Plan (grill, spec, tickets), select team, resume | `skills/orchestrator/references/start.md` |
 | Task input, worker communication and reports | `skills/orchestrator/references/specs.md` |
 | PO gates and scope changes | `skills/orchestrator/references/gates.md` |
 | Review and fix rounds | `skills/orchestrator/references/review.md` |
