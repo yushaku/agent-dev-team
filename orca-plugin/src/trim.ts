@@ -1,4 +1,4 @@
-// Cuts the dashboard's /api/data payload to what the Tasks tab (#tk-theo-repo) renders, so the
+// Cuts the dashboard's /api/data payload to what the Tasks and Agents tools views (#tk-theo-repo, #tk-agents-tools) render, so the
 // pieces fit the 1 MiB limit on a worker's reply (the full 7-day payload is 1.6 MB, 30 days 3.0 MB).
 
 type Json = Record<string, unknown>

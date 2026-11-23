@@ -54,7 +54,7 @@ test('other URLs go to the real fetch', async () => {
   assert.equal(await fetchLike('/api/cli-tools'), 'real')
 })
 
-import { makeAsk } from '../dashboard-web/js/orca-source.js'
+import { makeAsk, viewHasCharts } from '../dashboard-web/js/orca-source.js'
 
 const expired = () => Object.assign(new Error('snapshot expired'), { code: 'expired' })
 
@@ -119,4 +119,37 @@ test('extra routes (the skill sheet) are answered by their own handler and a ref
   assert.equal(await withExtra('/api/cli-tools'), 'real')
   assert.deepEqual(asked, ['team-builder', '..', 'x'])
   void fetchLike
+})
+
+test('the offline check looks at the view this panel shows, so a rendered Agents tools view stays visible when a refresh fails', async () => {
+  // A page with only the Agents tools charts drawn: nothing in #tk-theo-repo (the Tasks view is not rendered here).
+  const doc = { querySelector: (selector) => (selector === '#tk-agents-tools svg' ? {} : null) }
+  assert.equal(viewHasCharts(doc, 'tk-agents-tools'), true)
+  assert.equal(viewHasCharts(doc, 'tk-theo-repo'), false)
+  let up = true
+  const bar = fakeBar(), msg = { textContent: '' }, view = barView(bar, msg)
+  const fetchLike = makeFetch({
+    real: async () => 'real', base: 'http://127.0.0.1:4747', cached: () => null, remember: () => {}, firstDays: 7,
+    ask: async () => { if (!up) throw down; return { sessions: [] } },
+    hasCharts: () => viewHasCharts(doc, 'tk-agents-tools'), ok: () => view.ok(), fail: (e, had) => view.fail(e.message, had),
+  })
+  assert.equal((await fetchLike('/api/data?days=7')).ok, true)
+  up = false
+  assert.equal((await fetchLike('/api/data?days=7')).ok, false)
+  assert.ok(bar.classList.has('error') && !bar.classList.has('empty'), 'the drawn charts are kept under the error bar')
+  // The Tasks-only predicate (the old one) would have hidden them:
+  const tasksOnly = makeFetch({
+    real: async () => 'real', base: 'http://127.0.0.1:4747', cached: () => null, remember: () => {}, firstDays: 7, ask: async () => { throw down },
+    hasCharts: () => viewHasCharts(doc, 'tk-theo-repo'), ok: () => {}, fail: (e, had) => view.fail(e.message, had),
+  })
+  await tasksOnly('/api/data?days=7')
+  assert.ok(bar.classList.has('empty'), 'checking the wrong view marks a rendered panel as empty')
+})
+
+test('a too-large skill document reaches the sheet as HTTP 413', async () => {
+  const withExtra = makeFetch({
+    real: async () => 'real', base: 'http://127.0.0.1:4747', ask: async () => ({}), cached: () => null, remember: () => {}, firstDays: 7, hasCharts: () => false, ok: () => {}, fail: () => {},
+    extra: { '/api/team/skill': async () => { throw Object.assign(new Error('Tài liệu của skill quá lớn'), { code: 'too_large' }) } },
+  })
+  assert.equal((await withExtra('/api/team/skill?name=big')).status, 413)
 })
