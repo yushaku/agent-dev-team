@@ -6,7 +6,9 @@ import re
 from .config import TEAMS
 
 ROLE_LINE_RE = re.compile(r"^\s*role\s*:\s*(.+)$", re.I | re.M)
-ROLE_FILE_RE = re.compile(r"roles/([a-z0-9-]+)\.md")
+ROLE_DIRS = ("roles", "checks")  # worker cards, in-session check cards
+COMMAND_ROLES = ("researcher", "solution-architect")  # slash-command skills the PO chats with directly
+ROLE_FILE_RE = re.compile(r"(?:roles|checks)/([a-z0-9-]+)\.md|skills/(researcher|solution-architect)/SKILL\.md")
 DISCUSSION_ROLE_PATTERNS = (
     ("researcher", re.compile(
         r"\blàm\s+researcher\b|\b(?:act|work)\s+as\s+(?:the\s+)?researcher\b|"
@@ -16,22 +18,24 @@ DISCUSSION_ROLE_PATTERNS = (
         r"\b(?:act|work)\s+as\s+(?:the\s+)?solution\s+architect\b|"
         r"^\s*role\s*:\s*solution\s+architect(?:ure)?\b", re.I | re.M)),
 )
-DISCUSSION_READ_RE = re.compile(r"\b(?:cat|sed|head)\b[^;&|\n]*\broles/(researcher|solution-architect)\.md\b", re.I)
+DISCUSSION_READ_RE = re.compile(r"\b(?:cat|sed|head)\b[^;&|\n]*\b(?:roles/(researcher|solution-architect)\.md|skills/(researcher|solution-architect)/SKILL\.md)", re.I)
 ROLE_ALIAS = {
     "build": "builder", "fix": "builder", "review": "reviewer", "re-review": "reviewer",
     "review+security": "reviewer", "docs": "doc-keeper", "doc": "doc-keeper",
     "design": "designer", "perf": "perf-a11y", "a11y": "perf-a11y", "close": "orchestrator",
     "product": "tech-lead", "research": "researcher", "verify": "reviewer", "ux": "designer",
     "qa": "builder", "qa-tests": "builder", "delivery": "builder", "deliver": "builder",
-    "spec": "tech-lead", "pm": "tech-lead", "tidy": "tech-lead", "plan": "tech-lead", "arch": "tech-lead", "architect": "tech-lead", "investigate": "researcher",
+    "spec": "tech-lead", "pm": "tech-lead", "tidy": "tech-lead", "plan": "tech-lead", "arch": "tech-lead", "architect": "tech-lead", "investigate": "support",
     "solution": "solution-architect", "sa": "solution-architect", "solution-architect": "solution-architect",
     "arch-review": "solution-architect", "poc": "builder",
+    "investigator": "support",  # retired id: old sessions and Tasks
 }
 DIRECT_ROLE = "chat trực tiếp"  # no team role: a direct chat with the user
 WORKER_ROLE = "worker"  # Orca worker whose task title names no role
 
 def known_roles():
-    names = {os.path.basename(f)[:-3] for f in glob.glob(os.path.join(TEAMS, "roles", "*.md"))}
+    names = {os.path.basename(f)[:-3] for d in ROLE_DIRS for f in glob.glob(os.path.join(TEAMS, d, "*.md"))}
+    names.update(n for n in COMMAND_ROLES if os.path.isfile(os.path.join(TEAMS, "skills", n, "SKILL.md")))
     if os.path.isfile(os.path.join(TEAMS, "skills", "orchestrator", "SKILL.md")):
         names.add("orchestrator")
     return sorted(names)
@@ -61,7 +65,8 @@ def role_from_text(text, roles):
     v = m.group(1)
     m2 = ROLE_FILE_RE.search(v)
     if m2:
-        return norm_role(m2.group(1), roles) or m2.group(1)
+        name = m2.group(1) or m2.group(2)
+        return norm_role(name, roles) or name
     m3 = re.match(r"\s*([A-Za-z][\w+-]*)", v)
     return norm_role(m3.group(1), roles) if m3 else None
 
@@ -80,10 +85,10 @@ def discussion_tool_role(name, args):
     if name == "Read" and isinstance(parsed, dict):
         path = parsed.get("file_path") or parsed.get("path") or ""
         m = ROLE_FILE_RE.search(path)
-        if m and m.group(1) in ("researcher", "solution-architect"):
-            return m.group(1)
+        if m and (m.group(1) or m.group(2)) in COMMAND_ROLES:
+            return m.group(1) or m.group(2)
     m = DISCUSSION_READ_RE.search(cmd_text(args))
-    return m.group(1).lower() if m else None
+    return (m.group(1) or m.group(2)).lower() if m else None
 
 def note_discussion_tool(s, name, args):
     if s.get("tool_count", 0) < 5 and not s.get("discussion_read"):
@@ -101,6 +106,8 @@ def assign_role(task, session):
         return "orchestrator", "title"
     elif any(name == "orchestrator" for name, _ in session.get("skills", [])):
         return "orchestrator", "skill"
+    elif not task and any(name in COMMAND_ROLES for name, _ in session.get("skills", [])):
+        return next(name for name, _ in session["skills"] if name in COMMAND_ROLES), "skill"
     elif not task and session.get("discussion"):
         return session["discussion"], "discussion"
     elif task:

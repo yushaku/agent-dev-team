@@ -108,6 +108,8 @@ class CheckTests(unittest.TestCase):
 
     def test_real_role_cards_have_required_skills(self):
         cards = I.parse_role_skills()
+        for stem in ("security", "anti-ai", "researcher", "solution-architect", "support"):
+            self.assertIn(stem, cards)
         self.assertIn("ponytail-review", cards["reviewer"]["required"])
         self.assertNotIn("diagnosing-bugs", cards["builder"]["required"])
 

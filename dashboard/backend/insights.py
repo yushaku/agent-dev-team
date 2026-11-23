@@ -12,7 +12,7 @@ import time
 
 from . import snapshots
 from .config import TEAMS
-from .roles import DIRECT_ROLE
+from .roles import COMMAND_ROLES, DIRECT_ROLE, ROLE_DIRS
 
 # ---- thresholds
 MAX_FIX_ROUNDS = 2            # check 3: more than this many fix rounds in one Run
@@ -60,10 +60,27 @@ def ids(items, n=EVIDENCE_IDS):
 
 # ---- role cards
 
+def role_card_paths(roles_dir=None):
+    """stem -> card path over roles/, checks/ and the researcher and solution-architect skills (or one given dir)."""
+    dirs = [roles_dir] if roles_dir else [os.path.join(TEAMS, d) for d in ROLE_DIRS]
+    out = {os.path.basename(f)[:-3]: f for d in dirs for f in sorted(glob.glob(os.path.join(d, "*.md")))}
+    if not roles_dir:
+        for name in COMMAND_ROLES:
+            f = os.path.join(TEAMS, "skills", name, "SKILL.md")
+            if os.path.isfile(f):
+                out[name] = f
+    return out
+
+
+def card_ref(paths, role):
+    path = paths.get(role)
+    return os.path.relpath(path, TEAMS) if path else "roles/%s.md" % role
+
+
 def parse_role_skills(roles_dir=None):
-    """role -> {required: [...], conditional: [...]} from the `- **Skills:**` line of roles/*.md."""
+    """role -> {required: [...], conditional: [...]} from the `- **Skills:**` line of role, check and session cards."""
     out = {}
-    for f in sorted(glob.glob(os.path.join(roles_dir or os.path.join(TEAMS, "roles"), "*.md"))):
+    for stem, f in sorted(role_card_paths(roles_dir).items()):
         try:
             with open(f, encoding="utf-8") as src:
                 m = re.search(r"^- \*\*Skills:\*\*\s*(.+)$", src.read(), re.M)
@@ -81,7 +98,7 @@ def parse_role_skills(roles_dir=None):
                     if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
                         continue  # {slot} placeholders and code snippets
                     (conditional if cond else required).append(name)
-        out[os.path.basename(f)[:-3]] = {"required": required, "conditional": conditional}
+        out[stem] = {"required": required, "conditional": conditional}
     return out
 
 
@@ -219,6 +236,7 @@ def check_missing_skills(sessions, cards):
         if s.get("run_id") and s.get("role") in cards:
             groups.setdefault((s["run_id"], s["role"]), []).append(s)
     out = []
+    paths = role_card_paths()
     for (rid, role), X in sorted(groups.items()):
         have = set()
         for s in X:
@@ -229,7 +247,7 @@ def check_missing_skills(sessions, cards):
                              "Vai %s không nạp skill bắt buộc" % role,
                              "Run %s: %d phiên %s không nạp %s (%s)" % (
                                  rid, len(X), role, ", ".join(missing), ids(s["id"] for s in X)),
-                             "Nhắc trong Task spec nạp skill theo roles/%s.md, hoặc sửa thẻ vai nếu skill không còn bắt buộc." % role,
+                             "Nhắc trong Task spec nạp skill theo %s, hoặc sửa thẻ vai nếu skill không còn bắt buộc." % card_ref(paths, role),
                              run=rid, role=role, repo=X[0].get("repo")))
     return out
 

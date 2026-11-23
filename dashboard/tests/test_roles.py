@@ -1,7 +1,7 @@
 import unittest
 
 from backend.parsers.common import finish_first
-from backend.roles import assign_role, discussion_role, known_roles, role_from_text, role_from_title
+from backend.roles import assign_role, discussion_role, discussion_tool_role, known_roles, role_from_text, role_from_title
 
 
 ROLES = {
@@ -13,8 +13,43 @@ ROLES = {
 class RoleTests(unittest.TestCase):
     def test_active_role_count(self):
         roles = known_roles()
-        self.assertEqual(len(roles), 12)
+        self.assertEqual(len(roles), 11)
         self.assertTrue({"builder", "orchestrator"}.issubset(roles))
+
+    def test_known_roles_span_workers_checks_and_sessions(self):
+        roles = set(known_roles())
+        self.assertTrue({"builder", "reviewer", "tech-lead", "designer", "support"}.issubset(roles))
+        self.assertTrue({"security", "perf-a11y", "anti-ai"}.issubset(roles))
+        self.assertTrue({"researcher", "solution-architect"}.issubset(roles))
+        self.assertNotIn("investigator", roles)
+
+    def test_investigator_maps_to_support(self):
+        self.assertEqual(role_from_title("investigator: read the thread", ROLES), "support")
+        self.assertEqual(role_from_title("support: read the thread", ROLES | {"support"}), "support")
+        self.assertEqual(role_from_text("Role: roles/investigator.md", ROLES), "support")
+        self.assertEqual(role_from_text("Role: roles/support.md", ROLES | {"support"}), "support")
+        self.assertEqual(assign_role({"role": "investigator"}, {"role_line": None}), ("support", "orca"))
+
+    def test_role_file_paths_in_any_group_dir(self):
+        cases = (("roles/builder.md", "builder"), ("checks/security.md", "security"),
+                 ("skills/researcher/SKILL.md", "researcher"))
+        for path, want in cases:
+            with self.subTest(path=path):
+                self.assertEqual(role_from_text("Role: " + path, ROLES | {"security"}), want)
+
+    def test_command_skill_loads_map_to_roles(self):
+        for skill in ("researcher", "solution-architect"):
+            with self.subTest(skill=skill):
+                self.assertEqual(assign_role(None, {"role_line": None, "skills": [[skill, 1]]}), (skill, "skill"))
+        self.assertEqual(assign_role({"role": "builder"}, {"role_line": None, "skills": [["researcher", 1]]}),
+                         ("builder", "orca"))
+
+    def test_discussion_reads_accept_roles_and_sessions_paths(self):
+        for path in ("roles/researcher.md", "skills/researcher/SKILL.md"):
+            with self.subTest(path=path):
+                self.assertEqual(discussion_tool_role("Bash", {"command": "cat ~/.agents/teams/" + path}), "researcher")
+                self.assertEqual(discussion_tool_role("Read", {"file_path": "/x/teams/" + path}), "researcher")
+        self.assertIsNone(discussion_tool_role("Bash", {"command": "cat checks/security.md"}))
 
     def test_retired_roles_resolve_to_builder(self):
         for title in ("qa: acceptance tests", "QA", "qa-tests", "delivery: publish", "Delivery", "deliver"):
