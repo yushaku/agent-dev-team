@@ -11,6 +11,7 @@ import statistics
 import time
 
 from . import snapshots
+from .parsers.common import loaded_skills
 from .config import TEAMS
 from .roles import COMMAND_ROLES, DIRECT_ROLE, TEAM_PREFIX
 
@@ -110,14 +111,6 @@ def filter_sessions(data, repo=None, run=None, role=None, agent=None):
             and (not role or s.get("role") == role) and (not agent or s.get("agent") == agent)]
 
 
-def loaded_skills(s):
-    """Agent loads plus hook-injected skills (once per session unless also loaded). name -> count."""
-    out = {k: v[0] for k, v in (s.get("skills") or {}).items()}
-    for k in s.get("hooks") or {}:
-        out.setdefault(k, 1)
-    return out
-
-
 def tokens_by_role(sessions):
     total = sum(s.get("total") or 0 for s in sessions)
     by = {}
@@ -180,6 +173,9 @@ def fix_rounds(r):
     for t in fixes:
         c = t["measurement"].get("cause") or "unknown"
         causes[c] = causes.get(c, 0) + 1
+    metric = r.get("fix_rounds")
+    if metric:
+        return metric["count"], causes, metric["source"] == "code-review" or (metric["source"] == "measurement" and bool(unknown))
     return len(known) + unknown, causes, bool(unknown)
 
 
@@ -191,8 +187,9 @@ def run_summary(r):
     rounds, causes, estimated = fix_rounds(r)
     return {"id": r["id"], "objective": r.get("objective"), "repo": r.get("repo"), "stage": r.get("stage"),
             "tasks": len(r.get("tasks") or []), "kinds": kinds, "fix_rounds": rounds, "fix_causes": causes,
+            "fix_rounds_source": (r.get("fix_rounds") or {}).get("source", "measurement"),
             "fix_rounds_estimated": estimated, "gate_wait_seconds": r.get("gate_wait_seconds"),
-            "lead_seconds": r.get("lead_seconds"), "delivered": bool(r.get("delivered_at")),
+            "lead_seconds": r.get("lead_seconds"), "delivered": r.get("delivered", bool(r.get("delivered_at")) or r.get("stage") == "merged"),
             "worker_tokens": r.get("worker_tokens"), "orchestrator_tokens": r.get("orchestrator_tokens")}
 
 

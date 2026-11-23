@@ -54,6 +54,22 @@ The Tasks run chart toggles between elapsed time and token consumption while kee
 
 Model catalogs and tier preferences live in each project's `.team/config.yaml` (`config.md`). Task specs carry the initial `Routing:` selection and a `Routing-log:` pointer to `.team/<feature>/routing.jsonl`. After dispatch, the Orchestrator appends resolved selections keyed by Task and Dispatch id; retries retain separate records. The dashboard reads only matching Task records from logs contained in `.team/`, including shared `.team` symlinks. Role defaults come from `skills/team-*/SKILL.md`. A session's observed model/agent and effort are compared with its own resolved selection, without guessing tiers from model names. Missing or ambiguous routing history remains unverified; historical sessions are not classified through the current project catalog. No new YAML dependency is required by the dashboard.
 
+## Feature Runs
+
+The UI is for humans (charts first); the API is for agents.
+
+Claude usage records retain each message's cwd and gitBranch. Codex records retain turn-context git branches where supplied, including delayed usage associated with a turn ID. Feature Runs split tokens and skill loads across those contexts; session-level views retain their original branch, cwd and totals. Each session exposes `feature_segments` with branch usage and `branch_source`; `features.runs[].sources.branch` reports `message_context` or `session` provenance. Other parsers retain one branch per session. Missing branch metadata carries forward the last recorded branch; a cwd change without new branch information becomes unknown. A branch change absent from the logs cannot be reconstructed from the checkout's current state. Parser cache version 14 reparses existing logs.
+
+`/api/data?days=N` includes `features`: `runs`, `comparison` and `attribution`. Runs group selected-window session rows by repo and branch, skipping main, master, HEAD and empty branches. Git worktree metadata resolves the main checkout; removed Orca worktrees retain the repo-name path heuristic. A group with any Orca-attributed session is `orca`, otherwise `direct`. Existing Orca attribution and totals remain separate.
+
+Each feature Run has `repo`, `branch`, `variant`, `run_ids`, `first_activity`, `last_activity`, `lead_seconds`, `tokens`, `orchestrator_tokens`, `worker_tokens`, `session_count`, `agents`, `loaded_skills`, `fix_rounds: {count, source}`, `gate2_findings` and `delivered`. Tokens and skills cover the selected window; activity spans use branch usage timestamps, with session bounds for parsers without message context. Direct Runs have no worker/orchestrator split. The Runs tab's filters select whole feature Runs through their session segments and keep their complete window totals.
+
+Each Run also has a stable `id` (the compact JSON encoding of `[repo, branch]`), `sources` for checkout resolution, tokens, activity, findings and delivery, and a `heuristics` list. Fix-round provenance stays in `fix_rounds.source`. The UI compares variants with bars, shows fix-round buckets and plots one mark per Run at its last activity time. Filled marks mean merged; hollow marks mean unmerged, with a dashed outline for unknown delivery. The detail table is collapsed below the charts.
+
+Fix-round sources, in order: distinct builder report round numbers under the branch's last path segment in the main checkout's `.team/`, code-review loads minus one (minimum zero), then distinct Orca Measurement rounds. Existing Orca summaries and fix-round checks use these counts too. Reports take precedence even when the directory is empty. Gate 2 findings count exact `- Gate 2 finding:` lines in `decisions.md`; a missing file yields null. Comparison totals include only known findings and expose `gate2_known` coverage.
+
+Delivery is true/false/null from local branch ancestry against the local default branch (origin/HEAD, then main/master), with a two-second Git timeout. No fetch occurs; deleted branches remain unknown. Ancestry results are cached by repo, branch and both head SHAs. Unknown Orca stages use linked feature Runs as a fallback, marking merged only when all linked branches are merged. Report counts can also resolve from recorded Orca Task worktree names when no branch sessions are in the date window. Branch reuse and identical repo basenames can combine unrelated work; this is a comparison heuristic, not an audit trail.
+
 ## For agents
 
 `backend/insights.py` aggregates the snapshot server-side; no need to download `/api/data`.

@@ -13,7 +13,7 @@
 <header class="topbar">
   <div class="wrap">
     <a class="brand" href="#tk-tong-quan" aria-label="orca team, về Tổng quan"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10" cy="4" r="2.5"/><circle cx="4" cy="16" r="2.5"/><circle cx="16" cy="16" r="2.5"/><path d="M8.88 6.24 5.12 13.76M11.12 6.24l3.76 7.52"/></svg><span>orca team</span></a>
-    <nav id="tk-nav" aria-label="Mục dashboard"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-theo-repo">Tasks</button><button type="button" data-view="tk-agents-tools">Agents tools</button><button type="button" data-view="tk-cli-tools">CLI tools</button></nav>
+    <nav id="tk-nav" aria-label="Mục dashboard"><button type="button" data-view="tk-tong-quan">Tổng quan</button><button type="button" data-view="tk-features">Runs</button><button type="button" data-view="tk-theo-repo">Tasks</button><button type="button" data-view="tk-agents-tools">Agents tools</button><button type="button" data-view="tk-cli-tools">CLI tools</button></nav>
     <a class="doc-link" href="https://yushaku.github.io/agent-dev-team/docs/" target="_blank" rel="noopener">Tài liệu</a>
   </div>
 </header>
@@ -67,6 +67,23 @@
     </section>
   </section>
 
+  <section class="dash-view" id="tk-features" aria-labelledby="tk-features-h" hidden>
+    <h3 id="tk-features-h">Run theo repo và nhánh</h3>
+    <p class="muted">Token và skill trong khoảng đã chọn; bộ lọc chọn toàn Run. Vòng sửa, Gate 2 và merge theo dữ liệu hiện có của nhánh.</p>
+    <div class="feature-comparison" aria-label="So sánh cách chạy">
+      <figure class="chart" id="feature-tokens"></figure>
+      <figure class="chart" id="feature-fixes"></figure>
+      <figure class="chart" id="feature-findings"></figure>
+    </div>
+    <div class="charts">
+      <figure class="chart" id="feature-distribution"></figure>
+      <figure class="chart" id="feature-time"></figure>
+    </div>
+    <details class="feature-details">
+      <summary>Chi tiết các Run tính năng</summary>
+      <div id="feature-runs"></div>
+    </details>
+  </section>
   <section class="dash-view" id="tk-theo-repo" aria-labelledby="tk-theo-repo-h" hidden>
     <div class="panel-head">
       <h3 id="tk-theo-repo-h">Tasks</h3>

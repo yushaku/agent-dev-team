@@ -3,7 +3,7 @@ import os
 
 from ..config import CLAUDE_SKILLS, SKILLS_DIR
 from .common import (note_search, CLAUDE_CMD_RE, TASK_RE, cmd_text, finish_first, hook_skill, note_orca,
-                            skills_in, ts_of)
+                            skills_in, ts_of, note_branch)
 from ..roles import note_discussion_tool
 
 def parse_claude(path):
@@ -36,6 +36,7 @@ def parse_claude(path):
                 s["end"] = ts if s["end"] is None else max(s["end"], ts)
             s["cwd"] = s["cwd"] or d.get("cwd")
             s["branch"] = s["branch"] or d.get("gitBranch")
+            context = note_branch(s, ts, d.get("cwd"), d.get("gitBranch"))
             s["sid"] = s["sid"] or d.get("sessionId")
             s["originator"] = s["originator"] or d.get("entrypoint")
             m = d.get("message") or {}
@@ -59,7 +60,7 @@ def parse_claude(path):
                 calls[mid] = [ts, model, d.get("effort") or d.get("perTurnEffort"),
                               u.get("input_tokens") or 0, u.get("cache_read_input_tokens") or 0,
                               u.get("cache_creation_input_tokens") or 0, u.get("output_tokens") or 0,
-                              (u.get("output_tokens_details") or {}).get("thinking_tokens") or 0, mid]
+                              (u.get("output_tokens_details") or {}).get("thinking_tokens") or 0, mid, 0, context]
             if isinstance(content, list):
                 for c in content:
                     if not isinstance(c, dict) or c.get("type") != "tool_use":

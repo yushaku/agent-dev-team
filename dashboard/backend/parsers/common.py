@@ -3,6 +3,8 @@ import os
 import re
 import shlex
 import time
+from functools import lru_cache
+from pathlib import Path
 from datetime import datetime, timezone
 
 from ..config import HOME, RTK_DB, TEAMS
@@ -51,11 +53,33 @@ def ts_of(s):
 def local_date(ts):
     return time.strftime("%Y-%m-%d", time.localtime(ts))
 
+@lru_cache(maxsize=2048)
+def main_checkout(cwd):
+    if not cwd:
+        return None
+    for root in (Path(cwd), *Path(cwd).parents):
+        git = root / ".git"
+        if git.is_dir():
+            return str(root)
+        if git.is_file():
+            try:
+                target = git.read_text().strip().removeprefix("gitdir: ")
+                gitdir = (root / target).resolve()
+                common = (gitdir / "commondir").read_text().strip()
+                return str((gitdir / common).resolve().parent)
+            except OSError:
+                return None
+    return None
+
+
 def repo_of(cwd):
     """(repo, worktree) from a working directory; never returns the path itself."""
     if not cwd:
         return "?", "?"
     p = os.path.normpath(cwd)
+    checkout = main_checkout(p)
+    if checkout:
+        return os.path.basename(checkout), "(main)" if p == checkout or p.startswith(checkout + os.sep) else os.path.basename(p)
     ws = os.path.join(HOME, "orca", "workspaces") + os.sep
     pj = os.path.join(HOME, "orca", "projects") + os.sep
     if p.startswith(ws):
@@ -220,3 +244,34 @@ def parse_rtk(start_date=None):
         return {"available": True, "summary": summary, "by_cmd": by_cmd, "daily": daily, "by_project": by_project}
     except Exception:
         return {"available": False}
+
+
+def note_branch(s, ts, cwd=None, branch=None, source="message_context"):
+    segments = s.setdefault("branch_segments", [])
+    previous = segments[-1] if segments else dict(cwd=None, branch=None, branch_source="unavailable")
+    context = dict(cwd=cwd or previous["cwd"], branch=previous["branch"], branch_source=previous["branch_source"])
+    if cwd and cwd != previous["cwd"]:
+        context["branch"] = None
+        context["branch_source"] = "unavailable"
+    if branch is not None:
+        context["branch"] = branch
+        context["branch_source"] = source
+    if not segments or any(context[k] != previous[k] for k in context):
+        segments.append(dict(context, at=ts))
+    return context
+
+
+def branch_at(s, ts):
+    segments = s.get("branch_segments")
+    if segments is None:
+        return dict(cwd=s.get("cwd"), branch=s.get("branch"))
+    return next((x for x in reversed(segments) if x["at"] is None or (ts is not None and x["at"] <= ts)),
+                dict(cwd=s.get("cwd"), branch=None))
+
+
+def loaded_skills(s):
+    """Agent loads plus hook-injected skills (once per session unless also loaded). name -> count."""
+    out = {k: v[0] for k, v in (s.get("skills") or {}).items()}
+    for k in s.get("hooks") or {}:
+        out.setdefault(k, 1)
+    return out

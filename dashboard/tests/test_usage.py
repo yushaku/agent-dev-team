@@ -1,10 +1,14 @@
 import copy
+import os
 import time
 import unittest
 from unittest.mock import patch
 
 from backend import usage
 from backend.parsers.common import finish_first, note_orca
+from backend.parsers.common import ts_of
+from backend.parsers.claude import parse_claude
+from backend.parsers.codex import parse_codex
 
 
 def session(calls, **extra):
@@ -18,6 +22,29 @@ def call(ts, tokens=10):
 
 
 class UsageTests(unittest.TestCase):
+    def test_branch_switch_fixtures_split_features_and_preserve_session_views(self):
+        for agent, parser, total, branches, unassigned in (
+                ("claude", parse_claude, 466, {"feat/switch": 265, "feat/second": 55}, 146),
+                ("codex", parse_codex, 520, {"feat/switch": 290}, 230)):
+            with self.subTest(agent=agent):
+                path = os.path.join(os.path.dirname(__file__), "fixtures", agent + "_branch_switch.jsonl")
+                parsed = parser(path)
+                with patch.object(usage.time, "time", return_value=ts_of("2026-11-13T00:01:00Z")):
+                    data = self.build([parsed])
+                self.assertEqual(len(data["sessions"]), 1)
+                row = data["sessions"][0]
+                self.assertEqual((row["branch"], row["cwd"], row["total"]), ("main", "/repo/main", total))
+                self.assertEqual(data["attribution"]["total"], total)
+                self.assertEqual(sum(s["total"] for s in row["feature_segments"]), total)
+                self.assertEqual({f["branch"]: f["tokens"] for f in data["features"]["runs"]}, branches)
+                self.assertEqual(data["features"]["attribution"]["unassigned"], unassigned)
+                feature = next(f for f in data["features"]["runs"] if f["branch"] == "feat/switch")
+                self.assertEqual(feature["session_count"], 1)
+                self.assertEqual(feature["sources"]["branch"], ["message_context"])
+                self.assertEqual(feature["loaded_skills"]["code-review"], 1)
+                self.assertEqual(feature["fix_rounds"], dict(count=0, source="code-review"))
+                self.assertEqual(row["skills"]["code-review"][0], 2)
+
     def build(self, sessions, tasks=None, runs=None, dispatches=None):
         state = dict(tasks=tasks or {}, runs=runs or [], dispatches=dispatches or [],
                      available=True, error=None, fetched_at=time.time())

@@ -421,3 +421,26 @@ details.tbl[open] > summary { margin-bottom: var(--s-3); }
 .issue b { color: var(--text); font-weight: 600; }
 .issue .ev, .issue .fix { display: block; font-size: var(--fs-1); color: var(--subtext1); overflow-wrap: anywhere; }
 .issue .fix { color: var(--subtext0); }
+
+#tk-features { gap: var(--s-5); }
+#tk-features th[scope="row"] { color: var(--text); font-weight: 400; overflow-wrap: anywhere; }
+#feature-runs table { min-width: 960px; }
+#feature-runs tr > :not(:first-child) { padding-left: var(--s-2); }
+#feature-runs tr > :not(:last-child) { padding-right: var(--s-2); }
+#tk-features td { font-variant-numeric: tabular-nums; }
+#feature-runs td:nth-child(n+4) { text-align: right; }
+#feature-runs th[scope="row"] { min-width: 220px; }
+#feature-runs details { max-width: 320px; }
+#feature-runs summary { cursor: pointer; }
+#tk-features > div { min-width: 0; }
+#tk-features .table-wrap { max-width: 100%; }
+#feature-runs td:nth-child(3) { white-space: nowrap; }
+.feature-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); }
+.feature-details { min-width: 0; }
+.feature-details > summary { cursor: pointer; margin-bottom: var(--s-4); }
+@media (max-width: 900px) {
+  .feature-comparison { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  #tk-features table tr > :first-child { position: sticky; left: 0; background: var(--base); }
+}

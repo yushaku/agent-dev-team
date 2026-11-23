@@ -10,6 +10,7 @@ import { renderSessionCharts, showSession } from "./tabs/sessions.js";
 import { renderSkills } from "./tabs/skills.js";
 import { renderRtkCommands } from "./tabs/tokens.js";
 import { renderSearch, renderTaskRoleSearch, toggleSearchKind } from "./tabs/search.js";
+import { renderFeatures } from "./tabs/runs.js";
 import { renderOverall } from "./tabs/overall.js";
 import { showCliTools } from "./tabs/cli-tools.js";
 
@@ -40,7 +41,7 @@ async function load() {
 function render() {
   const d = C.state.data;
   buildMixColours();
-  const repos = [...new Set(d.sessions.map(s => s.repo).concat((d.orca.runs || []).map(r => r.repo)))].filter(Boolean).sort();
+  const repos = [...new Set(d.sessions.map(s => s.repo).concat((d.orca.runs || []).map(r => r.repo), (d.features?.runs || []).map(r => r.repo)))].filter(Boolean).sort();
   const sel = $("#f-repo");
   sel.innerHTML = '<option value="">Mọi repo</option>' + repos.map(r => `<option${r === C.state.repo ? " selected" : ""}>${esc(r)}</option>`).join("");
   $("#f-agent").value = C.state.agent;
@@ -50,6 +51,7 @@ function render() {
   const S = sessionsF();
   const view = views.find(v => !v.hidden)?.id || "tk-tong-quan";
   if (view === "tk-tong-quan") renderOverview(S);
+  else if (view === "tk-features") renderFeatures(sessionsF(true));
   else if (view === "tk-theo-repo") {
     renderOverall(S); renderRoles(S); renderRoleSkills(S); renderRepos(S); renderTaskRoleSearch(S); renderSessionCharts(S);
   } else if (view === "tk-agents-tools") { renderSkills(S); renderSearch(S); renderRtkCommands(); }
