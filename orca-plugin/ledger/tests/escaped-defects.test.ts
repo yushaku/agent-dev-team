@@ -13,7 +13,7 @@ class Repo {
   day = 1;
   constructor(t: import('node:test').TestContext) {
     t.after(() => rmSync(this.dir, { recursive: true, force: true }));
-    this.git('init', '-b', 'main');
+    this.git('init', '--object-format=sha1', '-b', 'main');
     this.git('config', 'user.name', 'Test');
     this.git('config', 'user.email', 'test@example.com');
     this.write('original\n');

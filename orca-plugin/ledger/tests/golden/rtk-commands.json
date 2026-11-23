@@ -68,7 +68,7 @@
   ],
   "by_project": [
    {
-    "project": "../../repo",
+    "project": "$HOME_TO_ROOT/repo",
     "n": 2,
     "saved": 70,
     "pct": 70
