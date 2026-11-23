@@ -1,0 +1,162 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Mechanical change",
+    "output": "diagrams/flow-mechanical.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO"
+        },
+        "messagebus": {
+          "label": "Plan"
+        },
+        "backend": {
+          "label": "Builder"
+        },
+        "external": {
+          "label": "Reviewer"
+        },
+        "database": {
+          "label": "Delivery"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "po",
+      "label": "PO"
+    },
+    {
+      "id": "orch",
+      "label": "Orchestrator"
+    },
+    {
+      "id": "builder",
+      "label": "Builder"
+    },
+    {
+      "id": "reviewer",
+      "label": "Reviewer"
+    }
+  ],
+  "phases": [
+    {
+      "id": "ask",
+      "label": "Ask",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "build",
+      "label": "Build + review",
+      "fromCol": 2,
+      "toCol": 3
+    },
+    {
+      "id": "ship",
+      "label": "Deliver",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "ask",
+    "ticket",
+    "build",
+    "review",
+    "deliver",
+    "gate2"
+  ],
+  "nodes": [
+    {
+      "id": "ask",
+      "lane": "po",
+      "col": 0,
+      "type": "frontend",
+      "label": "Exact change",
+      "sublabel": "PO fully specified it"
+    },
+    {
+      "id": "ticket",
+      "lane": "orch",
+      "col": 1,
+      "type": "messagebus",
+      "label": "One ticket",
+      "sublabel": "no grill, no Gate 1"
+    },
+    {
+      "id": "build",
+      "lane": "builder",
+      "col": 2,
+      "type": "backend",
+      "label": "Build",
+      "sublabel": "tdd"
+    },
+    {
+      "id": "review",
+      "lane": "reviewer",
+      "col": 3,
+      "type": "external",
+      "label": "Review",
+      "sublabel": "code-review, Anti-AI"
+    },
+    {
+      "id": "deliver",
+      "lane": "orch",
+      "col": 4,
+      "type": "database",
+      "label": "Deliver",
+      "sublabel": "draft PR or branch"
+    },
+    {
+      "id": "gate2",
+      "lane": "po",
+      "col": 5,
+      "type": "frontend",
+      "label": "Gate 2",
+      "sublabel": "PO tests",
+      "tag": "PO decision"
+    }
+  ],
+  "edges": [
+    {
+      "id": "ask-ticket",
+      "from": "ask",
+      "to": "ticket"
+    },
+    {
+      "id": "ticket-build",
+      "from": "ticket",
+      "to": "build"
+    },
+    {
+      "id": "build-review",
+      "from": "build",
+      "to": "review"
+    },
+    {
+      "id": "review-build",
+      "from": "review",
+      "to": "build",
+      "label": "fix, max 2",
+      "role": "return"
+    },
+    {
+      "id": "review-deliver",
+      "from": "review",
+      "to": "deliver",
+      "label": "no Must fix"
+    },
+    {
+      "id": "deliver-gate2",
+      "from": "deliver",
+      "to": "gate2"
+    }
+  ]
+}

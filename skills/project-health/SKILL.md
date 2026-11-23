@@ -32,7 +32,7 @@ What `commands.verify` must or should run. Each item passes when a command does 
 | S2 | Migrations | Migrations applied to an empty database build the schema the code expects. |
 | S3 | Boot | The app starts and answers a health route, or its DI container composes. |
 | S4 | Dead code | Unused files, exports and dependencies fail (knip or equivalent). |
-| S5 | Spec IDs | `skills/team-tech-lead/references/spec-id-check.md`, when `docs/product/` exists. |
+| S5 | Spec IDs | Every `<capability> Rn|ACn` in a test name exists in `docs/product/<capability>.md` and is not on its `Retired:` line; only when `docs/product/` exists. |
 | S6 | Coverage floor | Changed files meet a floor the PO set. |
 
 Not adopted: a Sonar zero-issue gate and 100% coverage per file (cost against benefit, `research/starci-harness-gates.md`).

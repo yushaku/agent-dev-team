@@ -1,10 +1,11 @@
 # Ticket mode
 
-Use `start.md` for team selection; add a Support Engineer only for a named gap existing workers cannot cover.
+Production tickets from a client tracker. Slice tickets written by `to-tickets` are planned in `start.md` "Plan". Use `start.md` for team selection; add a Support Engineer only for a named gap existing workers cannot cover.
 
 ## Intake
 
 - Read only the title, description and the last few comments: enough to classify the type below and pick the team. A long or contradictory thread goes to a Support Engineer (`skills/team-support-engineer/SKILL.md` step 1); use its requirement summary, never the full thread, in the Orchestrator context. Manual access: the PO supplies the thread.
+- A raw incoming issue or external PR: run `triage` (absolute path in the Task or by the Orchestrator); `tracker.write: false` stands, so its comments and labels are drafts for the PO. A hard bug (no clear cause, or a failed fix round): the Builder or Support Engineer loads `diagnosing-bugs`.
 - Link related tickets and deduplicate before investigating. The ticket remains the external record; keep internal evidence in the Run reports.
 - Poll only on an authorized schedule using the configured query. Waiting for the client is a waiting status; resume when an answer arrives.
 - Prioritize incidents, overdue tickets, client-blocked work, then tracker priority and due date.
@@ -15,7 +16,7 @@ Use `start.md` for team selection; add a Support Engineer only for a named gap e
 |---|---|
 | Question | Evidence-backed answer and draft; G-Reply, then the PO posts it |
 | Bug | Confirm expected vs actual behavior; failing reproduction then fix and regression evidence; G-PR; draft fix report for G-Reply |
-| Change request | G-Scope approves scope and estimate before work; update business spec when rules change; normal feature checks and G-PR; report through G-Reply |
+| Change request | G-Scope approves scope and estimate before work; new tickets and a spec update when rules change (`start.md` "Plan"); normal feature checks and G-PR; report through G-Reply |
 | Incident | Notify PO immediately; reviewed mitigation through fast-track G-PR; record follow-up root-cause/regression work |
 
 - Unclear expected behavior: draft a question for G-Reply before changing it. Never promise dates or effort before G-Scope.

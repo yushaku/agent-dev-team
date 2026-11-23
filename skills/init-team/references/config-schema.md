@@ -24,7 +24,7 @@ tracker:
   query: "assignee:me state:open"   # e.g.
 languages:
   client: en                 # tracker drafts
-  po: en                     # PO summaries, gate walkthroughs
+  po: en                     # PO summaries, gate material
 branches:
   base: main                 # feature branches start here and target it
   client_visible: main       # what the client runs today
@@ -43,19 +43,19 @@ codegraph: on                # on = index each code worktree; the codegraph MCP 
 skills:                      # slot values (`skills/orchestrator/references/routing.md` "Skill slots"); empty = role core skills only
   build.ui: [extra-skill]    # e.g.
   project: [.claude/skills/<name>]   # skills shipped in the repo
-ui_rules:                    # optional; Designer, UI Builders, Reviewer
+ui_rules:                    # optional; UI Builders and prototype Tasks, Reviewer
   design_doc: DESIGN.md
   tokens: src/styles.css
   components: src/components # check before creating one
   dont: ["hardcoded colours or px sizes"]   # e.g.
-  gate: on                   # G-UI: on = PO picks the option for new screens; off = Orchestrator picks
+  gate: on                   # G-UI: on = a wholly new screen gets a prototype and the PO picks; off = prototype only when the PO asks
   visual_loop: off           # on = Builder screenshot loop per UI slice; off = only when the PO asks
                              # other keys (screens, platform, copy) pass as-is to the Task spec
 ui_viewports: []             # e.g. ["desktop 1280x800", "mobile 390x844"]; set when there is a UI
-ui_screenshots: false        # true = capture shots for the visual loop and G-UI (`skills/orchestrator/references/specs.md` working rules)
+ui_screenshots: false        # true = capture shots for the visual loop and prototypes (`skills/orchestrator/references/specs.md` working rules)
 perf_metrics: "latency and memory of the changed path, measured before and after"
 compliance: []               # e.g. [gdpr], [appi], [vn-pdpl]; its skills go in skills.security as references, never replacing the regime
-perf_notes: <path>           # optional perf ledger for the Perf auditor
+perf_notes: <path>           # optional perf ledger for the Reviewer's perf check
 human_only: []               # steps agents only list for the PO, e.g. ["on-device testing"]
 flow:
   max_concurrent_agents: 3
@@ -64,6 +64,10 @@ docs:
   html: on                   # render docs/diagrams/*.html (docs-policy.md); off = markdown only
   site: off                  # pages = GitHub Pages workflow (docs-policy.md "Published site")
   html_lang: null            # null = languages.po
+matt:                        # Matt Pocock skills (`grill-with-docs`, `to-spec`, `to-tickets`); `setup-matt-pocock-skills` is never run
+  tracker: .team/<feature>/issues/   # ticket files, one per Orca Task; no status in them
+  glossary: GLOSSARY.md      # docs/GLOSSARY.md when the repo has docs/
+  adr: docs/adr/
 models:
   catalog: {}                # required before dispatch; named agent/model/effort entries
   tiers: {}                  # fast | work | top -> ordered catalog aliases
@@ -98,12 +102,13 @@ models:
     top: [deep-review]
   roles:
     builder: {tier: work, prefer: [implementation]}
-    designer: {tier: top}     # override: role skill default is work
+    support-engineer: {tier: fast}   # override: role skill default is work
 ```
 
 - `catalog.<alias>`: required `agent`; `model` and `effort` are strings or null. Null/omitted means omit that launch flag and use the agent's setting, not a guessed model. Optional `enabled: false` removes the entry from routing. Provider/account configuration and secrets stay in the agent; `provider` describes the intended backend without switching it.
+- `matt.*`: `glossary` and `adr` are committed repo docs; `tracker` is local `.team/` scratch. The Orchestrator passes all three to the Matt skills in Task Constraints.
 - `tiers`: ordered alias lists, cheapest/preferred first as chosen by the PO. Every alias must exist in `catalog`; supported tier names are `fast`, `work`, `top`. Use separate aliases for different effort settings. Model names and provider names do not establish quality, price or availability.
-- `roles`: optional role-id mappings; ids are the worker skills `skills/team-*` without the `team-` prefix (`tech-lead`, `builder`, `reviewer`, `designer`, `support-engineer`); the same ids prefix Task titles and the dashboard role. A check (`anti-ai`, a reviewer or builder reference) runs inside its host worker's Task and takes that Task's tier. Retired ids `support` and `investigator`: rename to `support-engineer`. `tier` overrides the role's default; `prefer` reorders eligible entries within that tier. Missing keys retain the role default and tier order. A referenced alias must belong to the selected tier.
+- `roles`: optional role-id mappings; ids are the worker skills `skills/team-*` without the `team-` prefix (`builder`, `reviewer`, `support-engineer`); the same ids prefix Task titles and the dashboard role. A check (`anti-ai`, a reviewer or builder reference) runs inside its host worker's Task and takes that Task's tier. Retired ids `support` and `investigator`: rename to `support-engineer`; `tech-lead` and `designer`: delete the entry. `tier` overrides the role's default; `prefer` reorders eligible entries within that tier. Missing keys retain the role default and tier order. A referenced alias must belong to the selected tier.
 - Existing `models.agents` and per-agent tier maps are legacy inputs to the interview, not dispatch settings. Show their proposed translation for PO agreement; preserve explicit disabled-agent choices. Missing old model/effort values remain unanswered rather than being filled from a deleted registry.
 
 ## Code search setup

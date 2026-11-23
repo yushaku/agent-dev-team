@@ -10,3 +10,5 @@
 - Keep `meta.title` under about 30 characters so it stays on one line.
 - Name diagram files by subject without a project prefix; after a rename grep the repo for old links.
 - One language per artifact; never swap labels at runtime. A translated spec is validated on its own, since label widths change.
+- `deliver` writes a `<subject>.delivery.json` sidecar; the Frappe pass changes the bytes, so `check` fails with `delivery/provenance-mismatch` while it exists. Delete the sidecar before `check`; never commit it.
+- `labelAt`, `labelDx`, `labelDy` or `via` on a connection disables Port Spread, so a pair of opposite edges between the same sides draws on one line. Leave both unpinned.

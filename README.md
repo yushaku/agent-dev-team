@@ -1,6 +1,6 @@
 # Software Dev Agent Team
 
-A process for a team of coding agents working a software project inside the Orca app. A human Product Owner approves at fixed gates (business spec, new screens, delivery); an Orchestrator, which can be any coding agent, chooses the team based on the work and risks, defaults to one Builder and one independent Reviewer, adds specialists for specific gaps and ends at a draft PR or a committed branch. Per-project specifics live in a project config, `.team/config.yaml`.
+A process for a team of coding agents working a software project inside the Orca app. A human Product Owner approves at fixed gates (spec and tickets, prototypes of new screens, delivery); an Orchestrator, which can be any coding agent, plans with the PO using Matt Pocock's skills (`grill-with-docs`, `to-spec`, `to-tickets`), maps each ticket to an Orca Task, defaults to one Builder and one independent Reviewer on a different agent, adds specialists for specific gaps and ends at a draft PR or a committed branch. Per-project specifics live in a project config, `.team/config.yaml`.
 
 Vietnamese docs for the Product Owner: https://yushaku.github.io/agent-dev-team/
 
@@ -10,11 +10,11 @@ Who hands work to whom: the PO talks to the Orchestrator and to discussion sessi
 
 ![Who hands work to whom](diagrams/team-overview.svg)
 
-An example with planning and design for a new capability, with the PO's gates:
+An example for a new capability (grill, spec, tickets, build, review), with the PO's gates:
 
 ![Main dev flow](diagrams/dev-flow.svg)
 
-The Builder covers diagnosis, implementation, tests, related docs and delivery evidence. The Orchestrator hands off the reviewed branch or opens the draft PR. One Reviewer checks the result; the Orchestrator adds specialists only for uncovered needs. For team selection, see [Team decisions](skills/orchestrator/references/start.md#team-decisions).
+The Builder builds each ticket test-first (`tdd`), with related docs and delivery evidence. One Reviewer runs `code-review` on the result. The Orchestrator hands off the reviewed branch or opens the draft PR, and adds specialists only for uncovered needs. For team selection, see [Team decisions](skills/orchestrator/references/start.md#team-decisions).
 
 ## Requirements
 
@@ -90,14 +90,13 @@ No `missing:` lines means every skill is in place.
 ## Workers and commands
 
 - **Workers** (`skills/team-*`, dispatched by the Orchestrator as their own session and Task; each loads its skill plus the `references/` its Task spec lists in `Refs:`):
-  - `team-tech-lead`: business spec and plan.
-  - `team-builder`: diagnosis, implementation, tests, related docs, delivery evidence.
-  - `team-reviewer`: independent review; security and perf/a11y checks are its references.
-  - `team-designer`: flow and mockups.
+  - `team-builder`: one ticket at a time: tests, implementation, related docs, delivery evidence; prototype Tasks.
+  - `team-reviewer`: independent review with `code-review`; security and perf/a11y checks are its references.
   - `team-support-engineer`: read-only ticket and production investigation.
+- **Planning** (the Orchestrator with the PO, not workers): `grill-with-docs`, `to-spec`, `to-tickets`; see `skills/orchestrator/references/start.md` "Plan".
 - **Commands** (`/orchestrator`, `/researcher`, `/solution-architect`, `/init-team`, `/project-health`): sessions the PO starts and chats with directly; the Orchestrator never dispatches them.
 
-Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` skill; they run inside a worker's session, never as a separate worker. Role ids (Task title prefix, `models.roles`, dashboard): `tech-lead`, `builder`, `reviewer`, `designer`, `support-engineer`.
+Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` skill; they run inside a worker's session, never as a separate worker. Role ids (Task title prefix, `models.roles`, dashboard): `builder`, `reviewer`, `support-engineer`.
 
 ## Layout
 
@@ -111,7 +110,7 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 - `skills-lock.json`: pinned downloaded skills
 - `templates/`: file templates for projects
 - `diagrams/`: architecture diagrams
-- `docs/`: Vietnamese docs site (GitHub Pages)
+- `docs/`: Vietnamese docs site (GitHub Pages); diagrams are `?embed=1` iframes sized from `style="--w; --h"` (the diagram's viewBox); update both when a re-render changes the viewBox
 - `dashboard/`: local dashboard
 
 ## Metrics

@@ -21,29 +21,10 @@ Run this checklist in the Builder Task before final review.
 
 ## Body
 
-Write the PO's manual test list under Human steps.
+Write the PO's manual test list under Human steps. Format: `pr` skill (`$AGENT_SKILLS_DIR/pr/SKILL.md`): Summary visual, Evidence before/after, Merge Danger (Door, Blast Radius). Team additions:
 
-```markdown
-## Summary
-<one visual>
-Spec/ticket: <IDs>; stories: USn done, USm partial (missing ACn)
-
-## Evidence
-- **Before:** <screenshot | failing test | output>
-  **After:** <screenshot | passing test | output>
-
-## Merge danger
-**Door:** one-way | two-way
-**Blast radius:** <scope>: <what could break, for whom>
-
-## Human steps
-<`human_only` steps this change needs, or "none">
-```
-
-- Use the project's vocabulary (`GLOSSARY.md` or the spec glossary).
-- **Summary:** smallest visual that makes the change clear: pseudocode (logic), call tree (control flow), component tree (UI), file tree (refactor), Mermaid (interaction), or a `diff` of that tree when the shape already exists.
-- **Evidence:** never "tested, works". Screenshots for visual changes, else the test that failed before and passes after, else command output. Write missing evidence as "missing".
-- **Door:** two-way if a revert undoes it. One-way if not: deleted data, destructive migration, messages sent to users, a public API or URL others use, money moved.
+- First line after Summary: `Tickets: <NN-slug list>; spec: <path>`.
+- **Evidence:** write missing evidence as "missing". Raw logs stay in `.team/<feature>/logs/`.
+- **Human steps:** `human_only` steps this change needs, or "none".
 - When adding Pages, include the site URL.
 - No verify commands in the body; "how to test" only for a manual check the PO must do.
-- No preamble, few words.

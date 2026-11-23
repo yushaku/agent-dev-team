@@ -1,0 +1,197 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Gate 2 and close",
+    "output": "diagrams/flow-delivery.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO"
+        },
+        "messagebus": {
+          "label": "Orchestrator close-out"
+        },
+        "backend": {
+          "label": "Builder"
+        },
+        "external": {
+          "label": "Reviewer"
+        },
+        "database": {
+          "label": "Delivery"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "builder",
+      "label": "Builder"
+    },
+    {
+      "id": "orch",
+      "label": "Orchestrator"
+    },
+    {
+      "id": "po",
+      "label": "PO"
+    },
+    {
+      "id": "reviewer",
+      "label": "Reviewer"
+    }
+  ],
+  "phases": [
+    {
+      "id": "ready",
+      "label": "Ready",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "gate",
+      "label": "Gate 2",
+      "fromCol": 2,
+      "toCol": 2
+    },
+    {
+      "id": "close",
+      "label": "Close",
+      "fromCol": 3,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "final",
+    "pr",
+    "gate2",
+    "metrics",
+    "closerun"
+  ],
+  "nodes": [
+    {
+      "id": "final",
+      "lane": "builder",
+      "col": 0,
+      "type": "backend",
+      "label": "Final run",
+      "sublabel": "DEV pane, seed data"
+    },
+    {
+      "id": "pr",
+      "lane": "orch",
+      "col": 1,
+      "type": "database",
+      "label": "Draft PR",
+      "sublabel": "pr body, CI green"
+    },
+    {
+      "id": "gate2",
+      "lane": "po",
+      "col": 2,
+      "type": "frontend",
+      "label": "Gate 2",
+      "sublabel": "PO tests in DEV pane",
+      "tag": "PO decision"
+    },
+    {
+      "id": "bug",
+      "lane": "builder",
+      "col": 3,
+      "type": "backend",
+      "label": "Fix",
+      "sublabel": "bug found at Gate 2"
+    },
+    {
+      "id": "metrics",
+      "lane": "orch",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Gate 2 findings",
+      "sublabel": "decisions.md; dashboard counts"
+    },
+    {
+      "id": "retro",
+      "lane": "reviewer",
+      "col": 4,
+      "type": "external",
+      "label": "Retro*",
+      "sublabel": "only if the Run had problems"
+    },
+    {
+      "id": "pick",
+      "lane": "po",
+      "col": 5,
+      "type": "frontend",
+      "label": "PO picks items",
+      "sublabel": "checks before rules",
+      "tag": "PO decision"
+    },
+    {
+      "id": "closerun",
+      "lane": "orch",
+      "col": 5,
+      "type": "messagebus",
+      "label": "Close Run",
+      "sublabel": "carry-over, cleanup"
+    }
+  ],
+  "edges": [
+    {
+      "id": "final-pr",
+      "from": "final",
+      "to": "pr"
+    },
+    {
+      "id": "pr-gate2",
+      "from": "pr",
+      "to": "gate2"
+    },
+    {
+      "id": "gate2-bug",
+      "from": "gate2",
+      "to": "bug",
+      "label": "bug found",
+      "role": "branch"
+    },
+    {
+      "id": "bug-gate2",
+      "from": "bug",
+      "to": "gate2",
+      "label": "reviewed fix",
+      "role": "return"
+    },
+    {
+      "id": "gate2-metrics",
+      "from": "gate2",
+      "to": "metrics",
+      "label": "approved"
+    },
+    {
+      "id": "metrics-retro",
+      "from": "metrics",
+      "to": "retro",
+      "label": "problems*"
+    },
+    {
+      "id": "retro-pick",
+      "from": "retro",
+      "to": "pick"
+    },
+    {
+      "id": "pick-closerun",
+      "from": "pick",
+      "to": "closerun"
+    },
+    {
+      "id": "metrics-closerun",
+      "from": "metrics",
+      "to": "closerun",
+      "label": "clean Run"
+    }
+  ]
+}

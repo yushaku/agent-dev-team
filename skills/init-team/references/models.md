@@ -23,12 +23,12 @@ models:
   tiers:
     fast: [codex, claude]
     work: [codex, claude]
-    top:  [claude, codex]   # Reviewer, Tech Lead on the other provider
+    top:  [claude, codex]   # Reviewer on the other agent
 ```
 
 ## B. One agent, tiers by model and effort
 
-One subscription; cost follows the tier. No fallback agent: a rate limit blocks the Task until the PO decides.
+One subscription; cost follows the tier. No fallback agent: a rate limit blocks the Task until the PO decides, and the Reviewer shares the Builder's agent (a recorded PO exception, `skills/orchestrator/references/routing.md` "Model routing").
 
 ```yaml
 models:
@@ -42,9 +42,9 @@ models:
     top:  [claude-top]
 ```
 
-## C. Two agents, cross-provider review
+## C. Two agents, cross-agent review
 
-Work tier (Builder, Designer, Support Engineer) on one provider, top tier (Reviewer, Tech Lead) on the other; every tier falls back to the other agent on a launch failure (rate limit, auth). Codex ids are examples: replace them with discovered ids the PO places.
+Work tier (Builder, Support Engineer) on one agent, top tier (Reviewer) on the other; every tier falls back to the other agent on a launch failure (rate limit, auth). Codex ids are examples: replace them with discovered ids the PO places.
 
 ```yaml
 models:
@@ -63,9 +63,9 @@ models:
 
 ## Choosing
 
-- Tier order already routes roles: role defaults come from each role skill's "Runs on". Add `roles` only for a real exception, e.g. `designer: {prefer: [claude-work]}` when the PO prefers one agent's UI work; never restate a default.
+- Tier order already routes roles: role defaults come from each role skill's "Runs on". Add `roles` only for a real exception, e.g. `support-engineer: {prefer: [claude-work]}` when the PO prefers one agent for investigation; never restate a default.
 - Give every tier at least two agents when the PO has them; a single-entry tier blocks on one rate limit.
 - One alias per agent/model/effort combination; the same model at two efforts is two aliases.
 - Top tier is the expensive one (Reviewer runs every Run); keep its effort at `high`, not the maximum, unless the PO asks.
-- Keep the Reviewer's tier at least the Builder's (`skills/orchestrator/references/routing.md` "Model routing"); a different provider for the Reviewer is optional, not required.
+- Keep the Reviewer's tier at least the Builder's (`skills/orchestrator/references/routing.md` "Model routing"); the Reviewer runs on a different agent than the Builder.
 - Disable an entry with `enabled: false` instead of deleting it, so the PO's choice stays visible.

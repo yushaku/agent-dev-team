@@ -13,16 +13,13 @@
           "label": "PO"
         },
         "cloud": {
-          "label": "Orchestrator sets tier"
-        },
-        "messagebus": {
-          "label": "Plan"
+          "label": "Tier (project catalog)"
         },
         "backend": {
-          "label": "Build"
+          "label": "Worker"
         },
         "external": {
-          "label": "Verify"
+          "label": "Independent review"
         }
       }
     }
@@ -57,72 +54,30 @@
       ]
     },
     {
-      "id": "top_0",
-      "type": "messagebus",
-      "label": "Tech Lead",
-      "sublabel": "spec, ADR, plan",
+      "id": "top_rev",
+      "type": "external",
+      "label": "Reviewer",
+      "sublabel": "full feature review",
       "pos": [
         40,
         170
       ],
       "size": [
-        140,
+        180,
         56
       ]
     },
     {
-      "id": "top_2",
+      "id": "top_b",
       "type": "backend",
       "label": "Builder",
-      "sublabel": "role override",
+      "sublabel": "risk or role override",
       "pos": [
-        196,
+        236,
         170
       ],
       "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "top_3",
-      "type": "external",
-      "label": "Code Reviewer",
-      "sublabel": "not below Builder",
-      "pos": [
-        352,
-        170
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "top_4",
-      "type": "external",
-      "label": "Security",
-      "sublabel": "when triggered",
-      "pos": [
-        508,
-        170
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "top_5",
-      "type": "messagebus",
-      "label": "Solution Architect",
-      "sublabel": "arch review worker",
-      "pos": [
-        664,
-        170
-      ],
-      "size": [
-        140,
+        180,
         56
       ]
     },
@@ -141,58 +96,44 @@
       ]
     },
     {
-      "id": "work_0",
-      "type": "messagebus",
-      "label": "Tech Lead",
-      "sublabel": "spec updates",
+      "id": "work_b",
+      "type": "backend",
+      "label": "Builder",
+      "sublabel": "default",
       "pos": [
         40,
         330
       ],
       "size": [
-        140,
+        180,
         56
       ]
     },
     {
-      "id": "work_1",
-      "type": "messagebus",
-      "label": "Designer",
-      "sublabel": "flow, options",
-      "pos": [
-        196,
-        330
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "work_3",
-      "type": "backend",
-      "label": "Builder",
-      "sublabel": "tests, code, PR body",
-      "pos": [
-        352,
-        330
-      ],
-      "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "work_5",
+      "id": "work_rev",
       "type": "external",
-      "label": "Perf / A11y",
-      "sublabel": "when triggered",
+      "label": "Reviewer",
+      "sublabel": "re-review, not below Builder",
       "pos": [
-        508,
+        236,
         330
       ],
       "size": [
-        140,
+        200,
+        56
+      ]
+    },
+    {
+      "id": "work_se",
+      "type": "backend",
+      "label": "Support Engineer",
+      "sublabel": "default",
+      "pos": [
+        452,
+        330
+      ],
+      "size": [
+        180,
         56
       ]
     },
@@ -211,30 +152,16 @@
       ]
     },
     {
-      "id": "fast_0",
+      "id": "fast_b",
       "type": "backend",
       "label": "Builder",
-      "sublabel": "simple task",
+      "sublabel": "simple Task",
       "pos": [
         40,
         490
       ],
       "size": [
-        140,
-        56
-      ]
-    },
-    {
-      "id": "fast_1",
-      "type": "external",
-      "label": "Anti-AI Editor",
-      "sublabel": "run alone",
-      "pos": [
-        196,
-        490
-      ],
-      "size": [
-        140,
+        180,
         56
       ]
     }
@@ -245,11 +172,8 @@
       "label": "top tier",
       "wraps": [
         "t_top",
-        "top_0",
-        "top_2",
-        "top_3",
-        "top_4",
-        "top_5"
+        "top_rev",
+        "top_b"
       ]
     },
     {
@@ -257,10 +181,9 @@
       "label": "work tier",
       "wraps": [
         "t_work",
-        "work_0",
-        "work_1",
-        "work_3",
-        "work_5"
+        "work_b",
+        "work_rev",
+        "work_se"
       ]
     },
     {
@@ -268,8 +191,7 @@
       "label": "fast tier",
       "wraps": [
         "t_fast",
-        "fast_0",
-        "fast_1"
+        "fast_b"
       ]
     }
   ],

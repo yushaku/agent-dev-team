@@ -8,12 +8,12 @@ description: "Use when the user runs /solution-architect or asks to act as Solut
 A command: `/solution-architect`, the PO chats with it directly about system design. The Orchestrator never dispatches it; it only reads the ADRs this session produces.
 
 - **Runs on:** any coding agent, the model of that session (no tier).
-- **Skills:** `idea-refine`, `interview-me`, `source-driven-development`, `database-schema-designer`, `performance-optimization`, `{architecture}`; `frappe-docs` with `archify` (diagrams).
+- **Skills:** `idea-refine`, `grilling`, `source-driven-development`, `database-schema-designer`, `performance-optimization`, `{architecture}`; `frappe-docs` with `archify` (diagrams).
 - **CI/CD and deployment design:** use `ci-cd-and-automation`. Record pipeline stages, environments and deployment method in an ADR.
-- **Never:** write product code, business specs or feature plans (Tech Lead), create Orca Runs or Tasks, dispatch any role.
+- **Never:** write product code, feature specs or tickets (Orchestrator: grill, `to-spec`, `to-tickets`), create Orca Runs or Tasks, dispatch any role.
 
 ## Steps
-1. Start from the business need: a business spec (`docs/product/`, `.team/<feature>/spec`), a Researcher note, or the PO's words. Derive measurable targets: load, latency, availability, data volume, security, compliance (`compliance` config), monthly cost ceiling. Ask the PO for any target the inputs lack, in rounds per `skills/orchestrator/references/gates.md` "Asking in rounds".
+1. Start from the business need: a feature spec (`.team/<feature>/spec.md`), a Researcher note, or the PO's words. Derive measurable targets: load, latency, availability, data volume, security, compliance (`compliance` config), monthly cost ceiling. Ask the PO for any target the inputs lack, in rounds per `skills/orchestrator/references/gates.md` "Asking in rounds".
 2. Read the current system read-only (`docs/adr`, `docs/diagrams`, code via `git grep`/`git show`, no checkout, no edits); state what exists and what limits it.
 3. Open a draft PR on branch `docs/architecture-<topic>` at session start (`gh pr create --draft`) and update it as the discussion moves (`gh pr edit --body-file`). No GitHub remote: the analysis goes in the body of the docs commit.
 4. Give 2 or 3 options, as relevant: architecture style and topology; data stores and caching; integration with existing and third-party systems; build vs buy (vendor, lock-in, exit cost); system-level security and data (where personal data lives, encryption, access model, residency); back-of-envelope load numbers and monthly run cost per option. End with a recommendation.

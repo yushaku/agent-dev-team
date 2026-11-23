@@ -1,0 +1,171 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Parallel Builders",
+    "output": "diagrams/flow-parallel.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "cloud": {
+          "label": "Orchestrator"
+        },
+        "backend": {
+          "label": "Builder"
+        },
+        "external": {
+          "label": "Reviewer"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "orch",
+      "label": "Orchestrator"
+    },
+    {
+      "id": "b1",
+      "label": "Builder 1 (integration owner)"
+    },
+    {
+      "id": "b2",
+      "label": "Builder 2"
+    },
+    {
+      "id": "reviewer",
+      "label": "Reviewer"
+    }
+  ],
+  "phases": [
+    {
+      "id": "build",
+      "label": "Build in child worktrees",
+      "fromCol": 1,
+      "toCol": 3
+    },
+    {
+      "id": "review",
+      "label": "Review",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "frontier",
+    "t1",
+    "merge",
+    "verify",
+    "next",
+    "review"
+  ],
+  "nodes": [
+    {
+      "id": "frontier",
+      "lane": "orch",
+      "col": 1,
+      "type": "cloud",
+      "label": "Frontier",
+      "sublabel": "tickets with blockers merged"
+    },
+    {
+      "id": "t1",
+      "lane": "b1",
+      "col": 1,
+      "type": "backend",
+      "label": "Ticket A",
+      "sublabel": "child worktree, tdd"
+    },
+    {
+      "id": "t2",
+      "lane": "b2",
+      "col": 1,
+      "type": "backend",
+      "label": "Ticket B",
+      "sublabel": "child worktree, tdd"
+    },
+    {
+      "id": "merge",
+      "lane": "b1",
+      "col": 2,
+      "type": "backend",
+      "label": "Merge children",
+      "sublabel": "in ticket order"
+    },
+    {
+      "id": "verify",
+      "lane": "b1",
+      "col": 3,
+      "type": "backend",
+      "label": "Verify",
+      "sublabel": "feature branch"
+    },
+    {
+      "id": "next",
+      "lane": "orch",
+      "col": 4,
+      "type": "cloud",
+      "label": "More tickets?",
+      "sublabel": "new frontier"
+    },
+    {
+      "id": "review",
+      "lane": "reviewer",
+      "col": 5,
+      "type": "external",
+      "label": "One review",
+      "sublabel": "integrated branch"
+    }
+  ],
+  "edges": [
+    {
+      "id": "frontier-t1",
+      "from": "frontier",
+      "to": "t1",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "frontier-t2",
+      "from": "frontier",
+      "to": "t2",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "id": "t1-merge",
+      "from": "t1",
+      "to": "merge"
+    },
+    {
+      "id": "t2-merge",
+      "from": "t2",
+      "to": "merge"
+    },
+    {
+      "id": "merge-verify",
+      "from": "merge",
+      "to": "verify"
+    },
+    {
+      "id": "verify-next",
+      "from": "verify",
+      "to": "next"
+    },
+    {
+      "id": "next-frontier",
+      "from": "next",
+      "to": "frontier",
+      "label": "yes",
+      "role": "return"
+    },
+    {
+      "id": "next-review",
+      "from": "next",
+      "to": "review",
+      "label": "all merged"
+    }
+  ]
+}

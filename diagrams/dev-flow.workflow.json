@@ -2,7 +2,7 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "New capability flow",
+    "title": "Feature flow",
     "output": "diagrams/dev-flow.html",
     "locale": "en",
     "quality_profile": "showcase",
@@ -12,17 +12,14 @@
         "frontend": {
           "label": "PO"
         },
-        "cloud": {
-          "label": "Orchestrator"
-        },
         "messagebus": {
           "label": "Plan"
         },
         "backend": {
-          "label": "Build"
+          "label": "Builder"
         },
         "external": {
-          "label": "Verify"
+          "label": "Reviewer"
         },
         "database": {
           "label": "Delivery"
@@ -40,62 +37,46 @@
       "label": "Orchestrator"
     },
     {
-      "id": "designer",
-      "label": "Designer"
-    },
-    {
-      "id": "tech-lead",
-      "label": "Tech Lead"
-    },
-    {
       "id": "builder",
       "label": "Builder"
     },
     {
-      "id": "verify",
-      "label": "Verify"
-    },
-    {
-      "id": "delivery",
-      "label": "Delivery"
+      "id": "reviewer",
+      "label": "Reviewer"
     }
   ],
   "phases": [
     {
-      "id": "spec",
-      "label": "Spec",
+      "id": "plan",
+      "label": "Grill, spec, tickets",
       "fromCol": 0,
-      "toCol": 1
-    },
-    {
-      "id": "design",
-      "label": "Design + plan",
-      "fromCol": 2,
-      "toCol": 3
+      "toCol": 2
     },
     {
       "id": "build",
-      "label": "Build + verify",
-      "fromCol": 4,
+      "label": "Build + review",
+      "fromCol": 3,
       "toCol": 4
     },
     {
-      "id": "deliver",
-      "label": "Deliver",
+      "id": "ship",
+      "label": "Gate 2",
       "fromCol": 5,
       "toCol": 5
     }
   ],
   "mainPath": [
     "idea",
-    "size",
+    "grill",
     "spec",
-    "gate1",
-    "plan",
+    "g1a",
+    "tickets",
+    "g1b",
     "build",
-    "verify",
+    "review",
     "deliver",
-    "gate2"
+    "gate2",
+    "close"
   ],
   "nodes": [
     {
@@ -107,78 +88,70 @@
       "sublabel": "PO asks Orchestrator"
     },
     {
-      "id": "size",
+      "id": "grill",
       "lane": "orch",
       "col": 0,
-      "type": "cloud",
-      "label": "Choose team",
-      "sublabel": "config.yaml, risks"
+      "type": "messagebus",
+      "label": "Grill",
+      "sublabel": "grill-with-docs"
     },
     {
       "id": "spec",
-      "lane": "tech-lead",
-      "col": 0,
+      "lane": "orch",
+      "col": 1,
       "type": "messagebus",
-      "label": "Business spec",
-      "sublabel": "same session as plan"
+      "label": "Spec + seams",
+      "sublabel": "to-spec"
     },
     {
-      "id": "gate1",
+      "id": "g1a",
       "lane": "po",
       "col": 1,
       "type": "frontend",
-      "label": "Gate 1",
-      "sublabel": "PO approves spec",
+      "label": "Gate 1: spec",
+      "sublabel": "PO confirms seams",
       "tag": "PO decision"
     },
     {
-      "id": "options",
-      "lane": "designer",
+      "id": "tickets",
+      "lane": "orch",
       "col": 2,
       "type": "messagebus",
-      "label": "Flow + options",
-      "sublabel": "2 or 3 mockups"
+      "label": "Tickets",
+      "sublabel": "to-tickets, blockers"
     },
     {
-      "id": "gui",
+      "id": "g1b",
       "lane": "po",
-      "col": 3,
-      "type": "frontend",
-      "label": "G-UI",
-      "sublabel": "PO picks one",
-      "tag": "PO decision"
-    },
-    {
-      "id": "plan",
-      "lane": "tech-lead",
       "col": 2,
-      "type": "messagebus",
-      "label": "Slice plan",
-      "sublabel": "ADR, arch review*"
+      "type": "frontend",
+      "label": "Gate 1: tickets",
+      "sublabel": "PO confirms slices",
+      "tag": "PO decision"
     },
     {
       "id": "build",
       "lane": "builder",
-      "col": 4,
+      "col": 3,
       "type": "backend",
-      "label": "Build slices",
-      "sublabel": "tests, code, PR body"
+      "label": "Build tickets",
+      "sublabel": "tdd, one Orca Task each"
     },
     {
-      "id": "verify",
-      "lane": "verify",
+      "id": "review",
+      "lane": "reviewer",
       "col": 4,
       "type": "external",
-      "label": "Verify wave",
-      "sublabel": "test evidence, Perf*"
+      "label": "Review",
+      "sublabel": "code-review, other agent"
     },
     {
       "id": "deliver",
-      "lane": "delivery",
-      "col": 5,
+      "lane": "orch",
+      "col": 4,
       "type": "database",
-      "label": "Orchestrator delivers",
-      "sublabel": "draft PR or branch"
+      "label": "Deliver",
+      "sublabel": "draft PR, app in DEV pane"
     },
     {
       "id": "gate2",
@@ -186,85 +159,81 @@
       "col": 5,
       "type": "frontend",
       "label": "Gate 2",
-      "sublabel": "PO reviews",
+      "sublabel": "PO tests in DEV pane",
       "tag": "PO decision"
+    },
+    {
+      "id": "close",
+      "lane": "orch",
+      "col": 5,
+      "type": "messagebus",
+      "label": "Retro*, close Run",
+      "sublabel": "dashboard metrics"
     }
   ],
   "edges": [
     {
-      "id": "ask",
+      "id": "idea-grill",
       "from": "idea",
-      "to": "size",
+      "to": "grill",
       "fromSide": "bottom",
       "toSide": "top"
     },
     {
-      "id": "dispatch-spec",
-      "from": "size",
-      "to": "spec",
-      "fromSide": "bottom",
-      "toSide": "top"
+      "id": "grill-spec",
+      "from": "grill",
+      "to": "spec"
     },
     {
-      "id": "spec-gate",
+      "id": "spec-g1a",
       "from": "spec",
-      "to": "gate1"
+      "to": "g1a"
     },
     {
-      "id": "gate1-design",
-      "from": "gate1",
-      "to": "options",
+      "id": "g1a-tickets",
+      "from": "g1a",
+      "to": "tickets",
       "label": "approved"
     },
     {
-      "id": "gate1-plan",
-      "from": "gate1",
-      "to": "plan",
+      "id": "tickets-g1b",
+      "from": "tickets",
+      "to": "g1b"
+    },
+    {
+      "id": "g1b-build",
+      "from": "g1b",
+      "to": "build",
       "label": "approved"
     },
     {
-      "id": "options-gui",
-      "from": "options",
-      "to": "gui",
-      "fromSide": "right",
-      "toSide": "bottom"
-    },
-    {
-      "id": "gui-build",
-      "from": "gui",
-      "to": "build",
-      "label": "chosen mockup"
-    },
-    {
-      "id": "plan-build",
-      "from": "plan",
-      "to": "build",
-      "fromSide": "right",
-      "toSide": "top"
-    },
-    {
-      "id": "build-verify",
+      "id": "build-review",
       "from": "build",
-      "to": "verify"
+      "to": "review"
     },
     {
-      "id": "fix-loop",
-      "from": "verify",
+      "id": "review-build",
+      "from": "review",
       "to": "build",
-      "label": "fix, max 2 rounds",
-      "variant": "default",
+      "label": "fix, max 2",
       "role": "return"
     },
     {
-      "id": "verify-deliver",
-      "from": "verify",
+      "id": "review-deliver",
+      "from": "review",
       "to": "deliver",
-      "label": "green"
+      "label": "no Must fix"
     },
     {
-      "id": "deliver-gate",
+      "id": "deliver-gate2",
       "from": "deliver",
       "to": "gate2"
+    },
+    {
+      "id": "gate2-close",
+      "from": "gate2",
+      "to": "close",
+      "label": "approved"
     }
   ]
 }

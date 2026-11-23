@@ -1,0 +1,175 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "UI ticket and prototype",
+    "output": "diagrams/flow-ui.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "PO"
+        },
+        "messagebus": {
+          "label": "Plan"
+        },
+        "backend": {
+          "label": "Builder"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "orch",
+      "label": "Orchestrator"
+    },
+    {
+      "id": "po",
+      "label": "PO"
+    },
+    {
+      "id": "builder",
+      "label": "Builder"
+    }
+  ],
+  "phases": [
+    {
+      "id": "grill",
+      "label": "Grill",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "proto",
+      "label": "Prototype*",
+      "fromCol": 2,
+      "toCol": 4
+    },
+    {
+      "id": "build",
+      "label": "Build",
+      "fromCol": 5,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "ask",
+    "answer",
+    "inticket",
+    "build"
+  ],
+  "nodes": [
+    {
+      "id": "ask",
+      "lane": "orch",
+      "col": 0,
+      "type": "messagebus",
+      "label": "4 UI questions",
+      "sublabel": "pattern, actions, states, mobile"
+    },
+    {
+      "id": "answer",
+      "lane": "po",
+      "col": 1,
+      "type": "frontend",
+      "label": "PO answers",
+      "sublabel": "must see to choose?",
+      "tag": "PO decision"
+    },
+    {
+      "id": "inticket",
+      "lane": "orch",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Answers in ticket",
+      "sublabel": "the ticket is the design"
+    },
+    {
+      "id": "proto",
+      "lane": "builder",
+      "col": 2,
+      "type": "backend",
+      "label": "Prototype Task",
+      "sublabel": "prototype/<name>, never merged"
+    },
+    {
+      "id": "dev",
+      "lane": "builder",
+      "col": 3,
+      "type": "backend",
+      "label": "Variants in DEV",
+      "sublabel": "required viewports"
+    },
+    {
+      "id": "gui",
+      "lane": "po",
+      "col": 4,
+      "type": "frontend",
+      "label": "G-UI",
+      "sublabel": "PO picks a variant",
+      "tag": "PO decision"
+    },
+    {
+      "id": "build",
+      "lane": "builder",
+      "col": 5,
+      "type": "backend",
+      "label": "Build ticket",
+      "sublabel": "answers + chosen variant"
+    }
+  ],
+  "edges": [
+    {
+      "id": "ask-answer",
+      "from": "ask",
+      "to": "answer",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "answer-inticket",
+      "from": "answer",
+      "to": "inticket",
+      "label": "words are enough",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "answer-proto",
+      "from": "answer",
+      "to": "proto",
+      "label": "must see, or new screen*",
+      "role": "branch",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "proto-dev",
+      "from": "proto",
+      "to": "dev"
+    },
+    {
+      "id": "dev-gui",
+      "from": "dev",
+      "to": "gui"
+    },
+    {
+      "id": "gui-build",
+      "from": "gui",
+      "to": "build",
+      "label": "chosen variant",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "inticket-build",
+      "from": "inticket",
+      "to": "build",
+      "fromSide": "right",
+      "toSide": "top"
+    }
+  ]
+}

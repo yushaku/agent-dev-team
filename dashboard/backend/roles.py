@@ -8,6 +8,7 @@ from .config import TEAMS
 ROLE_LINE_RE = re.compile(r"^\s*role\s*:\s*(.+)$", re.I | re.M)
 TEAM_PREFIX = "team-"  # worker skills: skills/team-<role>/SKILL.md, role id = name without the prefix
 OLD_CHECK_ROLES = ("security", "perf-a11y", "anti-ai")  # former checks/*.md, kept so old sessions still resolve
+RETIRED_ROLES = ("tech-lead", "designer")  # team-tech-lead and team-designer skills are gone; old Runs still show them
 COMMAND_ROLES = ("researcher", "solution-architect")  # slash-command skills the PO chats with directly
 # old roles/<x>.md and checks/<x>.md paths still map for old sessions
 ROLE_FILE_RE = re.compile(r"(?:roles|checks)/([a-z0-9-]+)\.md|skills/(researcher|solution-architect)/SKILL\.md|skills/team-([a-z0-9-]+)/")
@@ -48,7 +49,7 @@ def norm_role(word, roles):
     w = (word or "").strip().lower()
     if w in ROLE_ALIAS:
         return ROLE_ALIAS[w]
-    if w in roles:
+    if w in roles or w in RETIRED_ROLES:
         return w
     return None
 

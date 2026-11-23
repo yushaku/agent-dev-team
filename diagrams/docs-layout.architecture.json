@@ -26,10 +26,10 @@
   },
   "components": [
     {
-      "id": "product",
+      "id": "glossary",
       "type": "messagebus",
-      "label": "docs/product/*.md",
-      "sublabel": "Tech Lead: business spec",
+      "label": "GLOSSARY.md",
+      "sublabel": "Orchestrator: grill",
       "pos": [
         40,
         60
@@ -43,7 +43,7 @@
       "id": "adr",
       "type": "messagebus",
       "label": "docs/adr/*.md",
-      "sublabel": "Tech Lead, Solution Architect",
+      "sublabel": "Orchestrator, Solution Architect",
       "pos": [
         220,
         60
@@ -57,7 +57,7 @@
       "id": "dspec",
       "type": "messagebus",
       "label": "docs/diagrams/*.json",
-      "sublabel": "Tech Lead, Solution Architect",
+      "sublabel": "Builder, Solution Architect",
       "pos": [
         400,
         60
@@ -124,10 +124,10 @@
       ]
     },
     {
-      "id": "plan",
+      "id": "tickets",
       "type": "messagebus",
-      "label": "plan.md, design/",
-      "sublabel": "Tech Lead, Designer",
+      "label": "spec.md, issues/",
+      "sublabel": "Orchestrator: to-spec, to-tickets",
       "pos": [
         40,
         420
@@ -185,7 +185,7 @@
       "kind": "region",
       "label": "Committed sources: agents read",
       "wraps": [
-        "product",
+        "glossary",
         "adr",
         "dspec",
         "readme",
@@ -203,7 +203,7 @@
       "kind": "region",
       "label": ".team/ scratch: local, never committed",
       "wraps": [
-        "plan",
+        "tickets",
         "research",
         "handoff"
       ]

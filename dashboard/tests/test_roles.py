@@ -13,12 +13,20 @@ ROLES = {
 class RoleTests(unittest.TestCase):
     def test_active_role_count(self):
         roles = known_roles()
-        self.assertEqual(len(roles), 11)
+        self.assertEqual(len(roles), 9)
         self.assertTrue({"builder", "orchestrator"}.issubset(roles))
+
+    def test_retired_roles_still_resolve(self):
+        roles = set(known_roles())
+        self.assertEqual(role_from_title("tech-lead: spec", roles), "tech-lead")
+        self.assertEqual(role_from_title("designer: options", roles), "designer")
+        self.assertEqual(assign_role({"role": "designer"}, {"role_line": None}), ("designer", "orca"))
 
     def test_known_roles_span_workers_checks_and_sessions(self):
         roles = set(known_roles())
-        self.assertTrue({"builder", "reviewer", "tech-lead", "designer", "support-engineer"}.issubset(roles))
+        self.assertTrue({"builder", "reviewer", "support-engineer"}.issubset(roles))
+        self.assertNotIn("tech-lead", roles)
+        self.assertNotIn("designer", roles)
         self.assertTrue({"security", "perf-a11y", "anti-ai"}.issubset(roles))
         self.assertTrue({"researcher", "solution-architect"}.issubset(roles))
         self.assertNotIn("investigator", roles)

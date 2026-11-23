@@ -6,22 +6,22 @@ Read when creating, editing or reviewing documentation; load only the relevant s
 
 | Document | Owner | Content | Changes when |
 |---|---|---|---|
-| `docs/product/<capability>.md` | Builder; Tech Lead when assigned | Business spec (below) | The business changes |
-| `docs/adr/NNN-title.md` | Builder or assigned Tech Lead (feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line; superseded by a new ADR |
+| `matt.glossary` (`GLOSSARY.md`) | Orchestrator (grill, `domain-modeling`) | Domain terms, no implementation details | A term is resolved |
+| `matt.adr` (`docs/adr/NNN-title.md`) | Orchestrator (grill, feature decisions), Solution Architect (system decisions) | One technical decision | Never edited except its Status line; superseded by a new ADR |
 | `AGENTS.md` | PO | Repo agent rules; read-only for the team (`## AGENTS.md`) | Never by the team |
 | `.team/config.yaml` | PO (Orchestrator proposes) | Team config (`skills/init-team/references/config-schema.md`); local-only until the team adopts it | Project settings change |
-| `DESIGN.md` | Designer | Visual identity: tokens in use, type, spacing, component rules | The PO picks an option at G-UI that sets a new rule |
+| `DESIGN.md` | Builder | Visual identity: tokens in use, type, spacing, component rules | The PO picks a prototype variant at G-UI that sets a new rule |
 | `README.md` | PO | What it is, how to run it | The PO asks |
 | `todo.md` | PO | Roadmap; each item has **Goal**, **Outcome** (may name story IDs), a checkbox, optional `Ref: .team/research/<topic>.md` | The PO adds items; the Orchestrator removes shipped ones |
-| `docs/diagrams/<name>.json` | Builder or assigned Tech Lead; Solution Architect for system design diagrams | Archify spec of a kept diagram (source) | The shape it shows changes |
+| `docs/diagrams/<name>.json` | Builder; Solution Architect for system design diagrams | Archify spec of a kept diagram (source) | The shape it shows changes |
 | `docs/diagrams/<name>.html` | Whoever changes its spec | Archify render of that spec (`frappe-docs` pipeline) | Its spec changes, in the same commit |
 | `.github/workflows/pages.yml` | Orchestrator for a template copy, Builder for changes; the PO reviews the PR | Publishes the docs site when `docs.site: pages` (`## Published site`) | The publish list changes |
 
 - Committed documents are edited and committed by their assigned owner; the commit body lives in that commit.
-- The Builder owns related documentation by default. Assign a specialist author only for a specific requirements or design need; include assigned paths in the Task. Existing read-only documents stay read-only unless the PO authorizes changes.
+- The Builder owns related documentation by default. Assign a specialist author only for a specific need; include assigned paths in the Task. Existing read-only documents stay read-only unless the PO authorizes changes.
 - Finalize implementation-related docs once the solution settles, before final review; do not dispatch an author for each intermediate code adjustment. Accepted ADRs remain immutable.
 - No-op and contradiction findings are fixed by the assigned document owner.
-- Existing docs outside this list are read-only reference until the PO migrates or deletes them (`docs.legacy`).
+- Existing docs outside this list, including `docs/product/` business specs, are read-only reference until the PO migrates or deletes them (`docs.legacy`).
 - API reference, schema docs: generate from code when needed, never store.
 
 ## Two audiences
@@ -39,29 +39,13 @@ Read when creating, editing or reviewing documentation; load only the relevant s
 - A public repo publishes every committed doc: no secrets, personal data, client names or unreleased business terms in `docs/`.
 - Enabling Pages (Settings, Pages, source GitHub Actions) is the PO's step.
 
-## Business spec
+## Spec and tickets
 
-- One file per business capability, not per feature or ticket; a feature updates the existing file.
-- English for every project; domain terms that only exist in the client's language keep the original in parentheses in the glossary.
-- Allowed, business language only:
-  - Purpose: the problem and who has it.
-  - Actors and roles.
-  - User stories, numbered (US1, US2...), one line each: `USn (<actor>): <goal>, so that <benefit>. <AC IDs>`; an AC owned by another capability is written `<capability> ACn`, never copied. A story may span several features; it is done when all its ACs pass.
-  - Business rules, numbered (R1, R2...), one sentence each.
-  - Main flows and exceptions, in user terms; each flow names the story it serves (`Flow for US1`) and never restates the story's goal.
-  - Acceptance criteria, numbered (AC1, AC2...), Given / When / Then in business terms.
-  - Glossary of domain terms.
-  - Out of scope.
-  - Open questions (empty before Gate 1).
-  - Last line: `Retired: R3, R7, AC12` (retired IDs).
-- Not allowed: solution, architecture, technology, platform, screen or component names, API, database, code, test names, file paths. A sentence that would change when the implementation changes does not belong.
-- Gate 1 answers and other PO decisions for the Run live in numbered `.team/<feature>/decisions.md` items; the assigned author folds decided items into rules and AC, and the spec carries no `Decided at Gate 1` or post-Gate 1 `Decisions to confirm` sections or D/A/G/Q item lists. Open questions stay in their existing section.
-- Worked examples belong only in the Gate 1 `walkthrough.html` sent to the PO, never in the spec.
-- Size: target about 80 lines; past 150 lines, split the capability and move its stories, rules and ACs with the split; reference another capability's criteria as `<capability> ACn`. Long content lists such as catalogue text and card copy live in code or seed data, not the spec.
-- Traceability is one-way, code to spec: tests reference IDs with the capability file name (e.g. `garden AC3: member cannot book past the limit`); bare `AC3` is ambiguous. Never reference story IDs; the spec never references tests or code.
-- IDs: never reuse or renumber R, AC or US IDs. A wording fix keeps its ID; a meaning change gets the next free ID and retires the old one.
-- Splitting a capability: IDs keep their numbers in the new file (gaps allowed), are not retired in the old file, and tests update the capability prefix.
-- The commit that changes a business spec has a body listing each changed ID, its one-line decision and the date (from `.team/<feature>/decisions.md`); `git log -p` and `git blame` on the spec are its history, kept in no other file.
+- Spec: `to-spec` template, kept at `.team/<feature>/spec.md` (local). Tickets: `to-tickets` local format under `matt.tracker`, one file per Orca Task, no status in them. Both avoid file paths and code, and use `GLOSSARY.md` terms.
+- English for every project; a domain term that only exists in the client's language keeps the original in parentheses in the glossary.
+- PO decisions for the Run live in numbered `.team/<feature>/decisions.md` items; the Orchestrator folds decided items into the spec or tickets.
+- Changing a business rule is the PO's decision (Gate 1), never a silent agent edit.
+- Tests name the ticket or spec rule they prove; the spec never references tests or code.
 
 ## ADR
 
@@ -73,7 +57,7 @@ Read when creating, editing or reviewing documentation; load only the relevant s
 
 ## Audit
 
-- Docs audit request: read-only: a table per committed doc and `.team/` file (keep, migrate to `docs/product/`, legacy, delete) with the reason, missing required docs, stale cross-references; then propose a scoped cleanup. Files the PO names stay (`docs.legacy`). Nothing changes before the PO's go.
+- Docs audit request: read-only: a table per committed doc and `.team/` file (keep, legacy, delete) with the reason, missing required docs, stale cross-references; then propose a scoped cleanup. Files the PO names stay (`docs.legacy`). Nothing changes before the PO's go.
 
 ## Writing
 
@@ -91,8 +75,8 @@ Read when creating, editing or reviewing documentation; load only the relevant s
 ## Conflicts
 
 - ADR vs code: code wins; fix or delete the line. `AGENTS.md` or `README` vs code: code wins; tell the PO the line and the fix.
-- Business spec vs code: the assigned author establishes which is wrong against approved decisions; changing a business rule is the PO's decision (Gate 1), never a silent agent edit.
+- Spec or ticket vs code: the Orchestrator establishes which is wrong against approved decisions; changing a business rule is the PO's decision (Gate 1), never a silent agent edit.
 
 ## Reading (token budget)
 
-- Read `AGENTS.md`, the relevant business spec, the Orca Task spec, role-slot skills and touched code; never scan `docs/` wholesale.
+- Read `AGENTS.md`, the Task's ticket and spec, the glossary, the Orca Task spec, role-slot skills and touched code; never scan `docs/` wholesale.
