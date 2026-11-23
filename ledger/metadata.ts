@@ -3,10 +3,10 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join, normalize, resolve, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { teamRoot } from './roots.ts';
 
 export const home = homedir(),
-  teams = realpathSync(process.env.AGENT_TEAM_HOME || fileURLToPath(new URL('..', import.meta.url)));
+  teams = teamRoot();
 export const skills = process.env.AGENT_SKILLS_DIR || join(home, '.agents/skills');
 export function read(path: string) {
   try {

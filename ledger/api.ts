@@ -1,5 +1,6 @@
 import { Worker } from 'node:worker_threads';
-import { dirname } from 'node:path';
+import { teamRoot, webRoot } from './roots.ts';
+import { dirname, join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sendResponse, type Routes } from './http.ts';
@@ -39,7 +40,10 @@ const apiPaths = new Set([
   '/api/cli-tools',
 ]);
 type WorkerReply = [number, string, string | Buffer];
-export function createApi(ledger: Store | string) {
+const loading: WorkerReply = [503, 'application/json', JSON.stringify({ loading: true })];
+export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
+  const assets = webRoot();
+  teamRoot();
   const home =
     typeof ledger === 'string'
       ? ledger
@@ -53,29 +57,36 @@ export function createApi(ledger: Store | string) {
         );
   let worker: Worker | undefined,
     closed = false,
-    next = 0;
+    next = 0,
+    retryAt = 0;
   const pending = new Map<number, (r: WorkerReply) => void>();
   function startWorker() {
     const w = new Worker(new URL('./api-worker.ts', import.meta.url), { workerData: { home } });
     worker = w;
     w.on('message', ({ id, response }) => {
       pending.get(id)?.(response);
-      pending.delete(id);
     });
     w.on('error', (e) => console.error('Dashboard worker failed', e));
     w.on('exit', () => {
       if (worker !== w) return;
       worker = undefined;
-      for (const cb of pending.values()) cb([503, 'text/plain', 'Dashboard data is temporarily unavailable']);
-      pending.clear();
+      retryAt = Date.now() + 1000;
+      for (const cb of pending.values()) cb(loading);
     });
   }
   startWorker();
   function dispatch(url: string) {
+    if (closed || (!worker && Date.now() < retryAt)) return Promise.resolve(loading);
     if (!worker) startWorker();
     const id = next++;
     return new Promise<WorkerReply>((done) => {
-      pending.set(id, done);
+      function finish(reply: WorkerReply) {
+        clearTimeout(timer);
+        pending.delete(id);
+        done(reply);
+      }
+      const timer = setTimeout(() => finish(loading), timeoutMs);
+      pending.set(id, finish);
       worker!.postMessage({ id, url });
     });
   }
@@ -97,14 +108,9 @@ export function createApi(ledger: Store | string) {
       const type = staticFiles.get(url.pathname);
       if (type) {
         const path = url.pathname === '/' ? '/index.html' : url.pathname;
-        return response([
-          200,
-          type + '; charset=utf-8',
-          await readFile(new URL('../dashboard/web' + path, import.meta.url)),
-        ]);
+        return response([200, type + '; charset=utf-8', await readFile(join(assets, path))]);
       }
       if (!apiPaths.has(url.pathname)) return response([404, 'text/plain', 'not found']);
-      if (closed) return response([503, 'text/plain', 'Dashboard data is temporarily unavailable']);
       return response(await dispatch(url.pathname + url.search));
     } catch {
       return response([500, 'text/plain', 'Dashboard request failed']);
@@ -126,6 +132,7 @@ export function createApi(ledger: Store | string) {
     routes,
     async close() {
       closed = true;
+      for (const cb of pending.values()) cb(loading);
       await worker?.terminate();
     },
   });

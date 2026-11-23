@@ -1,3 +1,4 @@
+import type { GitMetrics } from './git-metrics.ts';
 import type { DashboardData } from './protocol.ts';
 import { basename, dirname, relative, normalize } from 'node:path';
 import type { Store } from './store.ts';
@@ -64,7 +65,12 @@ function rtk(db, start): DashboardData['rtk'] {
     ).map((r) => ({ project: relative(home, r.project) || '.', n: r.n, saved: r.saved, pct: percent(r) })),
   };
 }
-export function build({ db }: Store, days: number, now = Date.now() / 1000): DashboardData {
+export function build(
+  { db }: Store,
+  days: number,
+  now = Date.now() / 1000,
+  gitMetrics?: GitMetrics,
+): DashboardData {
   const begin = performance.now(),
     midnight = new Date(now * 1000);
   midnight.setHours(0, 0, 0, 0);
@@ -364,6 +370,7 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000): Das
     orca.runs,
     orca.available,
     db,
+    gitMetrics,
   );
   return {
     generated_at: now,
