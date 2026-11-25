@@ -8,6 +8,7 @@ import { featureData, featureDir, median, rounds } from './features.ts';
 import { home, checkout, repoOf, roleConfig } from './metadata.ts';
 import { aliases, tsOf, type Session } from './session.ts';
 import { runData } from './run-data.ts';
+import { sessionAssignment } from './assignment.ts';
 type Segment = UsageRow['feature_segments'][number];
 /** A usage row while build() fills it; the fields left out are set once its calls are counted. */
 type Row = Omit<UsageRow, 'hooks' | 'model' | 'effort' | 'ctx_med' | 'ctx_max' | 'total' | 'calls'> & { calls: number };
@@ -19,9 +20,10 @@ export const date = (s: number) => {
 };
 const dict = <T = number>(): Record<string, T> => Object.create(null);
 const inc = (obj: Record<string, number>, k: string, n: number) => (obj[k] = (obj[k] || 0) + n);
-function assign(task: RunTask | null | undefined, s: Session): [string, string | null] {
+function assign(task: RunTask | null | undefined, s: Session, assignment: [string, string] | null): [string, string | null] {
   if (task?.role) return [aliases[task.role] || task.role, 'orca'];
   if (s.role_line) return [aliases[s.role_line] || s.role_line, 'role-line'];
+  if (assignment) return assignment;
   if (s.dispatcher) return ['orchestrator', 'dispatch'];
   if ((s.title || '').toLowerCase().includes('orchestrator')) return ['orchestrator', 'title'];
   const names = s.skills.map((e) => e[0]);
@@ -82,6 +84,7 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
     .all(PARSER_VERSION)
     .map((r): Session => JSON.parse(String(r.data)));
   parsed.sort((a, b) => a.agent.localeCompare(b.agent) || Number(!!b.subagent) - Number(!!a.subagent) || (a.start || 0) - (b.start || 0));
+  const assignments = new Map(parsed.map((s) => [s, sessionAssignment(s)]));
   const fetched = db.prepare("SELECT max(recorded_at) stamp FROM ingest_log WHERE source IN (SELECT id FROM sources WHERE kind='orca')").get();
   const orca = runData(
     db.prepare('SELECT path,data FROM dashboard_orca WHERE version=? ORDER BY source').all(PARSER_VERSION),
@@ -168,7 +171,7 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
         source = 'unassigned';
       } else if (source === 'unassigned') source = t ? 'task_id' : 'run_id';
       // From here rid is null or the id of run r (run ids are strings), so `rid ?? null` below never changes it.
-      const [role, role_src] = r && !t ? ['orchestrator', 'dispatch'] : assign(t, s);
+      const [role, role_src] = r && !t ? ['orchestrator', 'dispatch'] : assign(t, s, assignments.get(s) || null);
       if (r) {
         // r came from runs.get(rid), so r.id === rid, and every run has a session set and an activity map.
         inc(r.tokens, s.agent, tot);

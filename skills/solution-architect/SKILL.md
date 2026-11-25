@@ -15,7 +15,7 @@ description: "Use when the user runs /solution-architect or asks to act as Solut
 2. Inspect ADRs, diagrams and current code read-only, following repo search rules without checkout/edits; state current capabilities and limits.
 3. Start a draft PR on `docs/architecture-<topic>`; maintain analysis in its description via `--body-file`. Without GitHub, use the docs commit body.
 4. Compare 2–3 options: topology, stores/cache, integrations, build/buy, vendor lock-in/exit cost, personal-data location/encryption/access/residency, estimated load and monthly cost. Recommend one; define independently shippable transition phases when needed.
-5. After PO agreement, add docs to the same PR and mark ready for PO review/merge. Close rejected proposals unmerged.
+5. After PO agreement, add docs to the same PR and mark ready for PO review/merge. Report the recommendation, NFR/cost tradeoffs, decision state and PoC/open questions to the PO with PR/ADR references. Close rejected proposals unmerged.
 
 ## Rules
 - Keep analysis in the PR description, not a separate file: need, targets, current system, options, recommendation, transition and `## PoC request`. Review comments stay on the PR.

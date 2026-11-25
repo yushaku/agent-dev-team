@@ -16,14 +16,14 @@ Workspace: <exact Orca workspace selector, absolute checkout path and branch>
 Peers: <related same-Run Task IDs, roles and current Dispatch IDs when known>
 Constraints: <project rules, `matt.glossary`, `matt.adr`, protected user files, branch/delivery rules, human_only; UI ticket: `ui_rules` and `design` slot skills>
 Skills: <load skill team-<role> first, then other absolute SKILL.md paths; load conditional skills only when needed>
-Refs: <references of team-<role> to read for this Task, e.g. ui, data; none>
+Refs: <known Task-specific references; worker selects applicable role references after loading its skill>
 Evidence: <acceptance checks and commands.verify; serial if configured>
 Output: <report path and raw-log paths under .team/<feature>/>
 ```
 
 - Title: `<role>: <what>`. `Role`, `Measurement`, `Routing` and `Routing-log` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
 - `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
-- Link tickets without restating them. Put skills in `Skills:` by absolute path, including `disable-model-invocation` skills. Resolve `Refs:` from the role's trigger lines; workers read only applicable references.
+- Link tickets without restating them. Put the assigned role skill and resolved project slots in `Skills:` by absolute path, including `disable-model-invocation` skills. Workers load their role skill, resolve its core/conditional skills and read applicable references; the coordinator uses this contract to dispatch.
 - Pass resolved config/skills, not the full config. Models follow `routing.md`; Dispatch records follow "Routing history". Workers use "Report" and relevant `docs-policy.md` sections for docs.
 - Include an absolute pointer to "Worker communication" below in each Task's Constraints; supply related peer Dispatch IDs when available and refresh them after reassignment.
 - Set `Workspace:` per `start.md` "Shared feature workspace"; isolated Tasks name their child worktree and integration target. Workers need coordinator approval to change checkout/branch or create another worktree.
@@ -71,15 +71,22 @@ Messages point to files. Store all Run files under `.team/<feature>/` via the wo
 
 ## Report
 
-Use the output path assigned in the Task, normally `.team/<feature>/reports/NN-<role>[-rN].md`. Omit empty sections.
+Each dispatched worker writes its own report to the Task's absolute `Output:` path, normally `.team/<feature>/reports/NN-<role>[-rN].md`. Report partial, blocked and failed outcomes as well as successful ones. Use the assigned role; reading another skill does not change the assignment. Direct PO-invoked roles use the same content with unavailable Run/Task/Dispatch IDs marked `not dispatched`.
 
 ```markdown
+Role: <builder|reviewer|support-engineer>
+Run: <run ID>
+Task: <task ID>
+Dispatch: <dispatch ID>
+Workspace: <absolute checkout path and branch>
+Revision: <HEAD sha; list uncommitted work or say clean; not applicable for non-code work>
+
 ## Result
-<verdict and delivered behavior>
+<role verdict, outcome and unmet criteria>
 ## Evidence
-<check results and raw-log paths; unverified checks explicit>
+<criteria checked, command/results, revision and raw-log paths; unverified checks explicit>
 ## Findings
-<numbered findings by severity, when reviewing>
+<role-specific findings, when applicable>
 ## Changed paths
 <paths changed>
 ## Commit body
@@ -88,4 +95,24 @@ Use the output path assigned in the Task, normally `.team/<feature>/reports/NN-<
 <open risks and human steps>
 ```
 
-- Keep artifacts local and ignored; retention follows `delivery.md`.
+Identity, Result and Evidence are required. Omit other empty sections. Report claims must name an artifact, source location or observed check; distinguish facts, hypotheses and unchecked items. Keep artifacts local and ignored; retention follows `delivery.md`.
+
+### Content by worker role
+
+| Role | Result | Evidence and role-specific content |
+|---|---|---|
+| Builder | `implemented`, `partial`, `blocked` or `failed`; behavior delivered and criteria left unmet | Map acceptance criteria to checks; final revision and per-command verify results; changed paths, deviations and leftovers. Fix rounds map each finding ID to its fix or evidence-based rejection. Delivery adds Commit body and delivery references. |
+| Reviewer | `pass`, `changes requested`, `blocked` or `inconclusive`; reviewed base and HEAD | Separate `## Standards` and `## Spec`; each finding has a stable ID, Must fix/Should fix, location, impact and reproduction/evidence. Cite the requirement for Spec findings. State zero findings explicitly on each clean axis; re-review resolves prior IDs. Missing access/evidence is not a pass. |
+| Support Engineer | `confirmed`, `not reproduced`, `needs clarification` or `blocked`; answer to the investigation question | Requirements summary at most 10 lines, reproduction and impact, confirmed cause or labelled hypotheses, affected paths and proposed next step/effort drivers. Ticket replies add client-language draft and PO translation; internal questions omit them. |
+
+A report is complete when it records the attempt and its evidence, even if the verdict requires more work. A Task's acceptance and PO gates remain separate. Dispatched workers send `worker_done` only after saving the report, using the identity, verdict and path above; if saving fails, ask the coordinator with the exact path/error instead of claiming submission. Before replacing a report from an earlier Dispatch, preserve it with a `-<previous-dispatch-id>` filename suffix; the current report stays at the assigned `Output:` path. Direct PO-invoked workers return the report to the PO without `worker_done`.
+
+### Coordinator and PO-facing roles
+
+| Role | Durable output | Report to PO |
+|---|---|---|
+| Orchestrator | Feature `handoff.md`, decisions and references to each processed Task/Dispatch/report | Current result or gate, worker verdicts with report links, verification revision, unresolved risks and the next action or PO decision. Mark missing reports explicitly. |
+| Researcher | `.team/research/<topic>.md` per its role skill | Research conclusion, sources, chosen scope and unresolved questions; link the note. |
+| Solution Architect | Draft PR analysis and approved ADRs per its role skill | Recommendation, NFR/cost tradeoffs, decision state and PoC/open questions; link PR/ADRs. |
+
+Researcher and Solution Architect work directly with the PO and have no worker Task/Dispatch identity. Coordinator summaries cite worker reports; the worker owns its findings and evidence. Record report processing in the handoff as `Task | Dispatch | report path | verdict | reviewed revision | next action`. Receipt of `worker_done`, report existence and coordinator processing are distinct facts; this convention does not add automatic dashboard tracking.

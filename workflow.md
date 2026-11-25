@@ -15,6 +15,7 @@ The Orchestrator adds specialists only for a named decision or evidence gap. Pro
 - The PO owns scope, business rules and acceptance of delivery. Gate 1 covers the spec and tickets; G-UI applies when a prototype ran. Ticket reply/scope gates are in `gates.md` below.
 - Within approved scope, agents choose implementation details. New scope or unresolved risks return to the PO.
 - Orca holds status, ownership and dependencies. Code/tests explain implementation; the approved spec and tickets state intended behavior. Reports link execution evidence rather than claiming "done".
+- Each worker owns its Task/Dispatch report, including blocked or failed attempts. The Orchestrator reads and reconciles reports before reporting to the PO; the report contract and role-specific outputs live in `skills/orchestrator/references/specs.md` "Report".
 
 ## Read by responsibility
 

@@ -2,7 +2,7 @@
 
 ## Worker results
 
-- After each `worker_done`, read the full report, including deviations/leftovers. Reconcile `git status --short` in the worker checkout with reported paths; have an authorized committer finish delivery changes.
+- After each `worker_done`, read the full report, including deviations/leftovers. Match its Role/Run/Task/Dispatch, output path and revision to the assignment and receipt; return missing or conflicting evidence to the same worker. Reconcile `git status --short` in the worker checkout with reported paths; have an authorized committer finish delivery changes.
 - Quote verify evidence in the PO update; use shas/counts only from output read this turn. Before Gate 2, require passing `commands.verify` evidence for the final revision; rerun with summary output only if missing, stale or contradictory.
 - Record processed Dispatch/report references in the handoff (`start.md` "Handoff"). Missing completion follows "Coordinator delivery"; missing reports follow "Dispatch and follow-ups" there.
 

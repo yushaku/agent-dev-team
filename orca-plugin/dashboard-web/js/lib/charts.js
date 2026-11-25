@@ -84,7 +84,15 @@ export const ROLE_GROUP = {
   "doc-keeper": "delivery",
   "chat trực tiếp": "direct",
 };
-export const ROLE_SRC = { orca: "task Orca", "role-line": "dòng Role:", dispatch: "lệnh giao việc Orca", title: "title", skill: "skill" };
+export const ROLE_SRC = {
+  orca: "task Orca",
+  "role-line": "dòng Role:",
+  dispatch: "lệnh giao việc Orca",
+  title: "title",
+  skill: "skill",
+  prompt: "yêu cầu đầu phiên (suy luận)",
+  brief: "brief được giao (suy luận)",
+};
 export const groupOf = (r) => ROLE_GROUP[r] || "other";
 export const roleCol = (r) => GROUPS[groupOf(r)][1];
 export const GATE = {

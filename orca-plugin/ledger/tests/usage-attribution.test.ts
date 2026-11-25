@@ -15,7 +15,7 @@ const now = Date.parse('2026-11-13T12:00:00Z') / 1000;
 const iso = (ts: number) => new Date(ts * 1000).toISOString();
 const worktree = '/repo/worktree';
 
-type Task = { id: string; run: string; title?: string; routing?: Record<string, unknown>[] };
+type Task = { id: string; run: string; title?: string; role?: string; routing?: Record<string, unknown>[] };
 type Dispatch = { id: string; task: string; from: number; to?: number; wt?: string; agent?: string };
 
 async function world(t: import('node:test').TestContext, spec: { runs: string[]; tasks?: Task[]; dispatches?: Dispatch[] }) {
@@ -38,7 +38,7 @@ async function world(t: import('node:test').TestContext, spec: { runs: string[];
         task_title: task.title ?? 'builder: build',
         status: 'in_progress',
         created_at: iso(now - 400),
-        spec: (task.routing ?? []).map((r) => 'Routing: ' + JSON.stringify(r)).join('\n'),
+        spec: [task.role ? 'Role: ' + task.role : '', ...(task.routing ?? []).map((r) => 'Routing: ' + JSON.stringify(r))].join('\n'),
       })),
     });
     put('worker-list', ['--run', run], {
@@ -260,4 +260,21 @@ test('role defaults do not depend on a model registry', async (t) => {
   assert.equal(config.roles.reviewer.tier, 'top');
   assert.equal(config.roles.builder.tier, 'work');
   assert.equal(config.roles.builder.agent ?? null, null);
+});
+
+test('worker request roles survive coordinator skill reads and Task Role overrides its title', async (t) => {
+  const w = await world(t, { runs: ['run_a'], tasks: [{ id: 'review', run: 'run_a', title: 'builder: old title', role: 'reviewer' }] });
+  w.session([[now - 30, 10]], { id: 'builder', preview: 'Fix the assigned implementation', skills: [['orchestrator', now - 30]] });
+  w.session([[now - 20, 20]], { id: 'designer', preview: '$design-taste-frontend enhance UI' });
+  w.session([[now - 10, 30]], { id: 'reviewer', tasks: [['review', now - 10]], preview: 'Build something', skills: [['orchestrator', now - 10]] });
+  const sessions = w.data().sessions;
+  assert.equal(sessions.find((s) => s.session_id === 'builder')?.role, 'builder');
+  assert.equal(sessions.find((s) => s.session_id === 'builder')?.role_src, 'prompt');
+  assert.equal(sessions.find((s) => s.session_id === 'designer')?.role, 'designer');
+  assert.equal(sessions.find((s) => s.session_id === 'reviewer')?.role, 'reviewer');
+  assert.equal(sessions.find((s) => s.session_id === 'reviewer')?.role_src, 'orca');
+  assert.equal(
+    sessions.reduce((n, s) => n + s.total, 0),
+    60,
+  );
 });

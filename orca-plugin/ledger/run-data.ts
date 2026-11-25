@@ -164,7 +164,7 @@ export function runData(rows: readonly Record<string, SQLOutputValue>[], now: nu
         id: t.id,
         run: rid,
         title: title.slice(0, 120),
-        role: roleId || (['qa', 'delivery'].includes(m.kind) ? 'builder' : null),
+        role: role(t.spec?.match(/^Role:[ \t]*([a-z-]+)/im)?.[1].toLowerCase() || '') || roleId || (['qa', 'delivery'].includes(m.kind) ? 'builder' : null),
         status: t.status ?? null,
         created: tsOf(t.created_at),
         completed: tsOf(t.completed_at),

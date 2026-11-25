@@ -89,7 +89,7 @@ No `missing:` lines means every skill is in place.
 
 ## Workers and commands
 
-- **Workers** (`skills/team-*`, dispatched by the Orchestrator as their own session and Task; each loads its skill plus the `references/` its Task spec lists in `Refs:`):
+- **Workers** (`skills/team-*`, dispatched by the Orchestrator as their own session and Task; each loads its assigned role skill, selects applicable references and writes its own Task/Dispatch report per `skills/orchestrator/references/specs.md` "Report"):
   - `team-builder`: one ticket at a time: tests, implementation, related docs, delivery evidence; prototype Tasks.
   - `team-reviewer`: independent review with `code-review`; security and perf/a11y checks are its references.
   - `team-support-engineer`: read-only ticket and production investigation.
