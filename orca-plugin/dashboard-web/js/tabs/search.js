@@ -1,7 +1,7 @@
 import { $, AG, fmt, sessionsF, state, widthOf, fig, hBars, roleCol } from "../lib/charts.js";
 
 const SEARCH_VIEWS = {
-  agent: { label: "Agent", key: (s) => AG[s.agent] || s.agent },
+  agent: { label: "Agent", key: (s) => s.agent, name: (id) => AG[id] },
   role: { label: "Vai", key: (s) => s.role },
   worktree: { label: "Worktree", key: (s) => (s.worktree ? s.repo + "/" + s.worktree : s.repo) },
 };
@@ -77,7 +77,8 @@ function bars(id, rows, title, caption, o = {}) {
           LW: o.LW || 240,
           RW: 150,
           rowH: 24,
-          rows: visibleRows.slice(0, 20).map(([label, r]) => {
+          rows: visibleRows.slice(0, 20).map(([id, r]) => {
+            const label = o.name ? o.name(id) : id; // grouped by id, named when drawn: two ids with one display name stay two rows
             const t = totalVisible(r.search),
               cg = cnt(r.search, "codegraph");
             const searches = ["codegraph", "rg", "grep", "find"].reduce((n, k) => n + cnt(r.search, k), 0);
@@ -124,5 +125,9 @@ export function renderSearch(S0) {
   const action = `<div class="search-views" role="group" aria-label="Nhóm lượt tìm code">${Object.entries(SEARCH_VIEWS)
     .map(([key, view]) => `<button type="button" data-toggle="search-view:${key}" aria-pressed="${searchView === key}">${view.label}</button>`)
     .join("")}</div>`;
-  bars("#c-search-agent", group(S, SEARCH_VIEWS[searchView].key), "Tìm và đọc code", "", { action, roles: searchView === "role" });
+  bars("#c-search-agent", group(S, SEARCH_VIEWS[searchView].key), "Tìm và đọc code", "", {
+    action,
+    roles: searchView === "role",
+    name: SEARCH_VIEWS[searchView].name,
+  });
 }

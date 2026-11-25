@@ -1,9 +1,34 @@
 /* Token dashboard tab: Claude, Codex, GitHub Copilot CLI and Orca usage from GET /api/data (ported from the old dashboard page). */
 export const $ = (s) => document.querySelector(s);
 export const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes" };
-export const AGENTS = ["claude", "codex", "copilot", "hermes"];
-export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0 });
+/* Agents come from the loaded snapshot (setAgents), never from a fixed list. */
+const LEGACY_AGENTS = ["claude", "codex", "copilot", "hermes"];
+const LEGACY_LABELS = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes" };
+/* Reserved summary keys in Run token maps: not agents. */
+const RESERVED_KEYS = new Set(["sessions"]);
+export const AG = new Proxy(LEGACY_LABELS, { get: (t, k) => (typeof k === "string" ? (Object.hasOwn(t, k) ? t[k] : k) : t[k]) });
+export const AGENTS = [];
+export const zeroAg = () => Object.fromEntries(AGENTS.map((a) => [a, 0]));
+export function setAgents(data) {
+  const ids = new Set();
+  const add = (a) => typeof a === "string" && a && !RESERVED_KEYS.has(a) && ids.add(a);
+  const addKeys = (m) => m && Object.keys(m).forEach(add);
+  (data?.sessions || []).forEach((s) => add(s.agent));
+  (data?.orca?.runs || []).forEach((r) => {
+    addKeys(r.tokens);
+    addKeys(r.window_tokens);
+    addKeys(r.orchestrator_by_agent);
+    Object.values(r.fix_tokens_by_cause || {}).forEach(addKeys);
+    (r.orchestrator_activity || []).forEach((a) => add(a.agent));
+    (r.tasks || []).forEach((t) => {
+      add(t.agent);
+      addKeys(t.tokens);
+    });
+  });
+  const rank = (a) => (LEGACY_AGENTS.includes(a) ? LEGACY_AGENTS.indexOf(a) : LEGACY_AGENTS.length);
+  AGENTS.splice(0, AGENTS.length, ...[...ids].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)));
+  if (state.agent && !AGENTS.includes(state.agent)) state.agent = "";
+}
 export const state = { days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", searchHidden: [], data: null, auto: true, timer: null };
 try {
   const s = JSON.parse(localStorage.getItem("team-dashboard") || "{}");
@@ -19,7 +44,6 @@ try {
     auto: s.auto !== false,
   });
 } catch {}
-if (!AGENTS.includes(state.agent)) state.agent = "";
 export const persist = () => {
   try {
     localStorage.setItem(
@@ -40,7 +64,14 @@ export const persist = () => {
 };
 
 /* ---------- colours: one meaning each ---------- */
-export const COL = {
+/* Agents outside the legacy four get a stable colour from a hash of the id. Hues keep clear of the legacy four (mauve, green, blue, peach) and of the token parts; mid lightness reads on light and dark. */
+const AGENT_HUES = [48, 170, 320, 345];
+export const agentColour = (a) => {
+  let h = 0;
+  for (const c of String(a)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `hsl(${AGENT_HUES[h % AGENT_HUES.length]} 62% 58%)`;
+};
+const COL_BASE = {
   claude: "var(--claude)",
   codex: "var(--codex)",
   copilot: "var(--copilot)",
@@ -50,6 +81,7 @@ export const COL = {
   cw: "var(--p-cw)",
   out: "var(--p-out)",
 };
+export const COL = new Proxy(COL_BASE, { get: (t, k) => (typeof k !== "string" || Object.hasOwn(t, k) ? t[k] : agentColour(k)) });
 export const PARTS = [
   ["fin", "Input mới"],
   ["cr", "Cache đọc"],

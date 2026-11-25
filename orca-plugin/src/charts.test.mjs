@@ -5,16 +5,39 @@ globalThis.document = { querySelector: () => null, addEventListener() {} }
 globalThis.window = { addEventListener() {} }
 const { hBars } = await import('../dashboard-web/js/lib/charts.js')
 
-test('dashboard agent series contain only the four supported agents', async () => {
-  const { AG, AGENTS, COL, zeroAg, agentLegend } = await import('../dashboard-web/js/lib/charts.js')
-  assert.deepEqual(AGENTS, ['claude', 'codex', 'copilot', 'hermes'])
-  assert.deepEqual(Object.keys(AG), AGENTS)
+test('dashboard agent series come from the data, unknown agents included', async () => {
+  const { AG, AGENTS, COL, zeroAg, agentLegend, setAgents, state } = await import('../dashboard-web/js/lib/charts.js')
+  setAgents({
+    sessions: [{ agent: 'codex' }, { agent: 'jcode' }, { agent: 'claude' }],
+    orca: {
+      runs: [
+        {
+          tokens: { sessions: 3, pi: 5 },
+          window_tokens: { pi: 1 },
+          orchestrator_by_agent: {},
+          orchestrator_activity: [{ agent: 'opencode' }],
+          fix_tokens_by_cause: {},
+          tasks: [{ agent: 'claude', tokens: { jcode: 1 } }],
+        },
+      ],
+    },
+  })
+  assert.deepEqual(AGENTS, ['claude', 'codex', 'jcode', 'opencode', 'pi'], 'legacy order first, reserved key skipped')
   assert.deepEqual(Object.keys(zeroAg()), AGENTS)
-  assert.equal(COL.jcode, undefined)
-  assert.equal(
-    agentLegend().some((x) => x.name === 'jcode'),
-    false,
-  )
+  assert.equal(AG.jcode, 'jcode')
+  assert.equal(AG.claude, 'Claude')
+  assert.equal(COL.claude, 'var(--claude)')
+  assert.equal(COL.jcode, COL.jcode, 'stable')
+  assert.match(COL.jcode, /^hsl\(/)
+  assert.notEqual(COL.jcode, COL.pi)
+  assert.ok(agentLegend().some((x) => x.name === 'jcode'))
+  state.agent = 'gone'
+  setAgents({ sessions: [{ agent: 'jcode' }] })
+  assert.equal(state.agent, '', 'saved filter for an absent agent is dropped')
+  state.agent = 'jcode'
+  setAgents({ sessions: [{ agent: 'jcode' }] })
+  assert.equal(state.agent, 'jcode', 'saved filter for a present new agent is kept')
+  state.agent = ''
 })
 
 const rows = [1000, 10, 0].map((v) => ({

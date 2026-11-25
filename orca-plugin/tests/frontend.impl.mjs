@@ -520,6 +520,7 @@ test("token timeline chains consumption in task order to the run total", () => {
     tokens: { codex: v * 1e6 },
   }));
   const r = { id: "tk", objective: "Tok", created: 100, repo: "test", tasks, gates: [], tokens: {}, orchestrator_by_agent: { codex: 2e6 } };
+  C.setAgents({ orca: { runs: [r] } });
   C.tokenTimeline(runDetail(r), (t) => t.tokens.codex || 0, "", "#tok");
   const html = element("#tok").innerHTML;
   assert.match(html, /Token theo thứ tự task/);
@@ -564,6 +565,7 @@ test("timeline includes observed orchestrator activity and respects role filters
     orchestrator_activity: [{ agent: "codex", start: 90, end: 300, tokens: 10 }],
     orchestrator_by_agent: { codex: 10 },
   };
+  C.setAgents({ orca: { runs: [r] } });
   C.gantt(runDetail(r), () => 0, "", "#orch-time");
   assert.match(element("#orch-time").innerHTML, /Orchestrator/);
   assert.match(element("#orch-time").innerHTML, /Codex/);
@@ -608,6 +610,7 @@ test("one run chart toggles units without changing task order", () => {
     orchestrator_by_agent: { codex: 10 },
     events: [{ id: "peer", at: 400, kind: "peer", from: "Reviewer", to: "Builder", text: "Check <API>", body: "Reproduce & fix" }],
   };
+  C.setAgents({ orca: { runs: [r] } });
   renderRunTimeline([runDetail(r)], r.id, "", "#toggle-host", "toggle-");
   assert.equal((element("#toggle-host").innerHTML.match(/<figure /g) || []).length, 2);
   assert.match(element("#toggle-host").innerHTML, /<figure class="chart"><h4[^>]*>Điều phối &amp; trao đổi/);
@@ -851,6 +854,7 @@ test("the Agents tools view renders the same from the worker's trimmed snapshot 
   };
   const draw = (data) => {
     C.state.data = data;
+    C.setAgents(data);
     C.state.searchHidden = [];
     renderSkills(data.sessions);
     renderSearch(data.sessions);
@@ -1050,4 +1054,73 @@ test("escaped defect charts preserve unknowns and escape fix subjects", () => {
   assert.match(element("#feature-runs").innerHTML, /2 lỗi · 4 ngày/);
   assert.match(element("#feature-runs").innerHTML, /fix: &lt;unsafe&gt;/);
   assert.doesNotMatch(element("#feature-runs").innerHTML, /<unsafe>|NaN|undefined/);
+});
+
+test("every tab renders an agent outside the legacy four with a label and a stable colour", async () => {
+  const { renderOverview } = await import("../dashboard-web/js/tabs/overview.js");
+  const { renderSessionCharts } = await import("../dashboard-web/js/tabs/sessions.js");
+  const session = (agent, id) => ({
+    id,
+    agent,
+    role: "builder",
+    repo: "r",
+    worktree: "w",
+    total: 1000,
+    fin: 100,
+    cr: 200,
+    cw: 300,
+    out: 400,
+    start: 1764028800000,
+    t0: 1764028800000,
+    calls: 3,
+    model: "m",
+    effort: "high",
+    mix: { "m|high": 1000 },
+    ctx: [1],
+    skills: { tdd: [1, 100] },
+    hooks: {},
+    search: { rg: 2 },
+    buckets: {},
+    days: {},
+    hours: {},
+  });
+  const sessions = [session("claude", "a"), session("jcode", "b")];
+  const data = {
+    days: 7,
+    dates: ["2026-11-25"],
+    range_start: 1764028800000,
+    generated_at: 1764115200000,
+    sessions,
+    skills_installed: ["tdd"],
+    roles_cfg: { tiers: {}, order: [], roles: {} },
+    orca: { runs: [{ id: "run", tokens: { sessions: 1, jcode: 5 }, tasks: [], orchestrator_by_agent: { jcode: 2 }, orchestrator_activity: [] }] },
+  };
+  C.state.data = data;
+  C.state.agent = "";
+  C.setAgents(data);
+  C.buildMixColours();
+  assert.deepEqual(C.AGENTS, ["claude", "jcode"]);
+  renderOverview(sessions);
+  renderSessionCharts(sessions);
+  renderSkills(sessions);
+  renderSearch(sessions);
+  renderRoles(sessions);
+  const col = C.COL.jcode;
+  assert.notEqual(col, C.COL.claude);
+  assert.equal(C.COL.claude, "var(--claude)");
+  for (const id of ["#c-daily", "#c-parts", "#c-top", "#c-scatter", "#c-skills", "#c-search-agent"]) {
+    const html = element(id).innerHTML;
+    assert.match(html, /jcode/, id + " names the agent");
+    assert.doesNotMatch(html, /NaN|undefined/, id);
+  }
+  assert.ok(element("#c-daily").innerHTML.includes(col), "same colour in the stack");
+  assert.ok(element("#c-top").innerHTML.includes(col), "same colour in top sessions");
+  assert.equal(
+    C.sum(C.agentsF(), (a) => data.orca.runs[0].tokens[a] || 0),
+    5,
+    "Run totals include the new agent",
+  );
+  C.state.agent = "jcode";
+  assert.deepEqual(C.agentsF(), ["jcode"]);
+  C.state.agent = "";
 });

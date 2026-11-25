@@ -1,5 +1,5 @@
 import * as C from "./lib/charts.js";
-import { $, esc, AG, AGENTS, buildMixColours, sessionsF, splitWhy, persist, hideTip } from "./lib/charts.js";
+import { $, esc, AG, setAgents, buildMixColours, sessionsF, splitWhy, persist, hideTip } from "./lib/charts.js";
 import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
 import { renderRoleSkills } from "./tabs/role-skills.js";
@@ -19,7 +19,7 @@ async function load() {
     const r = await fetch("/api/data?days=" + C.state.days, { cache: "no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
     C.state.data = await r.json();
-    C.state.data.sessions = C.state.data.sessions.filter((s) => AGENTS.includes(s.agent));
+    setAgents(C.state.data);
     C.state.err = "";
   } catch (e) {
     C.state.err = e.message;
