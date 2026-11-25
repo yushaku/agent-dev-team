@@ -196,7 +196,7 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
       if (source === 'dispatch_window') attribution.inferred += tot;
       if (r) inc(r.window_tokens, s.agent, tot);
       const matches =
-        t && !s.aggregate
+        t && !s.aggregate && !s.auxiliary
           ? t.routing.filter(
               (a) =>
                 a.dispatch &&

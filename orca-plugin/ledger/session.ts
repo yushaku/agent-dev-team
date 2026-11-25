@@ -32,6 +32,8 @@ export interface Session {
   tool_count?: number;
   discussion_read?: string | null;
   aggregate?: boolean;
+  /** A Codex helper session (guardian auto-review), not the dispatched worker: counted in usage, never compared with the Task's routing. */
+  auxiliary?: boolean;
   snapshot?: Record<string, Time> | null;
 }
 /** A Hermes `sessions` row, as the ledger archives it. */
@@ -519,6 +521,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
         s.id = p.id || p.session_id || s.id;
         s.cwd = p.cwd ?? null;
         s.originator = p.originator ?? null;
+        if (p.source?.subagent?.other === 'guardian') s.auxiliary = true; // the structured marker, not the model name
         s.branch = p.git?.branch ?? null;
         ctx = branch(s, ts, p.cwd, s.branch, 'session');
       } else if (t === 'turn_context') {

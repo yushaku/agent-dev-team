@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { build } from '../dashboard.ts';
+import { summary } from '../insights.ts';
+import { parseFile } from '../session.ts';
 import { PARSER_VERSION, projections } from '../derived.ts';
 import { Store } from '../store.ts';
 
@@ -277,4 +279,50 @@ test('worker request roles survive coordinator skill reads and Task Role overrid
     sessions.reduce((n, s) => n + s.total, 0),
     60,
   );
+});
+
+const guardianMeta = (source: unknown) =>
+  JSON.stringify({ type: 'session_meta', timestamp: '2026-11-13T00:00:00Z', payload: { id: 'codex-x', cwd: '/repo', source } }) + '\n';
+
+test('a Codex session whose source marks it as the guardian is auxiliary; other sources are not', () => {
+  assert.equal(parseFile('codex', '/x/guard.jsonl', guardianMeta({ subagent: { other: 'guardian' } }))?.auxiliary, true);
+  assert.notEqual(parseFile('codex', '/x/a.jsonl', guardianMeta({ subagent: { other: 'something-else' } }))?.auxiliary, true);
+  assert.notEqual(parseFile('codex', '/x/b.jsonl', guardianMeta('cli'))?.auxiliary, true);
+  assert.notEqual(parseFile('codex', '/x/c.jsonl', guardianMeta(undefined))?.auxiliary, true);
+});
+
+test('only a genuinely mismatched worker raises the routing alert; the guardian row keeps its tokens in Run usage', async (t) => {
+  const base = now - 100;
+  const routing = { tier: 'work', catalog: 'my-code', agent: 'codex', model: 'test-model', effort: 'medium', dispatch: 'd1' };
+  const spec = { runs: ['run_a'], tasks: [{ id: 'a', run: 'run_a', routing: [routing] }], dispatches: [{ id: 'd1', task: 'a', from: base - 1, to: base + 1 }] };
+  const call = (tokens: number, model: string): [number, string, string, number, number, number, number, number, null] => [
+    base,
+    model,
+    'medium',
+    tokens,
+    0,
+    0,
+    0,
+    0,
+    null,
+  ];
+  const alerts = (w: Awaited<ReturnType<typeof world>>) => summary(w.data(), new URLSearchParams()).issues.filter((i) => i.id.startsWith('routing:'));
+
+  const both = await world(t, spec);
+  both.session([[base, 10]], { id: 'guardian', tasks: [['a', base]], auxiliary: true, calls: [call(25, 'codex-auto-review')] });
+  both.session([[base, 10]], { id: 'worker', tasks: [['a', base]], calls: [call(10, 'other-model')] });
+  const issues = alerts(both);
+  assert.equal(issues.length, 1, 'the real mismatch raises one alert');
+  assert.match(issues[0].evidence, /worker/);
+  assert.doesNotMatch(issues[0].evidence, /guardian/);
+  assert.match(issues[0].evidence, /1 phiên/);
+  assert.equal(run(both.data(), 'run_a').tokens.codex, 35, 'guardian tokens stay in the Run totals');
+  const g = both.data().sessions.find((s) => s.id === 'guardian')!;
+  assert.equal(g.total, 25);
+  assert.equal(g.routing, null, 'an auxiliary session is not compared with the dispatch routing');
+
+  const alone = await world(t, spec);
+  alone.session([[base, 10]], { id: 'guardian', tasks: [['a', base]], auxiliary: true, calls: [call(25, 'codex-auto-review')] });
+  alone.session([[base, 10]], { id: 'worker', tasks: [['a', base]], calls: [call(10, 'test-model')] });
+  assert.deepEqual(alerts(alone), [], 'a guardian alone raises nothing');
 });
