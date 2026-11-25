@@ -8,12 +8,13 @@ function element(id) {
   if (!elements.has(id)) elements.set(id, {
     id, style: {}, innerHTML: "", textContent: "", title: "", listeners: {},
     showModal() { this.open = true; }, close() { this.open = false; }, focus() {},
-    setAttribute() {}, addEventListener(event, fn) { this.listeners[event] = fn; },
+    setAttribute() {}, getAttribute() { return null; }, addEventListener(event, fn) { this.listeners[event] = fn; },
   });
   return elements.get(id);
 }
 globalThis.document = {
   querySelector: element,
+  getElementById() { return null; },
   querySelectorAll: s => s === ".dash-view" ? ["tk-tong-quan", "tk-features", "tk-theo-repo", "tk-agents-tools", "tk-cli-tools", "tk-cach-tinh"].map(element) : [],
   addEventListener() {},
 };
@@ -29,7 +30,7 @@ const { renderRoleSkills } = await import("../dashboard-web/js/tabs/role-skills.
 const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures, featureTimeline } = await import("../dashboard-web/js/tabs/runs.js");
 const { renderOverall } = await import("../dashboard-web/js/tabs/overall.js");
 const { renderCliTools, showCliTools } = await import("../dashboard-web/js/tabs/cli-tools.js");
-const { renderTaskRoleSearch, renderSearch, toggleSearchKind } = await import("../dashboard-web/js/tabs/search.js");
+const { renderTaskRoleSearch, renderSearch, toggleSearchKind, setSearchView } = await import("../dashboard-web/js/tabs/search.js");
 const { renderSkills } = await import("../dashboard-web/js/tabs/skills.js");
 const { renderRtkCommands } = await import("../dashboard-web/js/tabs/tokens.js");
 const { trim } = await import("../src/trim.ts");
@@ -251,7 +252,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     const exports = specifier === "./lib/charts.js" ? C : {
       renderFeatures() { rendered.push("features"); }, renderOverall() { rendered.push("timeline"); }, renderOverview() { rendered.push("overview"); if (renderError) throw renderError; },
       renderRoles() { rendered.push("roles"); }, renderRoleSkills() { rendered.push("role-skills"); }, renderRepos() { rendered.push("repos"); }, renderSessionCharts() { rendered.push("sessions"); },
-      showSession() {}, showCliTools() { rendered.push("cli-tools"); }, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); }, toggleSearchKind() { return true; },
+      showSession() {}, showCliTools() { rendered.push("cli-tools"); }, renderSkills() { rendered.push("skills"); }, renderRtkCommands() { rendered.push("rtk-commands"); }, renderSearch() { rendered.push("search"); }, renderTaskRoleSearch() { rendered.push("task-search"); }, toggleSearchKind() { return true; }, setSearchView() { return true; }, toggleSkills() {},
     };
     return new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
@@ -274,7 +275,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     renderError = new ReferenceError("missing chart binding");
     await load();
     assert.equal(element("#updated").textContent, "Lỗi hiển thị");
-    assert.match(element("#updated").title, /missing chart binding/);
+    assert.match(element("#auto").title, /missing chart binding/);
     assert.ok(logged.some(args => args.includes(renderError)));
     assert.equal(C.state.loading, false);
 
@@ -283,7 +284,7 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     await load();
     assert.deepEqual(rendered, ["overview"]);
     assert.doesNotMatch(element("#updated").textContent, /Lỗi/);
-    assert.equal(element("#updated").title, "");
+    assert.doesNotMatch(element("#auto").title, /Lỗi/);
     assert.equal(C.state.err, "");
     assert.equal(element("#refresh").disabled, false);
     rendered.length = 0;
@@ -551,7 +552,11 @@ test("Tools legend toggles code-search chart categories", () => {
   renderSearch(sessions);
   assert.match(element("#c-search-agent").innerHTML, /Codegraph/);
   assert.match(element("#c-search-agent").innerHTML, /Claude/);
-  assert.match(element("#c-search-wt").innerHTML, /r\/w2/);
+  setSearchView("worktree"); renderSearch(sessions);
+  assert.match(element("#c-search-agent").innerHTML, /r\/w2/);
+  setSearchView("role"); renderSearch(sessions);
+  assert.match(element("#c-search-agent").innerHTML, /builder/);
+  setSearchView("agent"); renderSearch(sessions);
   assert.match(element("#c-search-agent").innerHTML, /data-toggle="search:rg"/);
   assert.match(element("#c-search-agent").innerHTML, /aria-pressed="true"/);
 
@@ -579,7 +584,7 @@ test("the Agents tools view renders the same from the worker's trimmed snapshot 
   const draw = (data) => {
     C.state.data = data; C.state.searchHidden = [];
     renderSkills(data.sessions); renderSearch(data.sessions); renderRtkCommands();
-    return ["#c-skills", "#c-search-agent", "#c-search-role", "#c-search-wt", "#c-rtk-cmd"].map((id) => element(id).innerHTML);
+    return ["#c-skills", "#c-search-agent", "#c-rtk-cmd"].map((id) => element(id).innerHTML);
   };
   const fromFull = draw(full);
   const trimmed = trim(full, 600);
@@ -587,7 +592,7 @@ test("the Agents tools view renders the same from the worker's trimmed snapshot 
   const fromTrimmed = draw(JSON.parse(JSON.stringify(trimmed)));
   assert.deepEqual(fromTrimmed, fromFull);
   assert.match(fromTrimmed[0], /unused-skill/);
-  assert.match(fromTrimmed[4], /git/);
+  assert.match(fromTrimmed[2], /git/);
   assert.ok(fromTrimmed.every((html) => html.length > 50 && !/NaN|undefined/.test(html)));
 });
 
@@ -604,19 +609,16 @@ test("Codegraph percentage ignores file reads", () => {
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
 
-test("issues section renders severity rows with filter hints and an empty state", async () => {
-  const { renderIssues } = await import("../dashboard-web/js/tabs/overview.js");
-  renderIssues([{ id: "a", severity: "high", title: "Tiêu đề <b>", evidence: "bằng chứng 1", suggestion: "gợi ý", filter: { run: "r1", role: "builder" } },
-    { id: "b", severity: "low", title: "Khác", evidence: "e", suggestion: "s", filter: {} }]);
-  const html = element("#issues").innerHTML;
-  assert.equal((html.match(/class="issue /g) || []).length, 2);
-  assert.match(html, /class="issue high"/);
-  assert.match(html, /Tiêu đề &lt;b&gt;/);
-  assert.match(html, /data-issue="\{&quot;run&quot;:&quot;r1&quot;,&quot;role&quot;:&quot;builder&quot;\}"/);
-  renderIssues([]);
-  assert.match(element("#issues").innerHTML, /Không phát hiện vấn đề nào trong khoảng này\./);
+test("Overview renders only summary metrics and charts", async () => {
+  const { renderOverview } = await import("../dashboard-web/js/tabs/overview.js");
+  C.state.data = { days: 7, dates: ["2026-11-25"], sessions: [] };
+  renderOverview([]);
+  assert.equal((element("#kpi").innerHTML.match(/class="card tile"/g) || []).length, 4);
+  for (const id of ["#c-daily", "#c-parts", "#c-mix", "#c-top"]) {
+    assert.match(element(id).innerHTML, /class="empty"/);
+    assert.doesNotMatch(element(id).innerHTML, /<table|<figcaption/);
+  }
 });
-
 
 test("feature Runs compare variants, preserve unknowns and escape branch and skill names", () => {
   C.state.repo = "";

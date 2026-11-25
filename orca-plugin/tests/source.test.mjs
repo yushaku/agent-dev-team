@@ -123,7 +123,7 @@ test('extra routes (the skill sheet) are answered by their own handler and a ref
 
 test('the offline check looks at the view this panel shows, so a rendered Agents tools view stays visible when a refresh fails', async () => {
   // A page with only the Agents tools charts drawn: nothing in #tk-theo-repo (the Tasks view is not rendered here).
-  const doc = { querySelector: (selector) => (selector === '#tk-agents-tools svg' ? {} : null) }
+  const doc = { querySelector: (selector) => (selector === '#tk-agents-tools .chart-scroll svg' ? {} : null) }
   assert.equal(viewHasCharts(doc, 'tk-agents-tools'), true)
   assert.equal(viewHasCharts(doc, 'tk-theo-repo'), false)
   let up = true

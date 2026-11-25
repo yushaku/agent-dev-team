@@ -1,15 +1,16 @@
 /* Token dashboard tab: Claude, Codex, GitHub Copilot CLI and Orca usage from GET /api/data (ported from the old dashboard page). */
 export const $ = s => document.querySelector(s);
 export const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes", jcode: "jcode" };
-export const AGENTS = ["claude", "codex", "copilot", "hermes", "jcode"];
-export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0, jcode: 0 });
+export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes" };
+export const AGENTS = ["claude", "codex", "copilot", "hermes"];
+export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0 });
 export const state = { days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", searchHidden: [], data: null, auto: true, timer: null };
 try { const s = JSON.parse(localStorage.getItem("team-dashboard") || "{}"); Object.assign(state, { days: s.days || 7, repo: s.repo || "", agent: s.agent || "", role: s.role || "", wt: s.wt || "", runF: s.runF || "", taskF: s.taskF || "", searchHidden: Array.isArray(s.searchHidden) ? s.searchHidden : [], auto: s.auto !== false }); } catch (e) {}
+if (!AGENTS.includes(state.agent)) state.agent = "";
 export const persist = () => { try { localStorage.setItem("team-dashboard", JSON.stringify({ days: state.days, repo: state.repo, agent: state.agent, role: state.role, wt: state.wt, runF: state.runF, taskF: state.taskF, searchHidden: state.searchHidden, auto: state.auto })); } catch (e) {} };
 
 /* ---------- colours: one meaning each ---------- */
-export const COL = { claude: "var(--claude)", codex: "var(--codex)", copilot: "var(--copilot)", hermes: "var(--hermes)", jcode: "var(--jcode)", fin: "var(--p-fin)", cr: "var(--p-cr)", cw: "var(--p-cw)", out: "var(--p-out)" };
+export const COL = { claude: "var(--claude)", codex: "var(--codex)", copilot: "var(--copilot)", hermes: "var(--hermes)", fin: "var(--p-fin)", cr: "var(--p-cr)", cw: "var(--p-cw)", out: "var(--p-out)" };
 export const PARTS = [["fin", "Input mới"], ["cr", "Cache đọc"], ["cw", "Cache ghi"], ["out", "Output"]];
 export const GROUPS = { po: ["PO", "var(--sky)"], orch: ["Orchestrator", "var(--blue)"], plan: ["Plan", "var(--mauve)"], build: ["Build", "var(--green)"], verify: ["Verify", "var(--peach)"], delivery: ["Delivery", "var(--pink)"], direct: ["Chat trực tiếp", "var(--overlay0)"], other: ["Khác", "var(--overlay2)"] };
 export const ROLE_GROUP = { po: "po", orchestrator: "orch", designer: "plan", architect: "plan", "solution-architect": "plan", "tech-lead": "plan", researcher: "plan", support: "plan", "support-engineer": "plan", builder: "build", "anti-ai": "verify", reviewer: "verify", security: "verify", "perf-a11y": "verify", "doc-keeper": "delivery", "chat trực tiếp": "direct" };
@@ -87,7 +88,20 @@ export function A(o) {
   if (o.f || o.toggle || o.sid || o.skill) s += ` tabindex="0" role="button" aria-label="${esc((o.tip || [o.f || o.toggle || o.sid || o.skill]).join(", "))}"`;
   return s;
 }
-export const svg = (W, H, label, inner) => `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(label)}">${inner}</svg>`;
+let chartId = 0;
+export const svg = (W, H, label, inner) => {
+  const id = 'token-' + ++chartId;
+  const patterns = {
+    cr: '<path d="M-2 2L2-2M0 6L6 0M4 8L8 4"/>',
+    cw: '<path d="M2 0V6M5 0V6"/>',
+    out: '<circle cx="3" cy="3" r="1" style="fill:var(--mantle);stroke:none"/>'
+  };
+  const used = Object.keys(patterns).filter(k => inner.includes(`var(--p-${k})`));
+  for (const k of used) inner = inner.replaceAll(`var(--p-${k})`, `url(#${id}-${k})`);
+  const defs = used.map(k => `<pattern id="${id}-${k}" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" style="fill:var(--p-${k})"/><g style="stroke:var(--mantle);stroke-width:1;opacity:.4">${patterns[k]}</g></pattern>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(label)}">${defs ? `<defs>${defs}</defs>` : ''}${inner}</svg>`;
+};
+export const swatch = color => `<span class="swatch" style="--c:${color}">${color.startsWith('var(--p-') ? svg(12, 12, '', `<rect width="12" height="12" style="fill:${color}"/>`).replace('role="img"', 'aria-hidden="true"') : ''}</span>`;
 export const fill = c => `style="fill:${c}"`;
 export function widthOf(id) {
   const el = $(id);
@@ -99,9 +113,11 @@ export function widthOf(id) {
 export function fig(id, o) {
   const el = $(id);
   if (!el) return;
-  const legend = (o.legend || []).map(l => `<li${l.f || l.toggle ? A({ f: l.f, toggle: l.toggle, pressed: l.pressed, tip: [l.name, l.tip || (l.f ? "Bấm để lọc" : "Bấm để ẩn hoặc hiện")] }) : ""}><span class="swatch" style="--c:${l.color}"></span>${esc(l.name)}</li>`).join("");
+  const legend = (o.legend || []).map(l => `<li${l.f || l.toggle ? A({ f: l.f, toggle: l.toggle, pressed: l.pressed ?? (l.f ? state[l.f.slice(0, l.f.indexOf(":"))] === l.f.slice(l.f.indexOf(":") + 1) : undefined), tip: [l.name, l.tip || (l.f ? "Bấm để lọc" : "Bấm để ẩn hoặc hiện")] }) : ""}>${swatch(l.color)}${esc(l.name)}</li>`).join("");
   const heading = `<h4>${esc(o.title)}</h4>`;
-  el.innerHTML = `${o.action ? `<div class="run-chart-toolbar">${heading}${o.action}</div>` : heading}${o.subtitle ? `<p class="chart-subtitle">${esc(o.subtitle)}</p>` : ""}${o.body ? `<div class="chart-scroll">${o.body}</div>` : `<p class="empty">${esc(o.empty || "Không có dữ liệu trong khoảng này.")}</p>`}${legend ? `<ul class="legend">${legend}</ul>` : ""}${o.caption ? `<figcaption>${o.caption}</figcaption>` : ""}`;
+  const key = legend ? `<ul class="legend">${legend}</ul>` : "";
+  const legendBlock = (o.legend || []).length > 6 ? `<details class="chart-key"><summary>Chú giải · ${o.legend.length} mục</summary>${key}</details>` : key;
+  el.innerHTML = `${o.action ? `<div class="run-chart-toolbar">${heading}${o.action}</div>` : heading}${o.subtitle ? `<p class="chart-subtitle">${esc(o.subtitle)}</p>` : ""}${legendBlock}${o.body ? `<div class="chart-scroll">${o.body}</div>` : `<p class="empty">${esc(o.empty || "Không có dữ liệu trong khoảng này.")}</p>`}${o.caption ? `<figcaption>${o.caption}</figcaption>` : ""}`;
 }
 export const agentLegend = () => agentsF().map(a => ({ name: AG[a], color: COL[a], f: "agent:" + a }));
 export const partLegend = () => PARTS.map(([k, n]) => ({ name: n, color: COL[k] }));
@@ -152,16 +168,18 @@ export function vBars(o) {
 }
 /* Horizontal stacked bars. rows: { label, f, sid, dot, segs:[{v,color,name,f}], tip:[], right:[{t,color}] } */
 export function hBars(o) {
-  const W = o.W, rowH = o.rowH || 28, T = 8, B = 40;
-  const LW = Math.min(o.LW || 220, Math.round(W * 0.36)), RW = Math.min(o.RW || 70, Math.round(W * 0.3)), pw = W - LW - RW - 12;
+  const W = o.W, compact = W < 560, rowH = compact ? 52 : Math.max(32, o.rowH || 32), T = 8, B = 40;
+  const right = r => r.right || [{ t: (o.fv || fmt)(sum(r.segs, s => s.v)) }];
+  const valueWidth = Math.max(40, ...o.rows.map(r => right(r).reduce((n, p) => n + String(p.t).length * 7 + 8, 0)));
+  const LW = compact ? 0 : Math.min(o.LW || 220, Math.round(W * 0.36)), RW = Math.max(o.RW || 70, valueWidth), pw = Math.max(24, W - LW - RW - 12);
   const H = T + o.rows.length * rowH + B, g = [];
   const tots = o.rows.map(r => sum(r.segs, s => s.v));
   const sc = scale(Math.max(0, ...tots));
-  sc.ticks.forEach(v => { const x = r1(LW + pw * v / sc.top); g.push(`<line class="gl" x1="${x}" x2="${x}" y1="${T}" y2="${T + o.rows.length * rowH}"/><text x="${x}" y="${T + o.rows.length * rowH + 16}" text-anchor="middle">${(o.fx || fmt)(v)}</text>`); });
+  sc.ticks.filter((v, i) => pw >= 200 || i % 2 === 0).forEach(v => { const x = r1(LW + pw * v / sc.top); g.push(`<line class="gl" x1="${x}" x2="${x}" y1="${T}" y2="${T + o.rows.length * rowH}"/><text x="${x}" y="${T + o.rows.length * rowH + 16}" text-anchor="${v === 0 ? "start" : "middle"}">${(o.fx || fmt)(v)}</text>`); });
   if (o.xTitle) g.push(`<text x="${LW + pw / 2}" y="${H - 4}" text-anchor="middle">${esc(o.xTitle)}</text>`);
-  const chars = Math.floor((LW - 16) / 6.6);
+  const chars = Math.floor(((compact ? W : LW) - 16) / 6.6);
   o.rows.forEach((r, i) => {
-    const y = T + i * rowH, cy = y + rowH / 2;
+    const y = T + i * rowH, cy = compact ? y + 10 : y + rowH / 2;
     let lx = 0;
     if (r.dot) { g.push(`<rect x="0" y="${cy - 5}" width="10" height="10" rx="2" ${fill(r.dot)}/>`); lx = 16; }
     const act = r.f || r.sid || r.skill;
@@ -170,13 +188,12 @@ export function hBars(o) {
     r.segs.forEach(s => {
       if (!(s.v > 0)) return;
       const w = Math.max(1, pw * s.v / sc.top);
-      g.push(`<rect x="${r1(x)}" y="${r1(y + 4)}" width="${r1(w)}" height="${rowH - 8}" rx="2" ${fill(s.color)}${A({ tip: [r.full || r.label, s.name + ": " + (o.fv || fmt)(s.v) + (tots[i] ? " (" + pct(s.v, tots[i]) + ")" : ""), r.segs.length > 1 ? "Tổng: " + (o.fv || fmt)(tots[i]) : null].concat(r.tip || [], s.f ? ["Bấm để lọc " + s.name] : r.sid ? ["Bấm để xem phiên"] : []), f: s.f, sid: s.f ? null : r.sid })}/>`);
+      g.push(`<rect x="${r1(x)}" y="${r1(compact ? y + 24 : y + 8)}" width="${r1(w)}" height="${compact ? 16 : rowH - 16}" rx="2" ${fill(s.color)}${A({ tip: [r.full || r.label, s.name + ": " + (o.fv || fmt)(s.v) + (tots[i] ? " (" + pct(s.v, tots[i]) + ")" : ""), r.segs.length > 1 ? "Tổng: " + (o.fv || fmt)(tots[i]) : null].concat(r.tip || [], s.f ? ["Bấm để lọc " + s.name] : r.sid ? ["Bấm để xem phiên"] : []), f: s.f, sid: s.f ? null : r.sid })}/>`);
       x += w;
     });
-    let rx = r1(x + 6);
-    (r.right || [{ t: (o.fv || fmt)(tots[i]) }]).forEach(p => { g.push(`<text x="${rx}" y="${cy + 4}" ${p.color ? fill(p.color) : 'class="v"'}>${esc(p.t)}</text>`); rx += p.t.length * 7 + 8; });
+    let rx = W;
+    [...right(r)].reverse().forEach(p => { g.push(`<text x="${rx}" y="${compact ? y + 36 : cy + 4}" text-anchor="end" ${p.color ? fill(p.color) : 'class="v"'}>${esc(p.t)}</text>`); rx -= String(p.t).length * 7 + 8; });
   });
-  g.push(`<line class="ax" x1="${LW}" x2="${LW}" y1="${T}" y2="${T + o.rows.length * rowH}"/>`);
   return svg(W, H, o.aria, g.join(""));
 }
 export function arcPath(cx, cy, r, ir, a0, a1) {

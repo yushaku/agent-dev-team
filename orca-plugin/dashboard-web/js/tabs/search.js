@@ -1,12 +1,24 @@
 import { $, AG, fmt, sessionsF, state, widthOf, fig, hBars, roleCol } from "../lib/charts.js";
 
+const SEARCH_VIEWS = {
+  agent: { label: "Agent", key: s => AG[s.agent] || s.agent },
+  role: { label: "Vai", key: s => s.role },
+  worktree: { label: "Worktree", key: s => s.worktree ? s.repo + "/" + s.worktree : s.repo }
+};
+let searchView = "agent";
+export function setSearchView(view) {
+  if (!Object.hasOwn(SEARCH_VIEWS, view)) return false;
+  searchView = view;
+  return true;
+}
+
 export const KINDS = [
   ["codegraph", "Codegraph", "var(--green)"],
   ["rg", "rg", "var(--blue)"],
   ["grep", "grep", "var(--peach)"],
   ["find", "find/glob", "var(--yellow)"],
-  ["read_full", "Đọc cả file", "var(--red)"],
-  ["read_part", "Đọc một đoạn", "var(--overlay1)"],
+  ["read_full", "Đọc cả file", "var(--mauve)"],
+  ["read_part", "Đọc một đoạn", "var(--pink)"],
 ];
 const hiddenKinds = () => state.searchHidden || [];
 const visibleKinds = () => KINDS.filter(([kind]) => !hiddenKinds().includes(kind));
@@ -45,7 +57,7 @@ function bars(id, rows, title, caption, o = {}) {
   const shownCodegraph = kinds.some(([kind]) => kind === "codegraph");
   const visibleRows = rows.filter(([, r]) => totalVisible(r.search));
   fig(id, {
-    title, subtitle: o.subtitle, legend: legend(), caption,
+    title, action: o.action, subtitle: o.subtitle, legend: legend(), caption,
     body: visibleRows.length ? hBars({
       W, LW: o.LW || 240, RW: 150, rowH: 24,
       rows: visibleRows.slice(0, 20).map(([label, r]) => {
@@ -76,7 +88,6 @@ export function renderTaskRoleSearch(S0) {
 
 export function renderSearch(S0) {
   const S = (S0 || sessionsF()).filter(s => s.search);
-  bars("#c-search-agent", group(S, s => AG[s.agent] || s.agent), "Theo agent", "Codegraph tính cả MCP (codegraph_explore, ...) và lệnh shell `codegraph explore|query|callers|...`. rg/grep tính cả qua rtk.");
-  bars("#c-search-role", group(S, s => s.role), "Theo vai", "Vai có tỉ lệ codegraph thấp là nơi nên nhắc dùng codegraph trong role prompt.");
-  bars("#c-search-wt", group(S, s => s.worktree ? s.repo + "/" + s.worktree : s.repo), "Theo repo / worktree", "Worktree chỉ có rg/grep thường là chưa `codegraph init`.");
+  const action = `<div class="search-views" role="group" aria-label="Nhóm lượt tìm code">${Object.entries(SEARCH_VIEWS).map(([key, view]) => `<button type="button" data-toggle="search-view:${key}" aria-pressed="${searchView === key}">${view.label}</button>`).join("")}</div>`;
+  bars("#c-search-agent", group(S, SEARCH_VIEWS[searchView].key), "Tìm và đọc code", "", { action, roles: searchView === "role" });
 }

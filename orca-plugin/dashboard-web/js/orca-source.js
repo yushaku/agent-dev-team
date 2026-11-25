@@ -72,5 +72,5 @@ export function makeAsk(request) {
 
 /** Whether the view this panel shows has drawn a chart: the offline bar hides the empty frames only when it has not. */
 export function viewHasCharts(doc, viewId) {
-  return !!doc.querySelector('#' + viewId + ' svg')
+  return !!doc.querySelector('#' + viewId + ' .chart-scroll svg')
 }

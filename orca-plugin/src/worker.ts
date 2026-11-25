@@ -1,5 +1,5 @@
-// Answers the panels (Tasks and Agents tools) with the dashboard's data. A panel cannot reach the network, so the
-// worker reads the in-process dashboard API (ledger-host.ts) and sends back only what the two views read, in chunks.
+// Answers the panel (Overview, Tasks and Agents tools) with the dashboard's data. A panel cannot reach the network, so the
+// worker reads the in-process dashboard API (ledger-host.ts) and sends back only what the views read, in chunks.
 import type { OrcaWorkerApi } from 'orca/worker'
 import { chunks, prepare, REPLY_LIMIT } from './trim'
 import { dashboardData, run as hostLedger, shutdown, skillDoc } from './ledger-host'

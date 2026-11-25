@@ -3,7 +3,7 @@
   "id": "team-dashboard",
   "name": "Team dashboard",
   "version": "0.1.0",
-  "description": "The dashboard Tasks tab inside Orca, and the host of the agent history ledger.",
+  "description": "The team dashboard inside Orca (Overview, Tasks and Agents tools tabs), and the host of the agent history ledger.",
   "engines": {
     "orca": ">=1.4.248"
   },
@@ -14,16 +14,9 @@
     "panels": [
       {
         "id": "tasks",
-        "title": "Tasks",
+        "title": "Team dashboard",
         "icon": "bar-chart-3",
         "entry": "dashboard-web/index.html",
-        "ui": "html"
-      },
-      {
-        "id": "agents-tools",
-        "title": "Agents tools",
-        "icon": "wrench",
-        "entry": "dashboard-web/agents-tools.html",
         "ui": "html"
       }
     ],

@@ -3,7 +3,7 @@ import {
   $, esc, AG, AGENTS, zeroAg, COL, PARTS, GROUPS, ROLE_SRC, GATE, groupOf, roleCol,
   buildMixColours, mixCol, mixName, fmt, pct, pad, dt, hm, dm, dur, median, sum, sessionCount,
   cut, r1, splitWhy, sessionsF, agentsF, buckets, bval, A, svg, fill, widthOf,
-  fig, agentLegend, partLegend, groupLegend, scale, timeTicks, yAxis, vBars, hBars,
+  fig, swatch, agentLegend, partLegend, groupLegend, scale, timeTicks, yAxis, vBars, hBars,
   arcPath, donut, squarify, spark, mixc, gantt, hideTip
 } from "../lib/charts.js";
 
@@ -61,7 +61,7 @@ export function showSession(id) {
   const dk = Object.keys(s.days).sort();
   const daysBar = dk.length > 1 ? vBars({ W, H: 180, cats: dk.map(k => ({ label: k.slice(8) + "/" + k.slice(5, 7) })), series: PARTS.map(([k, n]) => ({ name: n, color: COL[k] })), get: (i, j) => s.days[dk[i]][j], fv: fmt, yTitle: "Token", aria: "Cột token theo ngày của phiên" }) : "";
   $("#detail-title").textContent = AG[s.agent] + ": " + s.repo + " / " + s.worktree;
-  $("#detail-body").innerHTML = `<div class="chart">${partsBar}${daysBar}<ul class="legend">${partLegend().map(l => `<li><span class="swatch" style="--c:${l.color}"></span>${l.name}</li>`).join("")}</ul></div><dl class="kv">
+  $("#detail-body").innerHTML = `<div class="chart">${partsBar}${daysBar}<ul class="legend">${partLegend().map(l => `<li>${swatch(l.color)}${l.name}</li>`).join("")}</ul></div><dl class="kv">
     ${s.split ? `<dt>Nên tách</dt><dd>${esc(s.split)}. Nên mở phiên mới sau mỗi phần việc</dd>` : ""}
     <dt>Session id</dt><dd><code>${esc(s.id)}</code></dd>
     <dt>Thời gian</dt><dd>${dt(s.start)} đến ${dt(s.end)} (${dur(s.end - s.start)})</dd>
