@@ -31,13 +31,16 @@ Environment: `AGENT_DASHBOARD_WEB` defaults to this folder's `dashboard-web/`; `
 Run from the repository root. Node 24 or 26 (`node:sqlite`, type stripping); Orca's own Node is 24.
 
 ```sh
-node --test orca-plugin/ledger/tests/*.test.ts                      # the ledger: ingest, projections, API, golden files
-node --experimental-vm-modules --test orca-plugin/tests/frontend.impl.mjs   # the web UI render code
-node --test orca-plugin/tests/source.test.mjs                       # the panel's fetch shim
-orca plugin test orca-plugin                                        # everything above plus src/*.test.ts, under Orca's runner
+npm ci --prefix orca-plugin                                         # once: Biome, TypeScript, @types/node (dev tools only)
+npm run --prefix orca-plugin lint                                   # format and lint, check mode, fails on any warning (biome.jsonc)
+npm run --prefix orca-plugin typecheck                              # writes the ignored .orca/types, then strict tsc over src/ and ledger/
+orca plugin test orca-plugin                                        # every *.test.* (ledger, frontend, src), under Orca's runner
 orca plugin check orca-plugin && orca plugin validate orca-plugin
-npx -p typescript@5 tsc -p orca-plugin
+node --test orca-plugin/ledger/tests/*.test.ts                      # the ledger alone: ingest, projections, API, golden files
+node --experimental-vm-modules --test orca-plugin/tests/frontend.impl.mjs   # the web UI render code alone
 ```
+
+To fix formatting: `npm run --prefix orca-plugin format`. The dashboard's plain JS (`dashboard-web/`) is linted but not typechecked.
 
 `ledger/tests/golden/` holds Python's output for the fixtures, frozen from the retired Python dashboard (see `ledger/tests/golden.ts`); the test team in `ledger/tests/fixtures/team` makes roles and skills the same everywhere. With Orca's Node: `ELECTRON_RUN_AS_NODE=1 "/Applications/Orca.app/Contents/Frameworks/Orca Helper.app/Contents/MacOS/Orca Helper" --test orca-plugin/ledger/tests/*.test.ts`.
 

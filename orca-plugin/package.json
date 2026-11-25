@@ -3,6 +3,11 @@
   "private": true,
   "description": "Dev tools only (format, lint, typecheck). The plugin has no runtime dependencies.",
   "type": "module",
+  "scripts": {
+    "lint": "biome ci --error-on-warnings .",
+    "format": "biome check --write .",
+    "typecheck": "orca plugin types . > /dev/null && tsc -p ."
+  },
   "devDependencies": {
     "@biomejs/biome": "2.6.9",
     "@types/node": "24.19.2",
