@@ -180,6 +180,8 @@ test('terminal details survive restart and refresh after list changes or reappea
     join(f.root, 'orca'),
     `#!/bin/sh
 dir=$(dirname "$0")
+# The optional agent inventory (orca agent installed) runs beside the pass; this test counts orchestration calls only.
+[ "$1" = agent ] && exit 1
 echo "$2 $4" >> "$dir/calls"
 case "$2" in
 run-list) result=$(cat "$dir/listing") ;;
@@ -1275,6 +1277,8 @@ test('plugin host: one listener serves the dashboard, waits for a busy port, and
     const health = (await (await h.get('/health')).json()) as { listening: { bound: number[]; waiting: number[] } };
     assert.deepEqual(health.listening.bound, [h.port]);
     assert.deepEqual(health.listening.waiting, []);
+    // The bar says "starting" until the first ingest pass ends, which on a loaded machine can be after the listener is up: wait for it.
+    for (let i = 0; i < 200 && !h.bars.some((b) => /✓ \d+$/.test(b) && b.endsWith(String(h.port))); i++) await sleep(25);
     assert.ok(
       h.bars.some((b) => /✓ \d+$/.test(b) && b.endsWith(String(h.port))),
       h.bars.join(' | '),

@@ -356,6 +356,9 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
             renderSessionCharts() {
               rendered.push("sessions");
             },
+            renderMethodology() {
+              rendered.push("methodology");
+            },
             showSession() {},
             showCliTools() {
               rendered.push("cli-tools");
@@ -428,7 +431,8 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     assert.deepEqual(rendered, ["skills", "search", "rtk-commands"]);
     rendered.length = 0;
     dash.namespace.showView("tk-cach-tinh", { hash: false });
-    assert.deepEqual(rendered, []);
+    assert.deepEqual(rendered, ["methodology"]);
+    rendered.length = 0;
     dash.namespace.showView("tk-cli-tools", { hash: false });
     assert.deepEqual(rendered, ["cli-tools"]);
     assert.equal(element(".dash-head").hidden, true);
@@ -520,6 +524,7 @@ test("token timeline chains consumption in task order to the run total", () => {
     tokens: { codex: v * 1e6 },
   }));
   const r = { id: "tk", objective: "Tok", created: 100, repo: "test", tasks, gates: [], tokens: {}, orchestrator_by_agent: { codex: 2e6 } };
+  C.setAgents({ orca: { runs: [r] } });
   C.tokenTimeline(runDetail(r), (t) => t.tokens.codex || 0, "", "#tok");
   const html = element("#tok").innerHTML;
   assert.match(html, /Token theo thứ tự task/);
@@ -574,6 +579,7 @@ test("timeline includes observed orchestrator activity and respects role filters
     orchestrator_activity: [{ agent: "codex", start: 90, end: 300, tokens: 10 }],
     orchestrator_by_agent: { codex: 10 },
   };
+  C.setAgents({ orca: { runs: [r] }, agents: [{ id: "codex", name: "Codex" }] });
   C.gantt(runDetail(r), () => 0, "", "#orch-time");
   assert.match(element("#orch-time").innerHTML, /Orchestrator/);
   assert.match(element("#orch-time").innerHTML, /Codex/);
@@ -618,6 +624,7 @@ test("one run chart toggles units without changing task order", () => {
     orchestrator_by_agent: { codex: 10 },
     events: [{ id: "peer", at: 400, kind: "peer", from: "Reviewer", to: "Builder", text: "Check <API>", body: "Reproduce & fix" }],
   };
+  C.setAgents({ orca: { runs: [r] } });
   renderRunTimeline([runDetail(r)], r.id, "", "#toggle-host", "toggle-");
   assert.equal((element("#toggle-host").innerHTML.match(/<figure /g) || []).length, 2);
   assert.match(element("#toggle-host").innerHTML, /<figure class="chart"><h4[^>]*>Điều phối &amp; trao đổi/);
@@ -804,9 +811,10 @@ test("Tools legend toggles code-search chart categories", () => {
     { agent: "claude", role: "builder", repo: "r", worktree: "w1", total: 100, search: { codegraph: 3, rg: 1 } },
     { agent: "codex", role: "builder", repo: "r", worktree: "w2", total: 300, search: { rg: 4, read_full: 2 } },
   ];
+  C.setAgents({ sessions, agents: [{ id: "claude", name: "Claude Code" }] });
   renderSearch(sessions);
   assert.match(element("#c-search-agent").innerHTML, /Codegraph/);
-  assert.match(element("#c-search-agent").innerHTML, /Claude/);
+  assert.match(element("#c-search-agent").innerHTML, /Claude Code/);
   setSearchView("worktree");
   renderSearch(sessions);
   assert.match(element("#c-search-agent").innerHTML, /r\/w2/);
@@ -864,6 +872,7 @@ test("the Agents tools view renders the same from the worker's trimmed snapshot 
   };
   const draw = (data) => {
     C.state.data = data;
+    C.setAgents(data);
     C.state.searchHidden = [];
     renderSkills(data.sessions);
     renderSearch(data.sessions);
@@ -1063,4 +1072,162 @@ test("escaped defect charts preserve unknowns and escape fix subjects", () => {
   assert.match(element("#feature-runs").innerHTML, /2 lỗi · 4 ngày/);
   assert.match(element("#feature-runs").innerHTML, /fix: &lt;unsafe&gt;/);
   assert.doesNotMatch(element("#feature-runs").innerHTML, /<unsafe>|NaN|undefined/);
+});
+
+test("every tab renders an agent outside the legacy four with a label and a stable colour", async () => {
+  const { renderOverview } = await import("../dashboard-web/js/tabs/overview.js");
+  const { renderSessionCharts } = await import("../dashboard-web/js/tabs/sessions.js");
+  const session = (agent, id) => ({
+    id,
+    agent,
+    role: "builder",
+    repo: "r",
+    worktree: "w",
+    total: 1000,
+    fin: 100,
+    cr: 200,
+    cw: 300,
+    out: 400,
+    start: 1764028800000,
+    t0: 1764028800000,
+    calls: 3,
+    model: "m",
+    effort: "high",
+    mix: { "m|high": 1000 },
+    ctx: [1],
+    skills: { tdd: [1, 100] },
+    hooks: {},
+    search: { rg: 2 },
+    buckets: {},
+    days: {},
+    hours: {},
+  });
+  const sessions = [session("claude", "a"), session("jcode", "b")];
+  const data = {
+    days: 7,
+    dates: ["2026-11-25"],
+    range_start: 1764028800000,
+    generated_at: 1764115200000,
+    sessions,
+    skills_installed: ["tdd"],
+    roles_cfg: { tiers: {}, order: [], roles: {} },
+    orca: { runs: [{ id: "run", tokens: { sessions: 1, jcode: 5 }, tasks: [], orchestrator_by_agent: { jcode: 2 }, orchestrator_activity: [] }] },
+  };
+  C.state.data = data;
+  C.state.agent = "";
+  C.setAgents(data);
+  C.buildMixColours();
+  assert.deepEqual(C.AGENTS, ["claude", "jcode"]);
+  renderOverview(sessions);
+  renderSessionCharts(sessions);
+  renderSkills(sessions);
+  renderSearch(sessions);
+  renderRoles(sessions);
+  const col = C.COL.jcode;
+  assert.notEqual(col, C.COL.claude);
+  assert.equal(C.COL.claude, "var(--claude)");
+  for (const id of ["#c-daily", "#c-parts", "#c-top", "#c-scatter", "#c-skills", "#c-search-agent"]) {
+    const html = element(id).innerHTML;
+    assert.match(html, /jcode/, id + " names the agent");
+    assert.doesNotMatch(html, /NaN|undefined/, id);
+  }
+  assert.ok(element("#c-daily").innerHTML.includes(col), "same colour in the stack");
+  assert.ok(element("#c-top").innerHTML.includes(col), "same colour in top sessions");
+  assert.equal(
+    C.sum(C.agentsF(), (a) => data.orca.runs[0].tokens[a] || 0),
+    5,
+    "Run totals include the new agent",
+  );
+  C.state.agent = "jcode";
+  assert.deepEqual(C.agentsF(), ["jcode"]);
+  C.state.agent = "";
+});
+
+test("the methodology lists the sources from the snapshot, with the agent's label, and escapes them", async () => {
+  const { renderMethodology } = await import("../dashboard-web/js/tabs/methodology.js");
+  C.setAgents({ sessions: [{ agent: "jcode" }], agents: [{ id: "jcode", name: "JCode" }] });
+  renderMethodology([
+    { kind: "jcode", path: "~/.jcode/sessions", files: 3, present: true, note: "Mỗi phiên là một file JSON" },
+    { kind: "hermes", path: "~/<h>/state.db", files: null, present: false, note: "Chỉ có tổng phiên" },
+    { kind: "rtk", path: "~/rtk.db", files: null, present: true, note: "Lệnh RTK" },
+  ]);
+  const html = element("#src-list").innerHTML;
+  assert.match(html, /<dt>JCode<\/dt>.*~\/\.jcode\/sessions.*3 file/s);
+  assert.match(html, /<dt>hermes<\/dt>.*&lt;h&gt;.*chưa có dữ liệu/s, "an agent Orca does not list shows its raw id");
+  assert.match(html, /<dt>RTK<\/dt><dd><code>~\/rtk\.db<\/code><br>/, "a database source claims no file count");
+  assert.doesNotMatch(html, /<h>|undefined|NaN/);
+  renderMethodology(undefined);
+  assert.match(element("#src-list").innerHTML, /Chưa có danh sách/);
+});
+
+test("the methodology page names no agent and keeps no stale prose", async () => {
+  const html = await readFile(new URL("../dashboard-web/index.html", import.meta.url), "utf8");
+  const page = html.slice(html.indexOf('id="tk-cach-tinh"'));
+  assert.match(page, /id="src-list"/);
+  assert.doesNotMatch(page, /Claude|Codex|Copilot|Hermes|cache\.json|premium|Nhịp hạn mức/i);
+});
+
+test("Feature Runs and the Run timeline show Orca's agent names, and the Tasks view falls back to raw ids", () => {
+  const feature = {
+    repo: "sample",
+    branch: "feat/names",
+    variant: "orca",
+    tokens: 100,
+    first_activity: 10,
+    last_activity: 20,
+    lead_seconds: 10,
+    session_count: 2,
+    agents: ["pi", "mystery"],
+    loaded_skills: {},
+    run_ids: [],
+    fix_rounds: { count: 0, source: "code-review" },
+    gate2_findings: null,
+    delivered: null,
+    orchestrator_tokens: 1,
+    worker_tokens: 99,
+  };
+  const task = { id: "t1", title: "Build", role: "builder", status: "completed", agent: "pi", created: 100, started: 100, completed: 200, tokens: { pi: 7 } };
+  const run = { id: "named", objective: "Named", created: 100, repo: "sample", tasks: [task], gates: [], tokens: {}, orchestrator_by_agent: {}, events: [] };
+  C.state.repo = "";
+  C.state.data = { generated_at: 1000, features: { runs: [feature] }, orca: { runs: [run] }, agents: [{ id: "pi", name: "Pi" }] };
+  C.setAgents(C.state.data);
+  renderFeatures([{ repo: "sample", branch: "feat/names" }]);
+  assert.match(element("#feature-runs").innerHTML, /2 phiên · Pi, mystery/, "the table shows the Orca name, and the raw id for an agent Orca does not list");
+  assert.doesNotMatch(element("#feature-runs").innerHTML, /· pi/);
+  assert.match(
+    communicationDiagram(
+      {
+        ...run,
+        events: [{ id: "e", at: 150, kind: "dispatch", from: "Orchestrator", to: "Build", to_task: "t1", from_actor: "c", to_actor: "w", text: "go" }],
+      },
+      "names-view",
+    ),
+    /<span>Pi · #/,
+  );
+  C.setAgents({ ...C.state.data, agents: [] });
+  renderFeatures([{ repo: "sample", branch: "feat/names" }]);
+  assert.match(element("#feature-runs").innerHTML, /pi, mystery/);
+});
+
+test("code search groups by agent id and names the row when drawn", () => {
+  C.state.searchHidden = [];
+  C.state.data = { sessions: [] };
+  const sessions = [
+    { agent: "opencode", role: "builder", repo: "r", worktree: "w1", total: 1, search: { codegraph: 3 } },
+    { agent: "opencode2", role: "builder", repo: "r", worktree: "w2", total: 1, search: { rg: 4 } },
+    { agent: "other", role: "builder", repo: "r", worktree: "w3", total: 1, search: { grep: 2 } },
+  ];
+  C.setAgents({
+    sessions,
+    agents: [
+      { id: "opencode", name: "OpenCode" },
+      { id: "opencode2", name: "OpenCode" },
+      { id: "other", name: "opencode" },
+    ],
+  });
+  setSearchView("agent");
+  renderSearch(sessions);
+  const html = element("#c-search-agent").innerHTML;
+  assert.equal((html.match(/>OpenCode<\/text>/g) || []).length, 2, "two ids with one display name stay two rows");
+  assert.equal((html.match(/>opencode<\/text>/g) || []).length, 1, "a raw id equal to another label is its own row");
 });

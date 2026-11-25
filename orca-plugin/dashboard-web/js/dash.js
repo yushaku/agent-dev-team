@@ -1,5 +1,5 @@
 import * as C from "./lib/charts.js";
-import { $, esc, AG, AGENTS, buildMixColours, sessionsF, splitWhy, persist, hideTip } from "./lib/charts.js";
+import { $, esc, AG, setAgents, buildMixColours, sessionsF, splitWhy, persist, hideTip } from "./lib/charts.js";
 import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
 import { renderRoleSkills } from "./tabs/role-skills.js";
@@ -11,6 +11,7 @@ import { renderSearch, renderTaskRoleSearch, toggleSearchKind, setSearchView } f
 import { renderFeatures } from "./tabs/runs.js";
 import { renderOverall } from "./tabs/overall.js";
 import { showCliTools } from "./tabs/cli-tools.js";
+import { renderMethodology } from "./tabs/methodology.js";
 
 async function load() {
   C.state.loading = true;
@@ -19,7 +20,7 @@ async function load() {
     const r = await fetch("/api/data?days=" + C.state.days, { cache: "no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
     C.state.data = await r.json();
-    C.state.data.sessions = C.state.data.sessions.filter((s) => AGENTS.includes(s.agent));
+    setAgents(C.state.data);
     C.state.err = "";
   } catch (e) {
     C.state.err = e.message;
@@ -76,7 +77,7 @@ function render() {
     renderSkills(S);
     renderSearch(S);
     renderRtkCommands();
-  }
+  } else if (view === "tk-cach-tinh") renderMethodology(d.sources);
 }
 
 /* ---------- cross filter ---------- */

@@ -1,12 +1,14 @@
 import type { GitMetrics } from './git-metrics.ts';
 import type { DashboardData, DashboardRun, RunTask, UsageRow } from './protocol.ts';
-import { basename, dirname, relative, normalize } from 'node:path';
+import { relative, normalize } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Store } from './store.ts';
 import { PARSER_VERSION } from './derived.ts';
 import { featureData, featureDir, median, rounds } from './features.ts';
 import { home, checkout, repoOf, roleConfig } from './metadata.ts';
 import { aliases, tsOf, type Session } from './session.ts';
+import { readAgents } from './agents.ts';
+import { readSources } from './sources.ts';
 import { runData } from './run-data.ts';
 import { sessionAssignment } from './assignment.ts';
 type Segment = UsageRow['feature_segments'][number];
@@ -132,7 +134,7 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
     const rows = new Map<string, Row>(),
       branches = new Map<string, Segment>();
     for (const call of s.calls.sort((a, b) => (a[0] || 0) - (b[0] || 0))) {
-      const [ts, model, eff, fin, cr, cw, out, reason, mid, prem = 0, ctx = { cwd: s.cwd, branch: s.branch }] = call;
+      const [ts, model, eff, fin, cr, cw, out, reason, mid, , ctx = { cwd: s.cwd, branch: s.branch }] = call;
       if (mid) {
         const key = JSON.stringify([s.agent, mid]);
         if (seen.has(key)) continue;
@@ -233,8 +235,6 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
           cw: 0,
           out: 0,
           reason: 0,
-          prem: 0,
-          snapshot: s.snapshot ?? null,
           ctx: [],
           days: dict(),
           hours: dict(),
@@ -281,12 +281,10 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
       row.cw += cw;
       row.out += out;
       row.reason += reason;
-      row.prem += prem;
       if (!s.aggregate) row.ctx.push(fin + cr + cw);
       const day = date(ts),
         hour = day + ' ' + String(new Date(ts * 1000).getHours()).padStart(2, '0');
-      for (const values of [(row.days[day] ??= [0, 0, 0, 0, 0]), (row.hours[hour] ??= [0, 0, 0, 0, 0])])
-        [fin, cr, cw, out, prem].forEach((n, i) => (values[i] += n));
+      for (const values of [(row.days[day] ??= [0, 0, 0, 0]), (row.hours[hour] ??= [0, 0, 0, 0])]) [fin, cr, cw, out].forEach((n, i) => (values[i] += n));
       inc(row.models, model, tot);
       inc(row.mix, model + '|' + (eff || '?'), tot);
     }
@@ -371,16 +369,8 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
     sessions,
     attribution,
     features,
-    copilot_dirs: new Set(
-      db
-        .prepare(
-          `SELECT path, EXISTS(SELECT 1 FROM versions WHERE source=s.id AND item='directory') AS directory
-      FROM sources s WHERE kind='copilot'`,
-        )
-        .all()
-        .map((r) => (r.directory ? String(r.path) : dirname(String(r.path))))
-        .filter((path) => !basename(path).startsWith('.')),
-    ).size,
+    agents: readAgents(db, now * 1000),
+    sources: readSources(db),
     orca: { available: orca.available, error: orca.error, fetched_at: orca.fetched_at, runs: orcaRuns },
     ...roleConfig(),
     rtk: rtk(db, date(start)),

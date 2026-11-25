@@ -89,7 +89,7 @@ function openSkill(name) {
       out.push(
         Object.assign(document.createElement("div"), {
           className: "callout warn",
-          innerHTML: `<p><span class="callout-label">Không có nội dung</span>Skill này không có trong shared hub${s.path ? `; bản gốc ở <code>${esc(s.path)}</code>` : ""}. Agent ngoài Hermes không đọc được nó theo tên.</p>`,
+          innerHTML: `<p><span class="callout-label">Không có nội dung</span>Skill này không có trong shared hub${s.path ? `; bản gốc ở <code>${esc(s.path)}</code>` : ""}. Agent khác không đọc được nó theo tên.</p>`,
         }),
       );
     }

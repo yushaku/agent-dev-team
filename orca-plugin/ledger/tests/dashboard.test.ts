@@ -51,6 +51,11 @@ test('archived sessions and snapshots match Python across branch changes, append
   const actual = build(store, 7, now);
   // build_ms is wall-clock time, so it is dropped before comparing; the typed field itself is not optional.
   Reflect.deleteProperty(actual, 'build_ms');
+  // `agents` (Orca's installed-agent labels) is new since the Python golden files and empty here.
+  assert.deepEqual(actual.agents, []);
+  Reflect.deleteProperty(actual, 'agents');
+  assert.ok(actual.sources.length >= 6, 'the source list is new since the Python golden files');
+  Reflect.deleteProperty(actual, 'sources');
   assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected[0]);
   const result = summary(actual, new URLSearchParams());
   assert.deepEqual(JSON.parse(JSON.stringify(result)), expected[1]);
@@ -284,7 +289,7 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
   assert.equal(store.db.prepare('SELECT count(*) n FROM dashboard_git').get()?.n, 1);
 });
 
-test('Copilot counts visible directories and restores sidecar metadata after deletion', (t) => {
+test('Copilot rows carry the same fields as other agents and sidecar metadata survives deletion', (t) => {
   const { root, store } = scratch(t),
     dir = join(root, 'copilot');
   for (const session of ['empty', 'active', '.hidden']) mkdirSync(join(dir, session), { recursive: true });
@@ -302,10 +307,17 @@ test('Copilot counts visible directories and restores sidecar metadata after del
   rmSync(dir, { recursive: true });
   projections(store)();
   const data = build(store, 7);
-  assert.equal(data.copilot_dirs, 2);
+  assert.equal('copilot_dirs' in data, false, 'Copilot has no snapshot field of its own');
   assert.equal(data.sessions.length, 1);
   assert.equal(data.sessions[0].id, 'archived');
   assert.equal(data.sessions[0].originator, 'test');
+  const row = data.sessions[0] as unknown as Record<string, unknown>;
+  assert.equal('prem' in row || 'snapshot' in row, false, 'no premium-request fields on a row');
+  assert.ok(
+    Object.values(data.sessions[0].days).every((v) => v.length === 4),
+    'day buckets are [fin, cr, cw, out]',
+  );
+  assert.equal(data.sessions[0].fin, 10, 'token fields are unchanged');
 });
 
 test('query worker follows appended history without HTTP requests', async (t) => {

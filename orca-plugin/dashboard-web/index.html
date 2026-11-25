@@ -115,28 +115,21 @@
     </div>
     <section aria-labelledby="h-src">
       <h4 id="h-src">Nguồn dữ liệu</h4>
+      <div id="src-list"></div>
       <dl class="kv">
-        <dt>Claude Code</dt><dd><code>~/.claude/projects/**/*.jsonl</code>, gồm cả file subagent. Mỗi dòng assistant có <code>message.usage</code>; cùng <code>message.id</code> lặp lại theo từng khối nội dung nên chỉ đếm một lần (kể cả giữa các file).</dd>
-        <dt>Codex</dt><dd><code>~/.codex/sessions/YYYY/MM/DD/*.jsonl</code>. Mỗi bản ghi <code>token_usage_record</code> là một lượt gọi; model và effort lấy từ <code>turn_context</code> của cùng turn.</dd>
-        <dt>GitHub Copilot CLI</dt><dd><code>~/.copilot/session-state/&lt;uuid&gt;/events.jsonl</code> cùng <code>workspace.yaml</code> (cwd, nhánh, <code>client_name</code> làm cột nguồn). Mỗi sự kiện <code>session.usage_record</code> là một lượt gọi, khóa theo <code>accounting.sourceSessionId</code> và <code>sequence</code>; model và effort lấy từ chính bản ghi đó. <code>accountingSnapshot</code> trong <code>session.usage_checkpoint</code> và <code>session.shutdown</code> là số cộng dồn của cả phiên (giữ qua lần resume), chỉ dùng để đối chiếu: tổng từng lượt khớp đúng snapshot cuối. Thư mục phiên không có <code>events.jsonl</code> là phiên rỗng, bỏ qua.</dd>
-        <dt>Hermes</dt><dd><code>~/.hermes/state.db</code> (SQLite, đọc chỉ). Mỗi phiên một hàng <code>sessions</code> với token tổng hợp (xếp vào ngày bắt đầu phiên, không phải thời điểm từng lượt gọi); prompt đầu và skill nạp lấy từ bảng <code>messages</code>. Title bắt đầu <code>orchestrator:</code> hoặc nạp skill <code>orchestrator</code> thì vai là Orchestrator.</dd>
-        <dt>Orca</dt><dd><code>orca orchestration run-list, task-list, gate-list, worker-list, worker-show, inbox --json</code>, làm mới mỗi 60 giây ở nền. Orca không chạy thì các tab khác vẫn hoạt động.</dd>
-        <dt>RTK</dt><dd><code>~/Library/Application Support/rtk/history.db</code> (SQLite, đọc chỉ). Mỗi lệnh RTK nén là một bản ghi <code>commands</code>: token gốc, token tiết kiệm, thời gian chạy, dự án. Tab RTK gộp theo ngày, lệnh và dự án.</dd>
         <dt>Tier</dt><dd>Task Orca ghi lựa chọn ban đầu trong <code>Routing:</code>; <code>Routing-log:</code> trỏ tới log trong <code>.team/</code> lưu lựa chọn theo từng Dispatch; tier mặc định của role nằm trong <code>skills/team-*/SKILL.md</code>. Catalog do <code>.team/config.yaml</code> của dự án quyết định. Thiếu metadata thì không suy tier từ tên model.</dd>
-        <dt>Bộ nhớ đệm</dt><dd><code>cache.json</code> cạnh server, theo đường dẫn, kích thước và mtime của file; chỉ file thay đổi được đọc lại.</dd>
       </dl>
     </section>
     <section aria-labelledby="h-def">
       <h4 id="h-def">Định nghĩa</h4>
       <dl class="kv">
-        <dt>Input mới</dt><dd>Claude: <code>input_tokens</code>. Codex: <code>input_tokens</code> trừ <code>cached_input_tokens</code> (input của Codex đã gồm phần cache). Copilot: <code>inputTokens</code> trừ <code>cacheReadTokens</code> và <code>cacheWriteTokens</code> (input của Copilot đã gồm cả hai; hiệu này khớp <code>tokenDetails.input</code>).</dd>
-        <dt>Cache đọc</dt><dd>Claude: <code>cache_read_input_tokens</code>. Codex: <code>cached_input_tokens</code>. Copilot: <code>cacheReadTokens</code>.</dd>
-        <dt>Cache ghi</dt><dd>Claude: <code>cache_creation_input_tokens</code>. Codex: <code>cache_write_input_tokens</code> (hiện luôn 0). Copilot: <code>cacheWriteTokens</code>.</dd>
-        <dt>Output</dt><dd><code>output_tokens</code> (Copilot <code>outputTokens</code>). Reasoning (Codex <code>reasoning_output_tokens</code>, Claude <code>thinking_tokens</code>, Copilot <code>reasoningTokens</code>) đã nằm trong output, cột riêng chỉ để xem.</dd>
-        <dt>Premium request</dt><dd>Copilot: <code>usage.cost</code> của các lượt gọi do người dùng khởi tạo (<code>initiator</code> là <code>user</code>); các lượt agent tự gọi tiếp trong cùng turn không tính. Tổng khớp <code>totalPremiumRequestCost</code> của snapshot cuối mỗi phiên.</dd>
+        <dt>Input mới</dt><dd>Token input không nằm trong cache. Mỗi nguồn ở mục trên nói cách tính của nó; với nguồn mà input đã gồm cache thì phần cache được trừ ra.</dd>
+        <dt>Cache đọc</dt><dd>Token input lấy từ cache của nhà cung cấp.</dd>
+        <dt>Cache ghi</dt><dd>Token input ghi vào cache của nhà cung cấp.</dd>
+        <dt>Output</dt><dd>Token output của model. Reasoning (nếu nguồn có) đã nằm trong output, cột riêng chỉ để xem.</dd>
         <dt>Tổng token</dt><dd>Input mới + cache đọc + cache ghi + output.</dd>
         <dt>Context mỗi lượt</dt><dd>Input mới + cache đọc + cache ghi của một lượt gọi: độ dài prompt mà model phải đọc. Trung vị và lớn nhất theo phiên; trong bảng chi tiết theo vai là trung vị trên mọi lượt của vai.</dd>
-        <dt>Phiên</dt><dd>Một file log. Subagent của Claude là phiên riêng, ghi <code>(subagent)</code> ở cột nguồn. Số liệu của phiên chỉ tính các lượt nằm trong khoảng ngày; trục thời gian của biểu đồ phiên dùng lượt đầu tiên trong khoảng.</dd>
+        <dt>Phiên</dt><dd>Một file log. Subagent là phiên riêng, ghi <code>(subagent)</code> ở cột nguồn. Số liệu của phiên chỉ tính các lượt nằm trong khoảng ngày; trục thời gian của biểu đồ phiên dùng lượt đầu tiên trong khoảng.</dd>
         <dt>Khoảng ngày</dt><dd>Theo ngày lịch giờ máy: 1 ngày là hôm nay (biểu đồ chia theo giờ), 7 ngày là hôm nay và 6 ngày trước.</dd>
         <dt>Repo, worktree</dt><dd><code>~/orca/workspaces/&lt;repo&gt;/&lt;worktree&gt;</code>; <code>~/orca/projects/&lt;repo&gt;</code> là <code>(main)</code>; đường dẫn khác lấy hai đoạn cuối.</dd>
         <dt>Vai</dt><dd>Ưu tiên dòng <code>Role:</code> trong Task spec, rồi vai trong tiêu đề Task Orca, dòng <code>Role:</code> của phiên, yêu cầu đầu phiên hoặc brief được giao. Vai suy từ yêu cầu/brief được ghi rõ trong chi tiết phiên. Sau đó mới dùng bằng chứng dispatch, title và skill đã nạp. Phiên chưa xác định được vai giữ <code>chat trực tiếp</code>; không tạo worker giả để lấp đủ vai.</dd>
@@ -145,8 +138,7 @@
         <dt>Thanh task trong run</dt><dd>Từ lúc dispatch đầu tiên đến lúc dispatch cuối xong; task chưa dispatch dùng lúc tạo, task đang chạy kéo đến bây giờ.</dd>
         <dt>Vòng sửa</dt><dd>Task sửa và re-review lấy từ dòng <code>Measurement:</code> JSON trong Task spec. Vòng sửa là số round riêng biệt, không phải số Task. Task cũ suy từ tên và không tự suy ra round; thiếu metadata được ghi rõ.</dd>
         <dt>Cổng</dt><dd>Câu trả lời bắt đầu bằng <code>approve</code> là duyệt, <code>changes</code> là yêu cầu sửa, còn lại (ví dụ chọn phương án G-UI) là khác. Duyệt Gate 1 không có nghĩa đã delivery. Chỉ xác nhận đã giao khi có delivery hoàn tất, Gate 2 được duyệt và không còn Task mở; merged cần bằng chứng trạng thái riêng.</dd>
-        <dt>Nhịp hạn mức Codex</dt><dd>% đã dùng chia số ngày từ lúc cửa sổ tuần bắt đầu (lúc reset trừ 7 ngày). Đường dự kiến giữ nguyên nhịp đó; vùng đỏ là khoảng từ lúc chạm 100% đến lúc reset.</dd>
-        <dt>Skill được nạp</dt><dd>Claude: công cụ <code>Skill</code>, hoặc Read/Bash đọc <code>/skills/&lt;tên&gt;/SKILL.md</code>. Codex: lệnh exec đọc <code>/skills/&lt;tên&gt;/SKILL.md</code> hoặc <code>orca skills get &lt;tên&gt;</code>. Copilot: sự kiện <code>skill.invoked</code> và <code>skill.invoked_ref</code> (nạp lại skill đã có trong phiên). Hermes: lệnh <code>skill_view</code>. Skill gọi bằng lệnh gạch chéo cũng được đếm: Hermes <code>[IMPORTANT: The user has invoked the "X" skill</code>, Claude <code>&lt;command-name&gt;/X&lt;/command-name&gt;</code> (bỏ tiền tố plugin <code>a:</code>). Skill do hook nạp sẵn (ponytail qua SessionStart và SubagentStart: Claude có dòng hook_success, Codex có tin nhắn developer mở đầu bằng <code>PONYTAIL MODE ACTIVE</code>) được tính là một lần nạp mỗi phiên, trừ phiên agent đã tự nạp skill đó; Copilot chưa cấu hình hook nên không có. Danh sách skill có sẵn mà agent nhận lúc đầu phiên không được đếm.</dd>
+        <dt>Skill được nạp</dt><dd>Đếm theo cách từng nguồn ghi lại việc nạp skill: công cụ <code>Skill</code>, đọc <code>/skills/&lt;tên&gt;/SKILL.md</code>, <code>orca skills get &lt;tên&gt;</code>, sự kiện skill của nguồn, hoặc lệnh gạch chéo. Skill do hook nạp sẵn (ví dụ ponytail) được tính riêng là "qua hook". Nguồn không ghi lại việc nạp skill thì không có số liệu skill.</dd>
         <dt>Lọc chéo</dt><dd>Bấm một vai, repo, worktree hoặc agent trong biểu đồ bất kỳ để lọc mọi tab; bấm lại hoặc bấm chip "bỏ lọc" để bỏ.</dd>
       </dl>
     </section>
@@ -154,12 +146,10 @@
       <h4 id="h-cav">Giới hạn</h4>
       <ul>
         <li>Tổng token không phải tiền hay phần trăm hạn mức; các model và loại token có thể được nhà cung cấp tính hạn mức khác nhau.</li>
-        <li>Hạn mức tuần của Claude chỉ có trong <code>/usage</code>; dashboard không đọc được.</li>
         <li>Phiên không có dòng <code>Role:</code>, không thuộc task Orca và không tự giao việc cho worker thì vai là "chat trực tiếp".</li>
         <li>Token Run là tổng lượt gọi nối được với worker và Orchestrator, gồm mọi lần thử; bảng Run phân biệt toàn vòng đời và trong khoảng ngày đang chọn. Tỷ lệ phân bổ chỉ áp dụng cho log dashboard đọc được, không bảo đảm đã có toàn bộ log nhà cung cấp.</li>
         <li>Phiên điều phối nối bằng Run ID trong lệnh Orca thực thi. Phần không có ID hoặc không thể phân tách được giữ ở mục chưa phân bổ.</li>
-        <li>Hermes chỉ có tổng phiên: không phân bổ khi phiên chứa nhiều Run hoặc Task; không tính context mỗi lượt. Tổng theo ngày xếp ở ngày bắt đầu phiên, có thể bỏ sót hoạt động trong kỳ của phiên bắt đầu trước kỳ.</li>
-        <li><code>cost</code> từng lượt của Copilot là hệ số premium của model; với model có hệ số khác 1 thì số premium request là số lẻ.</li>
+        <li>Nguồn chỉ có tổng phiên (không có từng lượt gọi) không phân bổ được khi phiên chứa nhiều Run hoặc Task, không tính context mỗi lượt; tổng theo ngày xếp ở ngày bắt đầu phiên.</li>
       </ul>
     </section>
   </section>

@@ -7,11 +7,13 @@ export const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest
 
 export class Store {
   db: DatabaseSync;
+  readonly home: string;
   // Definitely assigned: the constructor calls init(), which sets all three or throws.
   private version!: ReturnType<DatabaseSync['prepare']>;
   private blob!: ReturnType<DatabaseSync['prepare']>;
   private log!: ReturnType<DatabaseSync['prepare']>;
   constructor(home: string) {
+    this.home = home;
     ensurePrivateHome(home);
     this.db = new DatabaseSync(join(home, 'ledger.sqlite'));
     try {
@@ -51,6 +53,8 @@ export class Store {
         PRIMARY KEY(source,generation,session));
       CREATE TABLE IF NOT EXISTS orca_revision (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER);
       INSERT OR IGNORE INTO orca_revision VALUES(1,0);
+      CREATE TABLE IF NOT EXISTS source_roots (kind TEXT PRIMARY KEY, path TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS agent_inventory (id INTEGER PRIMARY KEY CHECK(id=1), fetched_at INTEGER, data TEXT);
       CREATE TABLE IF NOT EXISTS ingest_log (
         id INTEGER PRIMARY KEY, source INTEGER, generation INTEGER, item TEXT, hash TEXT,
         recorded_at TEXT DEFAULT CURRENT_TIMESTAMP);

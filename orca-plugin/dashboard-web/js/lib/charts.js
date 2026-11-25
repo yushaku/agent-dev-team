@@ -1,9 +1,38 @@
-/* Token dashboard tab: Claude, Codex, GitHub Copilot CLI and Orca usage from GET /api/data (ported from the old dashboard page). */
+/* Token dashboard tab: usage of every agent in the ledger, and Orca runs, from GET /api/data (ported from the old dashboard page). */
 export const $ = (s) => document.querySelector(s);
 export const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-export const AG = { claude: "Claude", codex: "Codex", copilot: "Copilot", hermes: "Hermes" };
-export const AGENTS = ["claude", "codex", "copilot", "hermes"];
-export const zeroAg = () => ({ claude: 0, codex: 0, copilot: 0, hermes: 0 });
+/* Agents come from the loaded snapshot (setAgents), never from a fixed list. */
+/* Display names from Orca's installed-agent inventory (data.agents); without them the raw id is the label. */
+let LABELS = {};
+/* Reserved summary keys in Run token maps: not agents. */
+const RESERVED_KEYS = new Set(["sessions"]);
+export const AG = new Proxy({}, { get: (_, k) => (typeof k === "string" ? (Object.hasOwn(LABELS, k) ? LABELS[k] : k) : undefined) });
+export const AGENTS = [];
+export const zeroAg = () => Object.fromEntries(AGENTS.map((a) => [a, 0]));
+export function setAgents(data) {
+  const ids = new Set();
+  const add = (a) => typeof a === "string" && a && !RESERVED_KEYS.has(a) && ids.add(a);
+  // Only agents with observed usage: a token map key counts when its value is positive; a task's declared agent alone does not.
+  const addKeys = (m) => m && Object.entries(m).forEach(([a, v]) => Number(v) > 0 && add(a));
+  (data?.sessions || []).forEach((s) => add(s.agent));
+  (data?.orca?.runs || []).forEach((r) => {
+    addKeys(r.tokens);
+    addKeys(r.window_tokens);
+    addKeys(r.orchestrator_by_agent);
+    Object.values(r.fix_tokens_by_cause || {}).forEach(addKeys);
+    (r.orchestrator_activity || []).forEach((a) => add(a.agent));
+    (r.tasks || []).forEach((t) => addKeys(t.tokens));
+  });
+  const legacy = Object.keys(LEGACY_COL);
+  const rank = (a) => (legacy.includes(a) ? legacy.indexOf(a) : legacy.length);
+  AGENTS.splice(0, AGENTS.length, ...[...ids].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)));
+  LABELS = Object.fromEntries(
+    (Array.isArray(data?.agents) ? data.agents : [])
+      .filter((a) => a && typeof a.id === "string" && typeof a.name === "string" && a.name)
+      .map((a) => [a.id, a.name]),
+  );
+  if (state.agent && !AGENTS.includes(state.agent)) state.agent = "";
+}
 export const state = { days: 7, repo: "", agent: "", role: "", wt: "", runF: "", taskF: "", searchHidden: [], data: null, auto: true, timer: null };
 try {
   const s = JSON.parse(localStorage.getItem("team-dashboard") || "{}");
@@ -19,7 +48,6 @@ try {
     auto: s.auto !== false,
   });
 } catch {}
-if (!AGENTS.includes(state.agent)) state.agent = "";
 export const persist = () => {
   try {
     localStorage.setItem(
@@ -40,16 +68,60 @@ export const persist = () => {
 };
 
 /* ---------- colours: one meaning each ---------- */
-export const COL = {
+/* Legacy agents keep the colours the dashboard always had. Membership and order of "legacy" come from this one map. */
+const LEGACY_COL = {
   claude: "var(--claude)",
   codex: "var(--codex)",
   copilot: "var(--copilot)",
   hermes: "var(--hermes)",
+};
+/* Any other agent gets a colour that depends only on its id (a hash), so it never changes with what else is loaded; two ids may share one.
+   Swatches: a hue every 10 degrees (skipping 18 degrees around the legacy mauve, green, blue and peach) in two steps. Each is a light-dark() pair
+   whose two lightness values are searched so the fill keeps at least 3:1 against both chart backgrounds of its theme (--mantle and --base in
+   app.css and orca-panel.css). One fixed colour cannot do that on both themes, hence the pair; the page's color-scheme picks the side. */
+const BG = { dark: ["#292c3c", "#303446"], light: ["#e6e9ef", "#eff1f5"] };
+export const MIN_CONTRAST = 3;
+const LEGACY_HUES = [20, 100, 220, 272];
+const hueGap = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+const hsl = (h, s, l) => {
+  const k = (n) => (n + h / 30) % 12,
+    a = s * Math.min(l, 1 - l);
+  return [0, 8, 4].map((n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)));
+};
+const lum = (rgb) => {
+  const [r, g, b] = rgb.map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const hexLum = (x) => lum([1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16) / 255));
+const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+const ok = (h, l, theme) => BG[theme].every((bg) => ratio(lum(hsl(h, 0.65, l / 100)), hexLum(bg)) >= MIN_CONTRAST);
+function swatchesFor(h) {
+  let dark = 40;
+  while (dark < 90 && !ok(h, dark, "dark")) dark++;
+  let light = 70;
+  while (light > 10 && !ok(h, light, "light")) light--;
+  return [0, 9].map((d) => `light-dark(hsl(${h} 65% ${light - d}%), hsl(${h} 65% ${Math.min(dark + d, 90)}%))`);
+}
+export const AGENT_SWATCHES = Array.from({ length: 36 }, (_, i) => i * 10)
+  .filter((h) => LEGACY_HUES.every((l) => hueGap(h, l) > 18))
+  .flatMap(swatchesFor);
+const swatchOf = (a) => {
+  let h = 5381;
+  for (const c of String(a)) h = (Math.imul(h, 33) ^ c.charCodeAt(0)) >>> 0;
+  return h % AGENT_SWATCHES.length;
+};
+/* Where light-dark() is unsupported (older standalone browsers) the swatch is its dark half: the standalone page declares color-scheme dark. */
+const LIGHT_DARK = typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("color", "light-dark(red, blue)");
+const plain = (swatch) => (LIGHT_DARK ? swatch : /, (hsl\([^)]*\))\)$/.exec(swatch)[1]);
+export const agentColour = (a) => plain(AGENT_SWATCHES[swatchOf(a)]);
+const COL_BASE = {
+  ...LEGACY_COL,
   fin: "var(--p-fin)",
   cr: "var(--p-cr)",
   cw: "var(--p-cw)",
   out: "var(--p-out)",
 };
+export const COL = new Proxy(COL_BASE, { get: (t, k) => (typeof k !== "string" || Object.hasOwn(t, k) ? t[k] : agentColour(k)) });
 export const PARTS = [
   ["fin", "Input mới"],
   ["cr", "Cache đọc"],
@@ -194,7 +266,7 @@ export function sessionsF(featureBranches = false) {
   );
 }
 export const agentsF = () => AGENTS.filter((a) => !state.agent || a === state.agent);
-/* Buckets: hours for a 1 day range, days otherwise. Each value is [fin, cr, cw, out, premium requests]. */
+/* Buckets: hours for a 1 day range, days otherwise. Each value is [fin, cr, cw, out]. */
 export function buckets() {
   const d = state.data;
   if (d.days === 1)

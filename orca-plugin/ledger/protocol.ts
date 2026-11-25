@@ -84,7 +84,10 @@ export interface DashboardData {
     }[];
     attribution: { total: number; assigned: number; unassigned: number };
   };
-  copilot_dirs: number;
+  /** Orca's installed agents (id, name), cached; empty when Orca has not answered. Labels only: charts show agents with usage. */
+  agents: { id: string; name: string }[];
+  /** The sources the ledger reads: kind, resolved path (home shown as ~), archived file count (null when the source is not files) and the parser's token-accounting note. */
+  sources: { kind: string; path: string; files: number | null; present: boolean; note: string }[];
   orca: { available: boolean; error: string | null; fetched_at: number | null; runs: DashboardRun[] };
   roles_cfg: {
     tiers: Record<string, string>;
@@ -253,7 +256,6 @@ export interface UsageRow {
   cw: number;
   out: number;
   reason: number;
-  prem: number;
   total: number;
   routing: {
     tier: string;
@@ -274,7 +276,6 @@ export interface UsageRow {
   t0: number;
   models: Record<string, number>;
   mix: Record<string, number>;
-  snapshot: Record<string, number | null> | null;
   days: Record<string, number[]>;
   hours: Record<string, number[]>;
   feature_segments: {
