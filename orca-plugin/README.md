@@ -35,13 +35,15 @@ npm run --prefix orca-plugin lint                                   # format and
 npm run --prefix orca-plugin typecheck                              # writes the ignored .orca/types, then strict tsc over src/ and ledger/
 orca plugin test orca-plugin                                        # every *.test.* (ledger, frontend, src), under Orca's runner
 orca plugin check orca-plugin && orca plugin validate orca-plugin
-node --test orca-plugin/ledger/tests/*.test.ts                      # the ledger alone: ingest, projections, API, golden files
-node --experimental-vm-modules --test orca-plugin/tests/frontend.impl.mjs   # the web UI render code alone
+node --test --test-timeout=120000 orca-plugin/ledger/tests/*.test.ts  # the ledger alone: ingest, projections, API, golden files; each test gets a deadline
+node --experimental-vm-modules --test --test-timeout=120000 orca-plugin/tests/frontend.impl.mjs   # the web UI render code alone
 ```
+
+Always run tests under a deadline. `--test-timeout` fails a stuck test but does not end a hung process. macOS has no `timeout`, and `perl -e 'alarm 900; exec @ARGV' <cmd>` bounds only the command it execs (the test runner): a test file the runner spawned can outlive it. To bound the command and everything left in its process group, run it in its own group and kill the group: `perl -e 'setpgrp(0,0); $SIG{ALRM}=sub{kill "KILL",-$$}; alarm 900; system @ARGV; exit($? & 127 ? 128 + ($? & 127) : $? >> 8)' <cmd>` (exit 137 on timeout, 128 plus the signal if the command dies by a signal, the command's own code otherwise). This is one process group: a descendant that starts its own group (a `detached` spawn) is not reached, so a test that spawns such a child must kill that group itself, as the teardown fixture test does with its own detached group. Host fixtures register their shutdown with `defer()` (`ledger/tests/teardown.ts`) right after acquiring a listener, ingest runner or worker, so a failing assertion still releases them and the process exits; `teardown-child.ts` proves it by starting a real host, checking it is live, then failing.
 
 To fix formatting: `npm run --prefix orca-plugin format`. The dashboard's plain JS (`dashboard-web/`) is linted but not typechecked.
 
-`ledger/tests/golden/` holds Python's output for the fixtures, frozen from the retired Python dashboard (see `ledger/tests/golden.ts`); the test team in `ledger/tests/fixtures/team` makes roles and skills the same everywhere. With Orca's Node: `ELECTRON_RUN_AS_NODE=1 "/Applications/Orca.app/Contents/Frameworks/Orca Helper.app/Contents/MacOS/Orca Helper" --test orca-plugin/ledger/tests/*.test.ts`.
+`ledger/tests/golden/` holds Python's output for the fixtures, frozen from the retired Python dashboard (see `ledger/tests/golden.ts`); the test team in `ledger/tests/fixtures/team` makes roles and skills the same everywhere. With Orca's Node: `ELECTRON_RUN_AS_NODE=1 "/Applications/Orca.app/Contents/Frameworks/Orca Helper.app/Contents/MacOS/Orca Helper" --test --test-timeout=120000 orca-plugin/ledger/tests/*.test.ts`.
 
 ## Develop and run
 
