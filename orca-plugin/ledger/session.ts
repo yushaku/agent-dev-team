@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { teams } from './metadata.ts';
 import { homedir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 export type Time = number | null;
 type Event = [string, Time];
@@ -149,14 +149,33 @@ const valueFlags = new Set([
   '--max-depth',
   '--max-columns',
 ]);
-function symbolSearch(cmd: string, cwd: string | null) {
-  if (!cwd) return false;
-  const cd = cmd.match(/^\s*cd\s+("[^"]+"|'[^']+'|\S+)\s*(?:&&|;)/);
-  const rel = cd?.[1]?.replace(/^['"]|['"]$/g, '').replace(/^~(?=\/|$)/, homedir()) || '.';
-  let root = resolve(cwd, rel);
-  while (!existsSync(join(root, '.codegraph'))) {
-    if (root === dirname(root)) return false;
-    root = dirname(root);
+/** Is a `.codegraph/` directory present in the worktree that contains `dir`? The walk stops at the repository root. */
+function indexedWorktree(dir: string) {
+  const isDir = (path: string) => {
+    try {
+      return statSync(path).isDirectory();
+    } catch {
+      return false;
+    }
+  };
+  if (!isDir(dir)) return false; // the search location cannot be resolved: availability stays unknown
+  for (let root = dir; ; root = dirname(root)) {
+    if (isDir(join(root, '.codegraph'))) return true;
+    if (existsSync(join(root, '.git')) || root === dirname(root)) return false; // the worktree ends here
+  }
+}
+/**
+ * Is `cmd` a symbol-shaped rg/grep search? Null if not; else whether the directory it searched from (the tool's workdir,
+ * then a leading `cd`, relative to the session cwd) sat in a worktree with a `.codegraph/` directory when parsed.
+ */
+function symbolSearch(cmd: string, cwd: string | null, workdir?: string | null): { indexed: boolean } | null {
+  let indexed = false;
+  const dir = workdir?.replace(/^~(?=\/|$)/, homedir());
+  const base = dir ? (isAbsolute(dir) ? dir : cwd ? resolve(cwd, dir) : null) : cwd;
+  if (base) {
+    const cd = cmd.match(/^\s*cd\s+("[^"]+"|'[^']+'|\S+)\s*(?:&&|;)/);
+    const rel = cd?.[1]?.replace(/^['"]|['"]$/g, '').replace(/^~(?=\/|$)/, homedir()) || '.';
+    indexed = indexedWorktree(resolve(base, rel));
   }
   const decl = '(?:(?:export\\s+)?(?:async\\s+)?(?:function|class|def|interface|type|const|let|var|func|fn)\\s+)?';
   const ident = decl + '[A-Za-z_$][A-Za-z0-9_$]*',
@@ -186,7 +205,7 @@ function symbolSearch(cmd: string, cwd: string | null) {
     }
     return pats.some((p) => symbol.test(p) && shape.test(p));
   }
-  return shellWords(cmd.replaceAll('\\b', ''), true).some(search);
+  return shellWords(cmd.replaceAll('\\b', ''), true).some(search) ? { indexed } : null;
 }
 function shellWords(cmd: string, splitCommands: boolean) {
   const commands: string[][] = [[]];
@@ -244,7 +263,11 @@ function tool(s: Session, name: string, args: unknown, ts: Time) {
       read_part: /(?:^|[;&(\s'"`])(?:head|tail|sed\s+-n)\s+[^|]*[\p{L}\p{N}_/.]+\.[\p{L}\p{N}_]+/u,
     }))
       if (re.test(cmd)) search(kind);
-    if (/(?:^|[;&|(\s'"`])(?:rg|grep)\s/.test(cmd) && symbolSearch(cmd, s.cwd)) search('rg_symbol');
+    const symbol = /(?:^|[;&|(\s'"`])(?:rg|grep)\s/.test(cmd) ? symbolSearch(cmd, s.cwd, typeof a?.workdir === 'string' ? a.workdir : null) : null;
+    if (symbol) {
+      search('rg_symbol');
+      if (symbol.indexed) search('rg_symbol_indexed'); // evidence that the worktree had an index when this was parsed
+    }
   }
   if (name === 'Skill' && s.agent === 'claude') {
     const skill = String(a?.skill || a?.name || a?.command || '')
