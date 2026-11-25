@@ -1,10 +1,12 @@
 import './team-env.ts'; // first: the team root is read when modules load, and one process may run every test file
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { build } from '../dashboard.ts';
+import { summary } from '../insights.ts';
+import { parseFile } from '../session.ts';
 import { PARSER_VERSION, projections } from '../derived.ts';
 import { Store } from '../store.ts';
 
@@ -277,4 +279,148 @@ test('worker request roles survive coordinator skill reads and Task Role overrid
     sessions.reduce((n, s) => n + s.total, 0),
     60,
   );
+});
+
+const guardianMeta = (source: unknown) =>
+  JSON.stringify({ type: 'session_meta', timestamp: '2026-11-13T00:00:00Z', payload: { id: 'codex-x', cwd: '/repo', source } }) + '\n';
+
+test('a Codex session whose source marks it as the guardian is auxiliary; other sources are not', () => {
+  assert.equal(parseFile('codex', '/x/guard.jsonl', guardianMeta({ subagent: { other: 'guardian' } }))?.auxiliary, true);
+  assert.notEqual(parseFile('codex', '/x/a.jsonl', guardianMeta({ subagent: { other: 'something-else' } }))?.auxiliary, true);
+  assert.notEqual(parseFile('codex', '/x/b.jsonl', guardianMeta('cli'))?.auxiliary, true);
+  assert.notEqual(parseFile('codex', '/x/c.jsonl', guardianMeta(undefined))?.auxiliary, true);
+});
+
+test('only a genuinely mismatched worker raises the routing alert; the guardian row keeps its tokens in Run usage', async (t) => {
+  const base = now - 100;
+  const routing = { tier: 'work', catalog: 'my-code', agent: 'codex', model: 'test-model', effort: 'medium', dispatch: 'd1' };
+  const spec = { runs: ['run_a'], tasks: [{ id: 'a', run: 'run_a', routing: [routing] }], dispatches: [{ id: 'd1', task: 'a', from: base - 1, to: base + 1 }] };
+  const call = (tokens: number, model: string): [number, string, string, number, number, number, number, number, null] => [
+    base,
+    model,
+    'medium',
+    tokens,
+    0,
+    0,
+    0,
+    0,
+    null,
+  ];
+  const alerts = (w: Awaited<ReturnType<typeof world>>) => summary(w.data(), new URLSearchParams()).issues.filter((i) => i.id.startsWith('routing:'));
+
+  const both = await world(t, spec);
+  both.session([[base, 10]], { id: 'guardian', tasks: [['a', base]], auxiliary: true, calls: [call(25, 'codex-auto-review')] });
+  both.session([[base, 10]], { id: 'worker', tasks: [['a', base]], calls: [call(10, 'other-model')] });
+  const issues = alerts(both);
+  assert.equal(issues.length, 1, 'the real mismatch raises one alert');
+  assert.match(issues[0].evidence, /worker/);
+  assert.doesNotMatch(issues[0].evidence, /guardian/);
+  assert.match(issues[0].evidence, /1 phiên/);
+  assert.equal(run(both.data(), 'run_a').tokens.codex, 35, 'guardian tokens stay in the Run totals');
+  const g = both.data().sessions.find((s) => s.id === 'guardian')!;
+  assert.equal(g.total, 25);
+  assert.equal(g.routing, null, 'an auxiliary session is not compared with the dispatch routing');
+
+  const alone = await world(t, spec);
+  alone.session([[base, 10]], { id: 'guardian', tasks: [['a', base]], auxiliary: true, calls: [call(25, 'codex-auto-review')] });
+  alone.session([[base, 10]], { id: 'worker', tasks: [['a', base]], calls: [call(10, 'test-model')] });
+  assert.deepEqual(alerts(alone), [], 'a guardian alone raises nothing');
+});
+
+test('the rg-instead-of-codegraph alert gives the counts, and says "indexed" only with index evidence', async (t) => {
+  const base = now - 100;
+  const spec = { runs: ['run_a'], tasks: [{ id: 'a', run: 'run_a', role: 'builder' }], dispatches: [{ id: 'd1', task: 'a', from: base - 1, to: base + 1 }] };
+  const alert = async (kinds: string[]) => {
+    const w = await world(t, spec);
+    w.session([[base, 10]], { tasks: [['a', base]], search: kinds.map((k) => [k, base]) });
+    return summary(w.data(), new URLSearchParams()).issues.find((i) => i.id.startsWith('symbol-rg:'));
+  };
+  const withIndex = await alert(['rg_symbol', 'rg_symbol', 'rg_symbol', 'rg_symbol_indexed', 'rg_symbol_indexed', 'rg_symbol_indexed']);
+  assert.ok(withIndex, 'raised');
+  assert.match(withIndex.evidence, /3 lần/);
+  assert.match(withIndex.evidence, /repo đã có index codegraph/);
+  assert.match(withIndex.evidence, /codegraph 0 lần/);
+  const without = await alert(['rg_symbol', 'rg_symbol', 'rg_symbol']);
+  assert.ok(without, 'the observed count still raises the alert');
+  assert.match(without.evidence, /3 lần/);
+  assert.match(without.evidence, /chưa rõ/);
+  assert.doesNotMatch(without.evidence, /đã có index/);
+  const some = await alert(['rg_symbol', 'rg_symbol', 'rg_symbol', 'rg_symbol_indexed']);
+  assert.doesNotMatch(some!.evidence, /repo đã có index/, 'a partial index does not support the strong claim');
+  assert.match(some!.evidence, /1\/3/);
+});
+
+test('a symbol-shaped rg search is counted; it is marked indexed only by a .codegraph directory in the worktree it searched', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'symbol-index-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const repo = (name: string, index?: 'dir' | 'file') => {
+    const dir = join(root, name);
+    mkdirSync(join(dir, '.git'), { recursive: true });
+    if (index === 'dir') mkdirSync(join(dir, '.codegraph'));
+    if (index === 'file') writeFileSync(join(dir, '.codegraph'), 'not an index');
+    return dir;
+  };
+  const indexed = repo('indexed', 'dir'),
+    plain = repo('plain'),
+    fileOnly = repo('file-only', 'file');
+  const nested = join(indexed, 'packages', 'nested'); // its own repository inside an indexed one
+  mkdirSync(join(nested, '.git'), { recursive: true });
+  const sub = join(indexed, 'src');
+  mkdirSync(sub);
+  const parse = (cwd: string | null, args: Record<string, unknown>) => {
+    const text =
+      [
+        JSON.stringify({ type: 'session_meta', timestamp: '2026-11-13T00:00:00Z', payload: { id: 'x', ...(cwd ? { cwd } : {}) } }),
+        JSON.stringify({
+          type: 'response_item',
+          timestamp: '2026-11-13T00:00:01Z',
+          payload: { type: 'function_call', name: 'exec_command', arguments: JSON.stringify({ cmd: 'rg handleRequest src', ...args }) },
+        }),
+      ].join('\n') + '\n';
+    return (parseFile('codex', '/x/s.jsonl', text)?.search ?? [])
+      .map((e) => e[0])
+      .filter((k) => k.startsWith('rg_symbol'))
+      .sort();
+  };
+  const yes = ['rg_symbol', 'rg_symbol_indexed'],
+    no = ['rg_symbol'];
+  assert.deepEqual(parse(indexed, {}), yes, 'the session cwd is the indexed worktree');
+  assert.deepEqual(parse(sub, {}), yes, 'a subdirectory of the indexed worktree');
+  assert.deepEqual(parse(plain, {}), no);
+  assert.deepEqual(parse(indexed, { workdir: plain }), no, 'the tool ran in a plain worktree even though the session cwd is indexed');
+  assert.deepEqual(parse(plain, { workdir: indexed }), yes, 'an explicit workdir that is indexed');
+  assert.deepEqual(parse(indexed, { workdir: 'src' }), yes, 'a relative workdir resolves against the session cwd');
+  assert.deepEqual(parse(fileOnly, {}), no, 'a plain file named .codegraph is not an index');
+  assert.deepEqual(parse(nested, {}), no, 'an index outside the nested repository is not its worktree index');
+  assert.deepEqual(parse(indexed, { workdir: join(root, 'missing') }), no, 'an unresolvable location stays unknown');
+  assert.deepEqual(parse(null, { workdir: 'relative' }), no, 'no cwd to resolve a relative workdir against');
+
+  // Pi sessions reach the same tool() path: the index evidence works there, and they are never auxiliary.
+  const pi = (cwd: string) => {
+    const text =
+      [
+        { type: 'session', version: 3, id: 'pi-x', cwd, timestamp: '2026-11-13T00:00:00.000Z' },
+        {
+          id: 'a',
+          type: 'message',
+          timestamp: '2026-11-13T00:00:01.000Z',
+          message: { role: 'assistant', content: [{ type: 'toolCall', id: 'c', name: 'bash', arguments: { command: 'rg handleRequest src' } }] },
+        },
+      ]
+        .map((x) => JSON.stringify(x))
+        .join('\n') + '\n';
+    return parseFile('pi', '/x/pi.jsonl', text);
+  };
+  assert.deepEqual(
+    (pi(indexed)?.search ?? [])
+      .map((e) => e[0])
+      .filter((k) => k.startsWith('rg_symbol'))
+      .sort(),
+    yes,
+  );
+  assert.deepEqual(
+    (pi(plain)?.search ?? []).map((e) => e[0]).filter((k) => k.startsWith('rg_symbol')),
+    no,
+  );
+  assert.notEqual(pi(indexed)?.auxiliary, true);
 });

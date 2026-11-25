@@ -127,18 +127,25 @@ function issues(data: DashboardData, sessions: UsageRow[], runs: DashboardRun[])
         );
     }
     const hit = x.filter((s) => s.search.rg_symbol),
-      n = hit.reduce((n, s) => n + s.search.rg_symbol, 0);
+      n = hit.reduce((n, s) => n + s.search.rg_symbol, 0),
+      indexed = hit.reduce((n, s) => n + (s.search.rg_symbol_indexed || 0), 0);
     if (n >= 3)
       issue(
         'symbol-rg:' + (run || '-') + ':' + role,
         'medium',
         'Vai ' + role + ' dùng rg tìm symbol thay vì codegraph',
         n +
-          ' lần rg/grep tìm symbol trong repo đã index, codegraph ' +
+          ' lần rg/grep tìm symbol, codegraph ' +
           x.reduce((n, s) => n + (s.search.codegraph || 0), 0) +
-          ' lần; phiên: ' +
+          ' lần; ' +
+          (indexed === n
+            ? 'repo đã có index codegraph khi phân tích'
+            : indexed
+              ? 'chỉ ' + indexed + '/' + n + ' lần có index codegraph khi phân tích'
+              : 'chưa rõ repo có index codegraph không') +
+          '; phiên: ' +
           ids(hit.map(sid)),
-        'Tra symbol bằng `codegraph explore <symbol>`, còn quan hệ gọi bằng `codegraph callers|impact <symbol>`; chỉ dùng rg cho chuỗi thường.',
+        'Nếu worktree có `.codegraph/`, tra symbol bằng `codegraph explore <symbol>`, còn quan hệ gọi bằng `codegraph callers|impact <symbol>`; chỉ dùng rg cho chuỗi thường hoặc khi chưa có index.',
         { run, role, repo: hit[0].repo },
       );
   }

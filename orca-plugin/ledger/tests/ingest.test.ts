@@ -25,6 +25,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { cycle } from '../daemon.ts';
 import { Store } from '../store.ts';
+import { teardowns } from './teardown.ts';
 
 function fixture(t: import('node:test').TestContext) {
   const root = mkdtempSync(join(tmpdir(), 'ingest-'));
@@ -47,13 +48,14 @@ echo "{\\"id\\":$$,\\"result\\":$result}"
   );
   const home = join(root, 'ledger');
   let store = new Store(home);
-  t.after(() => {
+  const defer = teardowns(t, () => {
     store.db.close();
     rmSync(root, { recursive: true });
   });
   return {
     root,
     env,
+    defer,
     get store() {
       return store;
     },
@@ -584,11 +586,55 @@ async function holder(home: string) {
   return { child, said: String(line).trim(), stopped: once(child, 'exit') };
 }
 
+test('a host test that fails an assertion still tears the host down and its process exits within the deadline', async (t) => {
+  const port = 20000 + Math.floor(Math.random() * 20000);
+  const home = mkdtempSync(join(tmpdir(), 'teardown-parent-'));
+  t.after(() => rmSync(home, { recursive: true, force: true }));
+  const { NODE_TEST_CONTEXT: _inherited, ...env } = process.env; // a child of the runner would otherwise report as a subtest
+  const started = Date.now();
+  // Own process group: the runner spawns the test file as a grandchild, and a deadline kill must reach it too.
+  const child = spawn(nodeBin, ['--test', '--test-timeout=30000', join(here, 'teardown-child.ts')], {
+    env: { ...env, CHILD_PORT: String(port) },
+    detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const killGroup = () => {
+    try {
+      process.kill(-child.pid!, 'SIGKILL');
+    } catch {} // already gone
+  };
+  t.after(async () => {
+    killGroup();
+    await sleep(200);
+    assert.throws(() => process.kill(-child.pid!, 0), { code: 'ESRCH' }, 'no process of the child group is left, even after a failed run');
+  });
+  let stdout = '';
+  child.stdout.on('data', (d) => (stdout += d));
+  child.stderr.on('data', (d) => (stdout += d));
+  const deadline = setTimeout(killGroup, 60_000);
+  const [code, signal] = await once(child, 'exit');
+  clearTimeout(deadline);
+  killGroup();
+  const out = { stdout, code: code ?? 1, signal: signal as string | null };
+  assert.equal(out.signal, null, 'the process exited by itself, not killed at the deadline');
+  assert.ok(Date.now() - started < 30_000, 'it exited well inside the deadline');
+  assert.notEqual(out.code, 0, 'the forced failure fails the run');
+  assert.match(out.stdout, /HOST-READY/, 'the host was live (listener, held lock, ready API) before the failure: ' + out.stdout.slice(-600));
+  assert.doesNotMatch(out.stdout, /HOST-NOT-UP/);
+  assert.match(out.stdout, /FORCED-FAILURE/, 'the failure comes from the forced assertion');
+  await assert.rejects(
+    fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(500) }),
+    (e: Error & { cause?: { code?: string } }) => e.cause?.code === 'ECONNREFUSED',
+    'the port is released: connections are refused, not timed out',
+  );
+});
+
 test('start() ingests under a lock, trigger() coalesces to one pass, stop() releases', async (t) => {
   const f = fixture(t);
   const home = join(f.root, 'host');
   const passes: string[] = [];
   const { start, stop, trigger, status } = await import('../ingest.ts');
+  f.defer(stop);
   start({
     home,
     env: { ...process.env, ...f.env, AGENT_LEDGER_HOME: home },
@@ -696,6 +742,7 @@ test('scheduler: the periodic pass keeps its deadline under a stream of events, 
   const home = join(f.root, 'sched');
   const passes: { reason: string; at: number }[] = [];
   const { start, stop, trigger } = await import('../ingest.ts');
+  f.defer(stop);
   const t0 = Date.now();
   start({
     home,
@@ -738,10 +785,12 @@ test('stop() twice during a delayed Orca call drains once, releases the lock las
   const home = join(f.root, 'drain');
   const { start, stop } = await import('../ingest.ts');
   const { acquire } = await import('../lock.ts');
+  f.defer(stop);
   process.env.GATE = gate; // the Orca CLI child inherits the test process's environment
-  t.after(() => {
+  f.defer(() => {
     delete process.env.GATE;
   });
+  f.defer(() => rmSync(gate, { force: true })); // a stalled pass must be released before stop() can drain
   start({ home, env: { ...process.env, ...f.env, AGENT_LEDGER_HOME: home }, host: 'test' });
   for (let i = 0; i < 200 && !existsSync(gate); i++) await sleep(25);
   assert.ok(existsSync(gate));
@@ -801,11 +850,12 @@ test('plugin host: deactivating during activation starts nothing; a later activa
   const port = 20000 + Math.floor(Math.random() * 20000);
   const saved = { ...process.env };
   Object.assign(process.env, f.env, { AGENT_LEDGER_HOME: home, TEAM_DASHBOARD_PORT: String(port) });
-  t.after(() => {
+  f.defer(() => {
     for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
     Object.assign(process.env, saved);
   });
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   const listeners: Record<string, () => void> = {};
   const orca = {
     log() {},
@@ -855,11 +905,12 @@ test('plugin host: a failed startup shows in /health', async (t) => {
     AGENT_LEDGER_HOME: '/proc/definitely/not/writable',
     TEAM_DASHBOARD_PORT: String(port),
   });
-  t.after(() => {
+  f.defer(() => {
     for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
     Object.assign(process.env, saved);
   });
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   const orca = { log() {}, host: { call: async () => {} }, events: { on() {} } };
   await run(orca);
   try {
@@ -894,6 +945,7 @@ test('a leftover ingest.lock file from an older build is removed once the lock i
   mkdirSync(home);
   writeFileSync(join(home, 'ingest.lock'), JSON.stringify({ pid: process.pid, host: 'launchd', token: 'old' }));
   const { start, stop, status } = await import('../ingest.ts');
+  f.defer(stop);
   start({ home, env: { ...process.env, ...f.env, AGENT_LEDGER_HOME: home }, host: 'new' });
   try {
     for (let i = 0; i < 200 && !status()?.passes; i++) await sleep(25);
@@ -965,6 +1017,7 @@ test('scheduler: event passes keep their spacing at dispatch even when a slow pa
     const home = join(f.root, 'spacing' + interval);
     const starts: { reason: string; at: number }[] = [];
     const { start, stop, trigger } = await import('../ingest.ts');
+    f.defer(stop);
     start({
       home,
       env: { ...process.env, ...f.env, AGENT_LEDGER_HOME: home },
@@ -1000,11 +1053,12 @@ test('plugin host: a second activation without a shutdown replaces the first cle
   const port = 20000 + Math.floor(Math.random() * 20000);
   const saved = { ...process.env };
   Object.assign(process.env, f.env, { AGENT_LEDGER_HOME: home, TEAM_DASHBOARD_PORT: String(port) });
-  t.after(() => {
+  f.defer(() => {
     for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
     Object.assign(process.env, saved);
   });
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   const { status } = await import('../ingest.ts');
   const make = () => {
     const handlers: Record<string, () => void> = {};
@@ -1063,12 +1117,12 @@ function stalled(f: ReturnType<typeof fixture>) {
   );
   return join(f.root, 'gate');
 }
-function hostFixture(t: import('node:test').TestContext, f: ReturnType<typeof fixture>, name: string) {
+function hostFixture(f: ReturnType<typeof fixture>, name: string) {
   const home = join(f.root, name);
   const port = 20000 + Math.floor(Math.random() * 20000);
   const saved = { ...process.env };
   Object.assign(process.env, f.env, { AGENT_LEDGER_HOME: home, TEAM_DASHBOARD_PORT: String(port) });
-  t.after(() => {
+  f.defer(() => {
     for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
     Object.assign(process.env, saved);
   });
@@ -1090,11 +1144,13 @@ test('plugin host: shutdown and a new activation overlapping a delayed pass run 
   const f = fixture(t);
   const gate = stalled(f);
   process.env.GATE = gate;
-  t.after(() => {
+  f.defer(() => {
     delete process.env.GATE;
   });
-  const h = hostFixture(t, f, 'overlap');
+  const h = hostFixture(f, 'overlap');
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
+  f.defer(() => rmSync(gate, { force: true })); // a stalled pass must be released before shutdown can drain
   await run(h.make());
   for (let i = 0; i < 200 && !existsSync(gate); i++) await sleep(25);
   assert.ok(existsSync(gate), 'a pass is in flight');
@@ -1127,11 +1183,13 @@ test('plugin host: two overlapping shutdowns both wait for the drain, in order',
   const f = fixture(t);
   const gate = stalled(f);
   process.env.GATE = gate;
-  t.after(() => {
+  f.defer(() => {
     delete process.env.GATE;
   });
-  const h = hostFixture(t, f, 'twoshut');
+  const h = hostFixture(f, 'twoshut');
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
+  f.defer(() => rmSync(gate, { force: true })); // a stalled pass must be released before shutdown can drain
   await run(h.make());
   for (let i = 0; i < 200 && !existsSync(gate); i++) await sleep(25);
   assert.ok(existsSync(gate));
@@ -1190,7 +1248,7 @@ test('lock: only a missing ingest.lock is ignored; any other failure to remove i
 });
 
 /** The environment a host test needs: its own ledger home and port, the repo as team root, restored afterwards. */
-function hostEnv(t: import('node:test').TestContext, f: ReturnType<typeof fixture>, extra: Record<string, string> = {}) {
+function hostEnv(f: ReturnType<typeof fixture>, extra: Record<string, string> = {}) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const saved = { ...process.env };
   const repo = join(here, 'fixtures/team');
@@ -1201,7 +1259,7 @@ function hostEnv(t: import('node:test').TestContext, f: ReturnType<typeof fixtur
     extra,
   );
   delete process.env.AGENT_DASHBOARD_WEB; // the host must point it at its own bundle
-  t.after(() => {
+  f.defer(() => {
     for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
     Object.assign(process.env, saved);
   });
@@ -1234,15 +1292,14 @@ function hostEnv(t: import('node:test').TestContext, f: ReturnType<typeof fixtur
 
 test('plugin host: one listener serves the dashboard, waits for a busy port, and shuts down in order', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f);
+  const h = hostEnv(f);
   // Another server holds the port first.
   const { createServer } = await import('node:http');
   const squatter = createServer((_, res) => res.end('other')).listen(h.port, '127.0.0.1');
+  f.defer(() => squatter.close());
   await once(squatter, 'listening');
-  t.after(() => {
-    squatter.close();
-  });
   const { run, shutdown, dashboardData } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   await run(h.orca);
   try {
     for (let i = 0; i < 100 && !h.logs.some((l) => l.includes(`listener ${h.port} EADDRINUSE`)); i++) await sleep(25);
@@ -1289,8 +1346,9 @@ test('plugin host: one listener serves the dashboard, waits for a busy port, and
 
 test('plugin host: an invalid port override fails before anything starts, and says so', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f, { TEAM_DASHBOARD_PORT: 'not-a-port' });
+  const h = hostEnv(f, { TEAM_DASHBOARD_PORT: 'not-a-port' });
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   await run(h.orca);
   try {
     assert.ok(
@@ -1315,8 +1373,9 @@ test('plugin host: an invalid port override fails before anything starts, and sa
 
 test('plugin host: a listener that fails to start rolls everything back (no ingest, API worker or port left)', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f);
+  const h = hostEnv(f);
   const { run, shutdown, setModuleLoader } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   // A http module whose serve() throws right away, as listen() does for an unusable address.
   setModuleLoader(async (file: string) => {
     const real = await import(new URL('../' + file, import.meta.url).href);
@@ -1329,7 +1388,7 @@ test('plugin host: a listener that fails to start rolls everything back (no inge
         }
       : real;
   });
-  t.after(() => setModuleLoader());
+  f.defer(() => setModuleLoader());
   await run(h.orca);
   try {
     assert.ok(
@@ -1347,11 +1406,13 @@ test('plugin host: a listener that fails to start rolls everything back (no inge
 
 test('plugin host: shutdown while the listener is still retrying a busy port leaves nothing to bind later', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f);
+  const h = hostEnv(f);
   const { createServer } = await import('node:http');
   const squatter = createServer((_, res) => res.end('other')).listen(h.port, '127.0.0.1');
+  f.defer(() => squatter.close());
   await once(squatter, 'listening');
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   await run(h.orca);
   for (let i = 0; i < 100 && !h.logs.some((l) => l.includes(`listener ${h.port} EADDRINUSE`)); i++) await sleep(25);
   assert.ok(
@@ -1367,8 +1428,9 @@ test('plugin host: shutdown while the listener is still retrying a busy port lea
 
 test('plugin host: an API request in flight during shutdown does not hang the shutdown, and the port closes', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f);
+  const h = hostEnv(f);
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   await run(h.orca);
   for (let i = 0; i < 200 && !(await h.up()); i++) await sleep(25);
   assert.ok(await h.up());
@@ -1387,13 +1449,14 @@ test('plugin host: an API request in flight during shutdown does not hang the sh
 
 test('plugin host: an API module that cannot be imported leaves ingest and /health running and says so', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f);
+  const h = hostEnv(f);
   const { run, shutdown, setModuleLoader } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   setModuleLoader(async (file: string) => {
     if (file === 'api.ts') throw new SyntaxError('Unexpected token in api.ts');
     return import(new URL('../' + file, import.meta.url).href);
   });
-  t.after(() => setModuleLoader());
+  f.defer(() => setModuleLoader());
   await run(h.orca);
   try {
     let health: { ok: boolean; listening: { apiError?: string } } | null = null;
@@ -1414,8 +1477,9 @@ test('plugin host: an API module that cannot be imported leaves ingest and /heal
 
 test('plugin host: an API that cannot start (bad team root) leaves ingest and /health running and says so', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f, { AGENT_TEAM_HOME: join(f.root, 'no-team-here') });
+  const h = hostEnv(f, { AGENT_TEAM_HOME: join(f.root, 'no-team-here') });
   const { run, shutdown } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   await run(h.orca);
   try {
     let health: { ok: boolean; listening: { apiError?: string } } | null = null;
@@ -1458,8 +1522,9 @@ test('the API route map covers every file of the shipped dashboard bundle', asyn
 test('plugin host: a deactivation during a slow optional API import starts nothing, whether the import succeeds or fails', async (t) => {
   for (const outcome of ['loads', 'fails']) {
     const f = fixture(t);
-    const h = hostEnv(t, f);
+    const h = hostEnv(f);
     const { run, shutdown, setModuleLoader } = await import('../../src/ledger-host.ts');
+    f.defer(shutdown);
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -1492,8 +1557,9 @@ test('plugin host: a deactivation during a slow optional API import starts nothi
 
 test('plugin host: an asynchronous bind failure tears the activation down through the lifecycle chain, and a later activation works', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f);
+  const h = hostEnv(f);
   const { run, shutdown, setModuleLoader, dashboardData } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   // A listener whose bind fails some time after serve() returned, as listen() errors such as EACCES do.
   setModuleLoader(async (file: string) => {
     const real = await import(new URL('../' + file, import.meta.url).href);
@@ -1536,8 +1602,9 @@ test('plugin host: an asynchronous bind failure tears the activation down throug
 
 test('plugin host: a terminal listener error of an old activation does not tear down its replacement', async (t) => {
   const f = fixture(t);
-  const h = hostEnv(t, f);
+  const h = hostEnv(f);
   const { run, shutdown, setModuleLoader } = await import('../../src/ledger-host.ts');
+  f.defer(shutdown);
   let httpLoads = 0,
     apiLoads = 0,
     failOld: (() => void) | undefined,
