@@ -806,15 +806,10 @@ test('plugin host: deactivating during activation starts nothing; a later activa
     Object.assign(process.env, saved);
   });
   const { run, shutdown } = await import('../../src/ledger-host.ts');
-  const bars: string[] = [],
-    listeners: Record<string, () => void> = {};
+  const listeners: Record<string, () => void> = {};
   const orca = {
     log() {},
-    host: {
-      call: async (_: string, p: { text: string }) => {
-        bars.push(p.text);
-      },
-    },
+    host: { call: async () => {} },
     events: {
       on: (e: string, h: () => void) => {
         listeners[e] = h;
@@ -841,10 +836,7 @@ test('plugin host: deactivating during activation starts nothing; a later activa
   }
   assert.equal(health?.host, 'orca-plugin');
   assert.equal(health?.lock, 'held');
-  assert.ok(
-    bars.some((b) => /^Ledger \d\d:\d\d ✓/.test(b)),
-    'status bar: ' + bars.join(' | '),
-  );
+  assert.deepEqual((health as { listening?: { bound: number[] } } | null)?.listening?.bound, [port], 'the listener is bound (health says so)');
   assert.ok(listeners['agent.status.changed'] && listeners['workspace.created'] && listeners['workspace.removed']);
   await shutdown();
   assert.equal(await probe(), null);
@@ -854,36 +846,33 @@ test('plugin host: deactivating during activation starts nothing; a later activa
   await shutdown();
 });
 
-test('plugin host: a failed startup shows in the status bar', async (t) => {
+test('plugin host: a failed startup shows in /health', async (t) => {
   const f = fixture(t);
   const saved = { ...process.env };
+  const port = 20000 + Math.floor(Math.random() * 20000);
   // An unwritable home makes the ledger refuse to start its pass; a missing ledger module would fail the same way.
   Object.assign(process.env, f.env, {
     AGENT_LEDGER_HOME: '/proc/definitely/not/writable',
-    TEAM_DASHBOARD_PORT: String(20000 + Math.floor(Math.random() * 20000)),
+    TEAM_DASHBOARD_PORT: String(port),
   });
   t.after(() => {
     for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
     Object.assign(process.env, saved);
   });
   const { run, shutdown } = await import('../../src/ledger-host.ts');
-  const bars: string[] = [];
-  const orca = {
-    log() {},
-    host: {
-      call: async (_: string, p: { text: string }) => {
-        bars.push(p.text);
-      },
-    },
-    events: { on() {} },
-  };
+  const orca = { log() {}, host: { call: async () => {} }, events: { on() {} } };
   await run(orca);
   try {
-    for (let i = 0; i < 100 && !bars.some((b) => b.includes('✗')); i++) await sleep(25);
-    assert.ok(
-      bars.some((b) => b.includes('✗')),
-      'status bar: ' + bars.join(' | '),
-    );
+    // The listener still serves /health, and it says the ledger is not running.
+    let health: { ok: boolean; error?: string } | null = null;
+    for (let i = 0; i < 100 && !health; i++) {
+      await sleep(25);
+      health = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(500) }).then(
+        (r) => r.json(),
+        () => null,
+      );
+    }
+    assert.equal(health?.ok, false, 'the failed start is visible in /health');
   } finally {
     await shutdown();
   }
@@ -1083,14 +1072,10 @@ function hostFixture(t: import('node:test').TestContext, f: ReturnType<typeof fi
     for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
     Object.assign(process.env, saved);
   });
-  const bars: string[] = [];
+  const logs: string[] = [];
   const make = () => ({
-    log() {},
-    host: {
-      call: async (_: string, p: { text: string }) => {
-        bars.push(p.text);
-      },
-    },
+    log: (m: string) => void logs.push(String(m)),
+    host: { call: async () => {} },
     events: { on() {} },
   });
   const probe = () =>
@@ -1098,7 +1083,7 @@ function hostFixture(t: import('node:test').TestContext, f: ReturnType<typeof fi
       (r) => r.json(),
       () => null,
     );
-  return { home, port, bars, make, probe };
+  return { home, port, logs, make, probe };
 }
 
 test('plugin host: shutdown and a new activation overlapping a delayed pass run in order, and the activation is not lost', async (t) => {
@@ -1133,7 +1118,7 @@ test('plugin host: shutdown and a new activation overlapping a delayed pass run 
     health = await h.probe();
   }
   assert.equal(health?.lock, 'held', 'the second activation is running');
-  assert.ok(!h.bars.some((b) => b.includes('not started')), h.bars.join(' | '));
+  assert.ok(!h.logs.some((l) => l.includes('failed to start')), h.logs.join(' | '));
   await shutdown();
   assert.equal(await h.probe(), null);
 });
@@ -1220,14 +1205,10 @@ function hostEnv(t: import('node:test').TestContext, f: ReturnType<typeof fixtur
     for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
     Object.assign(process.env, saved);
   });
-  const bars: string[] = [];
+  const logs: string[] = [];
   const orca = {
-    log() {},
-    host: {
-      call: async (_: string, p: { text: string }) => {
-        bars.push(p.text);
-      },
-    },
+    log: (m: string) => void logs.push(String(m)),
+    host: { call: async () => {} },
     events: { on() {} },
   };
   const get = (path: string) => fetch(`http://127.0.0.1:${port}${path}`, { signal: AbortSignal.timeout(15000) });
@@ -1248,7 +1229,7 @@ function hostEnv(t: import('node:test').TestContext, f: ReturnType<typeof fixtur
         .end();
     });
   };
-  return { port, bars, orca, get, up, withHost, repo };
+  return { port, logs, orca, get, up, withHost, repo };
 }
 
 test('plugin host: one listener serves the dashboard, waits for a busy port, and shuts down in order', async (t) => {
@@ -1264,10 +1245,10 @@ test('plugin host: one listener serves the dashboard, waits for a busy port, and
   const { run, shutdown, dashboardData } = await import('../../src/ledger-host.ts');
   await run(h.orca);
   try {
-    for (let i = 0; i < 100 && !h.bars.some((b) => b.includes(`${h.port} busy`)); i++) await sleep(25);
+    for (let i = 0; i < 100 && !h.logs.some((l) => l.includes(`listener ${h.port} EADDRINUSE`)); i++) await sleep(25);
     assert.ok(
-      h.bars.some((b) => b.includes(`${h.port} busy`)),
-      h.bars.join(' | '),
+      h.logs.some((l) => l.includes(`listener ${h.port} EADDRINUSE`)),
+      h.logs.join(' | '),
     );
     assert.equal(await (await h.get('/')).text(), 'other', 'the port still belongs to the other server');
     squatter.close();
@@ -1277,12 +1258,6 @@ test('plugin host: one listener serves the dashboard, waits for a busy port, and
     const health = (await (await h.get('/health')).json()) as { listening: { bound: number[]; waiting: number[] } };
     assert.deepEqual(health.listening.bound, [h.port]);
     assert.deepEqual(health.listening.waiting, []);
-    // The bar says "starting" until the first ingest pass ends, which on a loaded machine can be after the listener is up: wait for it.
-    for (let i = 0; i < 200 && !h.bars.some((b) => /✓ \d+$/.test(b) && b.endsWith(String(h.port))); i++) await sleep(25);
-    assert.ok(
-      h.bars.some((b) => /✓ \d+$/.test(b) && b.endsWith(String(h.port))),
-      h.bars.join(' | '),
-    );
     // Every dashboard route answers on the one port: index.html equals the packaged bundle byte for byte.
     const index = await h.get('/');
     assert.equal(index.status, 200);
@@ -1319,8 +1294,8 @@ test('plugin host: an invalid port override fails before anything starts, and sa
   await run(h.orca);
   try {
     assert.ok(
-      h.bars.some((b) => b.includes('✗ not started')),
-      h.bars.join(' | '),
+      h.logs.some((l) => l.includes('ledger host failed to start') && l.includes('TEAM_DASHBOARD_PORT')),
+      h.logs.join(' | '),
     );
     assert.equal(existsSync(join(process.env.AGENT_LEDGER_HOME!, 'ingest.lock.db')), false, 'no ledger resource was touched');
   } finally {
@@ -1328,18 +1303,11 @@ test('plugin host: an invalid port override fails before anything starts, and sa
   }
   for (const bad of ['0', '70000', '80.5']) {
     process.env.TEAM_DASHBOARD_PORT = bad;
-    const bars: string[] = [];
-    await run({
-      ...h.orca,
-      host: {
-        call: async (_: string, p: { text: string }) => {
-          bars.push(p.text);
-        },
-      },
-    });
+    const logs: string[] = [];
+    await run({ ...h.orca, log: (m: string) => void logs.push(String(m)) });
     assert.ok(
-      bars.some((b) => b.includes('✗ not started')),
-      `${bad}: ${bars.join(' | ')}`,
+      logs.some((l) => l.includes('ledger host failed to start') && l.includes('TEAM_DASHBOARD_PORT')),
+      `${bad}: ${logs.join(' | ')}`,
     );
     await shutdown();
   }
@@ -1365,8 +1333,8 @@ test('plugin host: a listener that fails to start rolls everything back (no inge
   await run(h.orca);
   try {
     assert.ok(
-      h.bars.some((b) => b.includes('✗ not started')),
-      h.bars.join(' | '),
+      h.logs.some((l) => l.includes('ledger host failed to start')),
+      h.logs.join(' | '),
     );
     const { acquire } = await import('../lock.ts');
     const got = acquire(process.env.AGENT_LEDGER_HOME!, 'after'); // ingest was stopped by the rollback
@@ -1385,9 +1353,9 @@ test('plugin host: shutdown while the listener is still retrying a busy port lea
   await once(squatter, 'listening');
   const { run, shutdown } = await import('../../src/ledger-host.ts');
   await run(h.orca);
-  for (let i = 0; i < 100 && !h.bars.some((b) => b.includes(`${h.port} busy`)); i++) await sleep(25);
+  for (let i = 0; i < 100 && !h.logs.some((l) => l.includes(`listener ${h.port} EADDRINUSE`)); i++) await sleep(25);
   assert.ok(
-    h.bars.some((b) => b.includes(`${h.port} busy`)),
+    h.logs.some((l) => l.includes(`listener ${h.port} EADDRINUSE`)),
     'the retry is pending',
   );
   await shutdown();
@@ -1438,10 +1406,6 @@ test('plugin host: an API module that cannot be imported leaves ingest and /heal
     }
     assert.equal(health?.ok, true, 'ingest and /health run');
     assert.match(health?.listening.apiError ?? '', /Unexpected token in api\.ts/);
-    assert.ok(
-      h.bars.some((b) => b.endsWith('⚠')),
-      h.bars.join(' | '),
-    );
     assert.equal((await h.get('/api/data')).status, 404, 'no dashboard routes without the API');
   } finally {
     await shutdown();
@@ -1464,10 +1428,6 @@ test('plugin host: an API that cannot start (bad team root) leaves ingest and /h
     }
     assert.equal(health?.ok, true);
     assert.match(health?.listening.apiError ?? '', /AGENT_TEAM_HOME/);
-    assert.ok(
-      h.bars.some((b) => b.endsWith('⚠')),
-      h.bars.join(' | '),
-    );
   } finally {
     await shutdown();
   }
@@ -1519,7 +1479,11 @@ test('plugin host: a deactivation during a slow optional API import starts nothi
       await Promise.all([activation, stopping]);
       assert.equal(existsSync(join(process.env.AGENT_LEDGER_HOME!, 'ingest.lock.db')), false, `${outcome}: ingest never started`);
       await assert.rejects(h.get('/health'), `${outcome}: the port was never bound`);
-      assert.deepEqual(h.bars, [], `${outcome}: nothing was announced`);
+      assert.deepEqual(
+        h.logs.filter((l) => /failed to start|listener/.test(l)),
+        [],
+        `${outcome}: nothing was announced`,
+      );
     } finally {
       setModuleLoader();
     }
@@ -1545,10 +1509,10 @@ test('plugin host: an asynchronous bind failure tears the activation down throug
   });
   try {
     await run(h.orca);
-    for (let i = 0; i < 100 && !h.bars.some((b) => b.includes('✗ not started')); i++) await sleep(25);
+    for (let i = 0; i < 100 && !h.logs.some((l) => l.includes('tearing the host down')); i++) await sleep(25);
     assert.ok(
-      h.bars.some((b) => b.includes('✗ not started')),
-      h.bars.join(' | '),
+      h.logs.some((l) => l.includes(`listener ${h.port} EACCES: tearing the host down`)),
+      h.logs.join(' | '),
     );
     const { acquire } = await import('../lock.ts');
     let got = acquire(process.env.AGENT_LEDGER_HOME!, 'after');
@@ -1559,7 +1523,6 @@ test('plugin host: an asynchronous bind failure tears the activation down throug
     assert.ok('held' in got, 'ingest was stopped by the teardown');
     (got as { held: { release(): void } }).held.release();
     await assert.rejects(dashboardData(7), /chưa sẵn sàng/);
-    assert.equal(h.bars.at(-1)?.includes('✗ not started'), true, 'the status bar keeps saying why (nothing overwrote it)');
     // The activation can start again afterwards (the lifecycle chain is not stuck).
     setModuleLoader();
     await run(h.orca);
@@ -1614,7 +1577,6 @@ test('plugin host: a terminal listener error of an old activation does not tear 
     )) as { ok: boolean; lock: string } | null;
     assert.equal(health?.lock, 'held', 'the replacement is running');
     assert.ok(health?.ok);
-    assert.ok(!h.bars.some((b) => b.includes('✗ not started')), 'the old error did not announce a failure: ' + h.bars.join(' | '));
     assert.equal(
       (await h.get('/api/data?days=7')).status === 503 || (await h.get('/api/data?days=7')).status === 200,
       true,
