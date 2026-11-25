@@ -1,0 +1,48 @@
+// Format and lint for the plugin. Run: npm --prefix orca-plugin run lint (check mode, fails on any warning).
+// Each file group keeps the style it was written in: ledger/ single quotes with semicolons, the dashboard pages double quotes,
+// the Orca-side code (src/, tests/, dashboard-web/js/orca-*.js) single quotes without semicolons.
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": ["**", "!dashboard-web/vendor", "!ledger/tests/golden", "!ledger/tests/fixtures", "!.orca", "!package-lock.json"]
+  },
+  "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 160 },
+  "javascript": { "formatter": { "quoteStyle": "single", "semicolons": "always" } },
+  "linter": {
+    "rules": {
+      "preset": "recommended",
+      // Rules turned off because the code uses the pattern on purpose:
+      "style": {
+        "useTemplate": "off", // short concatenations read fine ("#" + id)
+        "noNonNullAssertion": "off", // `!` after a lookup the code has just guaranteed
+        "useExponentiationOperator": "off" // Math.pow in chart scales
+      },
+      "suspicious": {
+        "noAssignInExpressions": "off", // (by[k] ??= []).push(x) and while ((m = re.exec(s))) idioms
+        "useIterableCallbackReturn": "off" // xs.forEach(x => el.append(x)) shorthand
+      },
+      "a11y": {
+        "useSemanticElements": "off" // <div role="group"> for filter rows: a <fieldset> brings its own border and padding
+      }
+    }
+  },
+  "css": {
+    "linter": { "enabled": true },
+    "formatter": { "enabled": true }
+  },
+  "assist": { "enabled": false },
+  "overrides": [
+    { "includes": ["dashboard-web/**"], "javascript": { "formatter": { "quoteStyle": "double" } } },
+    {
+      "includes": ["src/**", "tests/**", "dashboard-web/js/orca-*.js"],
+      "javascript": { "formatter": { "quoteStyle": "single", "semicolons": "asNeeded" } }
+    },
+    { "includes": ["tests/frontend.impl.mjs"], "javascript": { "formatter": { "quoteStyle": "double", "semicolons": "always" } } },
+    {
+      // The cascade order in the stylesheets is deliberate (base rules, then panel and dark-mode overrides).
+      "includes": ["**/*.css"],
+      "linter": { "rules": { "style": { "noDescendingSpecificity": "off" }, "complexity": { "noImportantStyles": "off" } } }
+    }
+  ]
+}
