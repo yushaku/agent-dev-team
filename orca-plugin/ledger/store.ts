@@ -16,7 +16,11 @@ export class Store {
     try {
       this.init(home);
     } catch (error) {
-      try { this.db.close(); } catch { /* already closed */ }
+      try {
+        this.db.close();
+      } catch {
+        /* already closed */
+      }
       throw error;
     }
   }
@@ -62,7 +66,10 @@ export class Store {
         this.db.exec('ALTER TABLE cursors ADD COLUMN checksum TEXT');
       }
       this.db.exec('COMMIT');
-    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
     tightenFiles(home);
     this.version = this.db.prepare(`INSERT INTO versions VALUES(?,?,?,?) ON CONFLICT DO UPDATE
       SET hash=excluded.hash WHERE hash<>excluded.hash`);
@@ -73,7 +80,7 @@ export class Store {
   source(kind: string, path: string) {
     const row = this.db.prepare('SELECT * FROM sources WHERE kind=? AND path=?').get(kind, path);
     if (row) return Number(row.id);
-    const id = Number(this.db.prepare('INSERT INTO sources(kind,path) VALUES(?,?)').run(kind,path).lastInsertRowid);
+    const id = Number(this.db.prepare('INSERT INTO sources(kind,path) VALUES(?,?)').run(kind, path).lastInsertRowid);
     this.db.prepare('INSERT INTO cursors(source) VALUES(?)').run(id);
     return id;
   }

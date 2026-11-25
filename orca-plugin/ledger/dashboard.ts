@@ -9,11 +9,7 @@ import { aliases, tsOf } from './session.ts';
 import { runData } from './run-data.ts';
 export const date = (s: number) => {
   const d = new Date(s * 1000);
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
-  ].join('-');
+  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
 };
 const dict = () => Object.create(null);
 const inc = (obj, k, n) => (obj[k] = (obj[k] || 0) + n);
@@ -34,9 +30,7 @@ function assign(task, s) {
 function rtk(db, start): DashboardData['rtk'] {
   if (!db.prepare("SELECT 1 FROM sources WHERE kind='rtk' LIMIT 1").get()) return { available: false };
   const query = (columns, group = '') =>
-    db
-      .prepare('SELECT ' + columns + ' FROM dashboard_commands WHERE version=? AND timestamp>=? ' + group)
-      .all(PARSER_VERSION, start);
+    db.prepare('SELECT ' + columns + ' FROM dashboard_commands WHERE version=? AND timestamp>=? ' + group).all(PARSER_VERSION, start);
   const totals = 'count(*) n,coalesce(sum(saved_tokens),0) saved,coalesce(sum(input_tokens),0) input';
   const percent = (r) => Math.round((r.saved / (r.input || 1)) * 1000) / 10;
   const [r] = query(totals + ',coalesce(sum(output_tokens),0) output,coalesce(sum(exec_time_ms),0) time_ms');
@@ -51,26 +45,17 @@ function rtk(db, start): DashboardData['rtk'] {
       pct: percent(r),
       time_ms: r.time_ms,
     },
-    by_cmd: query(
-      'rtk_cmd cmd,' + totals + ',coalesce(sum(output_tokens),0) output',
-      'GROUP BY rtk_cmd ORDER BY saved DESC LIMIT 15',
-    ).map(pct),
-    daily: query(
-      'substr(timestamp,1,10) date,' + totals + ',coalesce(sum(output_tokens),0) output',
-      'GROUP BY date ORDER BY date',
-    ).map(pct),
-    by_project: query(
-      'project_path project,' + totals,
-      "AND project_path!='' GROUP BY project_path ORDER BY saved DESC LIMIT 15",
-    ).map((r) => ({ project: relative(home, r.project) || '.', n: r.n, saved: r.saved, pct: percent(r) })),
+    by_cmd: query('rtk_cmd cmd,' + totals + ',coalesce(sum(output_tokens),0) output', 'GROUP BY rtk_cmd ORDER BY saved DESC LIMIT 15').map(pct),
+    daily: query('substr(timestamp,1,10) date,' + totals + ',coalesce(sum(output_tokens),0) output', 'GROUP BY date ORDER BY date').map(pct),
+    by_project: query('project_path project,' + totals, "AND project_path!='' GROUP BY project_path ORDER BY saved DESC LIMIT 15").map((r) => ({
+      project: relative(home, r.project) || '.',
+      n: r.n,
+      saved: r.saved,
+      pct: percent(r),
+    })),
   };
 }
-export function build(
-  { db }: Store,
-  days: number,
-  now = Date.now() / 1000,
-  gitMetrics?: GitMetrics,
-): DashboardData {
+export function build({ db }: Store, days: number, now = Date.now() / 1000, gitMetrics?: GitMetrics): DashboardData {
   const begin = performance.now(),
     midnight = new Date(now * 1000);
   midnight.setHours(0, 0, 0, 0);
@@ -80,17 +65,8 @@ export function build(
     .prepare('SELECT data FROM dashboard_sessions WHERE version=? ORDER BY source,generation,sid')
     .all(PARSER_VERSION)
     .map((r) => JSON.parse(String(r.data)));
-  parsed.sort(
-    (a, b) =>
-      a.agent.localeCompare(b.agent) ||
-      Number(!!b.subagent) - Number(!!a.subagent) ||
-      (a.start || 0) - (b.start || 0),
-  );
-  const fetched = db
-    .prepare(
-      "SELECT max(recorded_at) stamp FROM ingest_log WHERE source IN (SELECT id FROM sources WHERE kind='orca')",
-    )
-    .get();
+  parsed.sort((a, b) => a.agent.localeCompare(b.agent) || Number(!!b.subagent) - Number(!!a.subagent) || (a.start || 0) - (b.start || 0));
+  const fetched = db.prepare("SELECT max(recorded_at) stamp FROM ingest_log WHERE source IN (SELECT id FROM sources WHERE kind='orca')").get();
   const orca = runData(
     db.prepare('SELECT path,data FROM dashboard_orca WHERE version=? ORDER BY source').all(PARSER_VERSION),
     now,
@@ -125,37 +101,14 @@ export function build(
     const [repository, wt] = repo(s.cwd),
       root = checkout(s.cwd);
     if (root) roots.set(repository, root);
-    const ds = s.cwd
-      ? orca.dispatches.filter(
-          (d) =>
-            d.wt &&
-            d.from &&
-            d.agent === s.agent &&
-            tasks.has(d.task) &&
-            normalize(d.wt) === normalize(s.cwd),
-        )
-      : [];
+    const ds = s.cwd ? orca.dispatches.filter((d) => d.wt && d.from && d.agent === s.agent && tasks.has(d.task) && normalize(d.wt) === normalize(s.cwd)) : [];
     const active = (events, ts) => events?.filter((e) => (e[1] || s.start || 0) <= ts).at(-1)?.[0];
     const branchAt = (ts) =>
-      s.branch_segments
-        ? s.branch_segments.findLast((x) => x.at === null || x.at <= ts) || { cwd: s.cwd, branch: null }
-        : { cwd: s.cwd, branch: s.branch };
+      s.branch_segments ? s.branch_segments.findLast((x) => x.at === null || x.at <= ts) || { cwd: s.cwd, branch: null } : { cwd: s.cwd, branch: s.branch };
     const rows = new Map(),
       branches = new Map();
     for (const call of s.calls.sort((a, b) => (a[0] || 0) - (b[0] || 0))) {
-      const [
-        ts,
-        model,
-        eff,
-        fin,
-        cr,
-        cw,
-        out,
-        reason,
-        mid,
-        prem = 0,
-        ctx = { cwd: s.cwd, branch: s.branch },
-      ] = call;
+      const [ts, model, eff, fin, cr, cw, out, reason, mid, prem = 0, ctx = { cwd: s.cwd, branch: s.branch }] = call;
       if (mid) {
         const key = JSON.stringify([s.agent, mid]);
         if (seen.has(key)) continue;
@@ -215,12 +168,7 @@ export function build(
       const matches =
         t && !s.aggregate
           ? t.routing.filter(
-              (a) =>
-                a.dispatch &&
-                a.agent === s.agent &&
-                ds.some(
-                  (d) => d.task === t.id && d.id === a.dispatch && d.from <= ts && ts <= (d.to || Infinity),
-                ),
+              (a) => a.dispatch && a.agent === s.agent && ds.some((d) => d.task === t.id && d.id === a.dispatch && d.from <= ts && ts <= (d.to || Infinity)),
             )
           : [];
       const routing = matches.length === 1 ? matches[0] : null,
@@ -309,8 +257,7 @@ export function build(
           rid = active(s.runs, ts);
         return values.find((r) => (tid ? r.task_id === tid : rid && r.run_id === rid)) || values[0];
       };
-    const same = (p, c) =>
-      p.cwd === c.cwd && p.branch === c.branch && p.branch_source === (c.branch_source || 'session');
+    const same = (p, c) => p.cwd === c.cwd && p.branch === c.branch && p.branch_source === (c.branch_source || 'session');
     for (const [name, ts] of s.skills) {
       const r = target(ts);
       if (!ts || ts < start || !r) continue;
@@ -332,15 +279,11 @@ export function build(
       r.hooks = Object.fromEntries(hooks.map(([n, h]) => [n, h[1]]));
       for (const [j, p] of r.feature_segments.entries()) {
         p.id = r.id + ':branch:' + j;
-        p.hooks = Object.fromEntries(
-          hooks.filter(([, h]) => same(p, branchAt(h[0]))).map(([n, h]) => [n, h[1]]),
-        );
+        p.hooks = Object.fromEntries(hooks.filter(([, h]) => same(p, branchAt(h[0]))).map(([n, h]) => [n, h[1]]));
       }
       const largest = (obj) => Object.keys(obj).reduce((a, b) => (obj[a] >= obj[b] ? a : b));
       r.model = largest(r.models);
-      r.effort = largest(
-        Object.fromEntries(Object.entries(r.mix).filter(([k]) => k.startsWith(r.model + '|'))),
-      ).split('|')[1];
+      r.effort = largest(Object.fromEntries(Object.entries(r.mix).filter(([k]) => k.startsWith(r.model + '|')))).split('|')[1];
       r.ctx_med = r.ctx.length ? Math.trunc(median(r.ctx)) : null;
       r.ctx_max = r.ctx.length ? r.ctx.reduce((a, b) => Math.max(a, b)) : null;
       if (s.aggregate) r.calls = null;

@@ -42,7 +42,9 @@ async function world(t: import('node:test').TestContext, spec: { runs: string[];
       })),
     });
     put('worker-list', ['--run', run], {
-      workers: dispatches.filter((d) => mine.some((task) => task.id === d.task)).map((d) => ({ dispatchId: d.id, taskId: d.task, agentTerminalHandle: 'term-' + d.id })),
+      workers: dispatches
+        .filter((d) => mine.some((task) => task.id === d.task))
+        .map((d) => ({ dispatchId: d.id, taskId: d.task, agentTerminalHandle: 'term-' + d.id })),
     });
     put('gate-list', ['--run', run], { gates: [] });
     put('inbox', ['--run', run], { messages: [] });
@@ -57,8 +59,22 @@ async function world(t: import('node:test').TestContext, spec: { runs: string[];
   const session = (calls: [number, number][], extra: Record<string, unknown> = {}) => {
     const id = String(extra.id ?? 'session');
     const row = {
-      agent: 'codex', id, cwd: worktree, branch: null, start: calls[0][0], end: calls.at(-1)![0], originator: null,
-      skills: [], tasks: [], runs: [], subagent: false, dispatcher: false, hooks: {}, preview: '', role_line: null, discussion: null,
+      agent: 'codex',
+      id,
+      cwd: worktree,
+      branch: null,
+      start: calls[0][0],
+      end: calls.at(-1)![0],
+      originator: null,
+      skills: [],
+      tasks: [],
+      runs: [],
+      subagent: false,
+      dispatcher: false,
+      hooks: {},
+      preview: '',
+      role_line: null,
+      discussion: null,
       calls: calls.map(([ts, tokens]) => [ts, 'test-model', 'medium', tokens, 0, 0, 0, 0, null]),
       ...extra,
     };
@@ -70,33 +86,76 @@ const run = (data: ReturnType<typeof build>, id: string) => data.orca.runs.find(
 
 test('a reused session splits its tokens between tasks and Runs and keeps the unassigned ones', async (t) => {
   const base = now - 100;
-  const w = await world(t, { runs: ['run_a', 'run_b'], tasks: [{ id: 'a', run: 'run_a' }, { id: 'b', run: 'run_b' }] });
-  w.session([[base, 10], [base + 10, 20], [base + 20, 30], [base + 30, 40]], {
-    tasks: [['a', base + 10], ['b', base + 20], ['a', base + 30]],
-    skills: [['tdd', base + 10], ['ponytail', base + 20]],
+  const w = await world(t, {
+    runs: ['run_a', 'run_b'],
+    tasks: [
+      { id: 'a', run: 'run_a' },
+      { id: 'b', run: 'run_b' },
+    ],
   });
+  w.session(
+    [
+      [base, 10],
+      [base + 10, 20],
+      [base + 20, 30],
+      [base + 30, 40],
+    ],
+    {
+      tasks: [
+        ['a', base + 10],
+        ['b', base + 20],
+        ['a', base + 30],
+      ],
+      skills: [
+        ['tdd', base + 10],
+        ['ponytail', base + 20],
+      ],
+    },
+  );
   const data = w.data();
   assert.equal(data.attribution.assigned, 90);
-  assert.equal(data.attribution.unassigned, 10, 'the call before the first task is nobody\'s');
-  assert.equal(data.sessions.reduce((n, s) => n + s.total, 0), 100);
+  assert.equal(data.attribution.unassigned, 10, "the call before the first task is nobody's");
+  assert.equal(
+    data.sessions.reduce((n, s) => n + s.total, 0),
+    100,
+  );
   assert.equal(run(data, 'run_a').tokens.codex, 60);
   assert.equal(run(data, 'run_b').tokens.codex, 30);
   assert.ok(!('prices' in data));
   assert.ok(!('cost' in data.sessions[0]));
-  assert.equal(data.sessions.reduce((n, s) => n + Object.values(s.skills).reduce((m, v) => m + v[0], 0), 0), 2);
+  assert.equal(
+    data.sessions.reduce((n, s) => n + Object.values(s.skills).reduce((m, v) => m + v[0], 0), 0),
+    2,
+  );
 });
 
 test('an orchestrator session is attributed by the Run in its commands, not by its worktree', async (t) => {
   const base = now - 100;
   const w = await world(t, { runs: ['run_a', 'run_b'] });
-  w.session([[base, 10], [base + 10, 20], [base + 20, 30]], { runs: [['run_a', base + 10], ['run_b', base + 20]], dispatcher: true });
+  w.session(
+    [
+      [base, 10],
+      [base + 10, 20],
+      [base + 20, 30],
+    ],
+    {
+      runs: [
+        ['run_a', base + 10],
+        ['run_b', base + 20],
+      ],
+      dispatcher: true,
+    },
+  );
   const data = w.data();
   assert.equal(data.attribution.unassigned, 10);
-  assert.deepEqual(data.orca.runs.map((r) => r.orchestrator_tokens), [20, 30]);
-  assert.deepEqual(data.orca.runs.map((r) => r.orchestrator_activity), [
-    [{ agent: 'codex', start: base + 10, end: base + 10, tokens: 20 }],
-    [{ agent: 'codex', start: base + 20, end: base + 20, tokens: 30 }],
-  ]);
+  assert.deepEqual(
+    data.orca.runs.map((r) => r.orchestrator_tokens),
+    [20, 30],
+  );
+  assert.deepEqual(
+    data.orca.runs.map((r) => r.orchestrator_activity),
+    [[{ agent: 'codex', start: base + 10, end: base + 10, tokens: 20 }], [{ agent: 'codex', start: base + 20, end: base + 20, tokens: 30 }]],
+  );
   assert.deepEqual(new Set(data.sessions.map((s) => s.role)), new Set(['orchestrator']));
 });
 
@@ -104,15 +163,28 @@ test('ambiguous dispatch windows and a multi-Run aggregate stay unassigned; one 
   const base = now - 100;
   const ambiguous = await world(t, {
     runs: ['run_a'],
-    tasks: [{ id: 'a', run: 'run_a' }, { id: 'b', run: 'run_a' }],
-    dispatches: [{ id: 'd1', task: 'a', from: base - 5, to: base + 5 }, { id: 'd2', task: 'b', from: base - 5, to: base + 5 }],
+    tasks: [
+      { id: 'a', run: 'run_a' },
+      { id: 'b', run: 'run_a' },
+    ],
+    dispatches: [
+      { id: 'd1', task: 'a', from: base - 5, to: base + 5 },
+      { id: 'd2', task: 'b', from: base - 5, to: base + 5 },
+    ],
   });
   ambiguous.session([[base, 10]]);
   assert.equal(ambiguous.data().attribution.unassigned, 10, 'two tasks in the same window on one worktree: nobody');
   assert.equal(ambiguous.data().attribution.inferred, 0);
 
   const aggregate = await world(t, { runs: ['run_a', 'run_b'] });
-  aggregate.session([[base, 10]], { aggregate: true, dispatcher: true, runs: [['run_a', base], ['run_b', base + 1]] });
+  aggregate.session([[base, 10]], {
+    aggregate: true,
+    dispatcher: true,
+    runs: [
+      ['run_a', base],
+      ['run_b', base + 1],
+    ],
+  });
   assert.equal(aggregate.data().attribution.unassigned, 10, 'an aggregate that spans two Runs cannot be split');
 
   const single = await world(t, { runs: ['run_a'], tasks: [{ id: 'a', run: 'run_a' }], dispatches: [{ id: 'd1', task: 'a', from: base - 5, to: base + 5 }] });
@@ -127,16 +199,26 @@ test('rerouting the same task keeps the selection of each dispatch', async (t) =
   const base = now - 100;
   const record = (tier: string, catalog: string, dispatch: string) => ({ tier, catalog, agent: 'codex', model: 'test-model', effort: 'medium', dispatch });
   const routing = [record('fast', 'quick', 'd1'), record('work', 'code', 'd2')];
-  const dispatches = [{ id: 'd1', task: 'a', from: base - 50, to: base - 20 }, { id: 'd2', task: 'a', from: base - 10, to: base + 5 }];
+  const dispatches = [
+    { id: 'd1', task: 'a', from: base - 50, to: base - 20 },
+    { id: 'd2', task: 'a', from: base - 10, to: base + 5 },
+  ];
   const task = { id: 'a', run: 'run_a', routing };
   const w = await world(t, { runs: ['run_a'], tasks: [task], dispatches });
-  w.session([[base - 40, 10], [base - 15, 7], [base - 5, 20]], { tasks: [['a', base - 50]] });
+  w.session(
+    [
+      [base - 40, 10],
+      [base - 15, 7],
+      [base - 5, 20],
+    ],
+    { tasks: [['a', base - 50]] },
+  );
   const by = Object.fromEntries(w.data().sessions.map((s) => [s.routing?.catalog ?? 'none', s.total]));
   assert.deepEqual(by, { quick: 10, none: 7, code: 20 }, 'a call between the two dispatch windows has no selection');
 
   const other = await world(t, { runs: ['run_a'], tasks: [task], dispatches });
   other.session([[base - 5, 20]], { agent: 'claude', tasks: [['a', base - 50]] });
-  assert.equal(other.data().sessions[0].routing, null, 'another agent than the dispatch\'s is never matched');
+  assert.equal(other.data().sessions[0].routing, null, "another agent than the dispatch's is never matched");
 
   const overlapping = await world(t, { runs: ['run_a'], tasks: [task], dispatches: [dispatches[0], { ...dispatches[1], from: base - 30 }] });
   overlapping.session([[base - 25, 20]], { tasks: [['a', base - 50]] });
@@ -155,10 +237,16 @@ test('a session carries the routing resolved for its task, except an aggregate s
   assert.equal(aggregate.data().sessions[0].routing, null);
 });
 
-test('a Run\'s lifetime tokens and its window tokens are different figures', async (t) => {
+test("a Run's lifetime tokens and its window tokens are different figures", async (t) => {
   const base = now - 10;
   const w = await world(t, { runs: ['run_a'], tasks: [{ id: 'a', run: 'run_a' }] });
-  w.session([[base - 10 * 86400, 40], [base, 10]], { tasks: [['a', base - 11 * 86400]] });
+  w.session(
+    [
+      [base - 10 * 86400, 40],
+      [base, 10],
+    ],
+    { tasks: [['a', base - 11 * 86400]] },
+  );
   const data = w.data(7);
   assert.equal(data.attribution.total, 10, 'only the window counts toward the attribution totals');
   assert.equal(run(data, 'run_a').tokens.codex, 50, 'lifetime');

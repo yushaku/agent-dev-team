@@ -51,14 +51,11 @@ exec "${binary}" "$@"
   }
   const check = () => service.lookup(repo).metrics;
   const wait = (assertion: () => void) => t.waitFor(assertion, { timeout: 5000, interval: 20 });
-  const calls = () =>
-    existsSync(join(repo, 'calls')) ? readFileSync(join(repo, 'calls'), 'utf8').trim().split('\n').length : 0;
+  const calls = () => (existsSync(join(repo, 'calls')) ? readFileSync(join(repo, 'calls'), 'utf8').trim().split('\n').length : 0);
   const hold = join(repo, 'hold'),
     fail = join(repo, 'fail');
   writeFileSync(hold, '');
-  store.db
-    .prepare('INSERT INTO dashboard_sessions VALUES(?,?,?,?,?)')
-    .run(PARSER_VERSION, 1, 1, 's', JSON.stringify({ cwd: repo, branch: 'feat/demo' }));
+  store.db.prepare('INSERT INTO dashboard_sessions VALUES(?,?,?,?,?)').run(PARSER_VERSION, 1, 1, 's', JSON.stringify({ cwd: repo, branch: 'feat/demo' }));
   service.warm();
   await wait(() => assert.equal(calls(), 1));
   assert.deepEqual([check().stale, check().loading], [false, true]);

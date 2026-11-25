@@ -17,7 +17,7 @@ export function ensurePrivateHome(home: string) {
 }
 /** Files SQLite created with the process umask, and any left by an older run, drop to 0600. Journals inherit the database's mode. */
 export function tightenFiles(home: string) {
-  for (const name of FILES.flatMap(f => [f, f + '-journal', f + '-wal', f + '-shm'])) {
+  for (const name of FILES.flatMap((f) => [f, f + '-journal', f + '-wal', f + '-shm'])) {
     const path = join(home, name);
     try {
       if (statSync(path).mode & 0o077) chmodSync(path, 0o600);

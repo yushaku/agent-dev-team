@@ -29,7 +29,11 @@ class Repo {
     return { GIT_AUTHOR_DATE: when, GIT_COMMITTER_DATE: when };
   }
   git(...args: string[]) {
-    return execFileSync('git', ['-C', this.dir, ...args], { encoding: 'utf8', env: { ...process.env, ...this.at(this.day) }, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    return execFileSync('git', ['-C', this.dir, ...args], {
+      encoding: 'utf8',
+      env: { ...process.env, ...this.at(this.day) },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
   }
   write(text: string, name = 'file.txt') {
     writeFileSync(join(this.dir, name), text);
@@ -63,7 +67,10 @@ test('a fix is blamed on the feature that wrote the line; add-only and whitespac
   const result = repo.result();
   const feature = result.features['feat/example'];
   assert.equal(feature.escaped_defects, 2);
-  assert.deepEqual(feature.fix_commits.map((f) => f.source), ['szz', 'trailer']);
+  assert.deepEqual(
+    feature.fix_commits.map((f) => f.source),
+    ['szz', 'trailer'],
+  );
   assert.deepEqual(new Set(result.unattributed_fix_commits.map((f) => f.subject)), new Set(['fix: add missing file']));
 });
 
@@ -129,7 +136,10 @@ test('a fix counts when it was merged, not when it was authored', (t) => {
   repo.commit('fix: delayed integration');
   repo.git('checkout', 'main');
   // Authored in January, merged on 1 March: outside the window of the feature that merged on January 3.
-  execFileSync('git', ['-C', repo.dir, 'merge', '--no-ff', 'fix/later', '-m', "Merge branch 'fix/later'"], { env: { ...process.env, ...repo.at(1, 3) }, stdio: 'ignore' });
+  execFileSync('git', ['-C', repo.dir, 'merge', '--no-ff', 'fix/later', '-m', "Merge branch 'fix/later'"], {
+    env: { ...process.env, ...repo.at(1, 3) },
+    stdio: 'ignore',
+  });
   const result = repo.result();
   assert.equal(result.features['feat/example'].escaped_defects, 0);
   assert.deepEqual(result.unattributed_fix_commits, []);

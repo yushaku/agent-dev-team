@@ -44,10 +44,7 @@ test('dashboard routes share the plugin HTTP server with its JSON health route',
   const page = await fetch(base + '/');
   assert.equal(page.headers.get('content-type'), 'text/html; charset=utf-8');
   assert.equal(page.headers.get('cache-control'), 'no-store');
-  assert.deepEqual(
-    Buffer.from(await page.arrayBuffer()),
-    await readFile(new URL('../../dashboard-web/index.html', import.meta.url)),
-  );
+  assert.deepEqual(Buffer.from(await page.arrayBuffer()), await readFile(new URL('../../dashboard-web/index.html', import.meta.url)));
 
   const status = await new Promise<number | undefined>((resolve, reject) => {
     get(base + '/api/data', { headers: { Host: 'example.com' } }, (res) => {

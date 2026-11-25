@@ -26,7 +26,11 @@ for (const [agent, path] of cases)
       rmSync(home, { recursive: true, force: true });
     });
     // Copilot sessions are a directory: events.jsonl plus the workspace.yaml sidecar, found the way ingest finds them.
-    if (agent === 'copilot') for (const p of files(join(fixtures, 'copilot'), 'copilot', (_, e) => { throw e; })) ingestFile(store, agent, p);
+    if (agent === 'copilot')
+      for (const p of files(join(fixtures, 'copilot'), 'copilot', (_, e) => {
+        throw e;
+      }))
+        ingestFile(store, agent, p);
     else ingestFile(store, agent, path);
     await projections(store)();
     const rows = store.db.prepare('SELECT data FROM dashboard_sessions').all();

@@ -28,26 +28,12 @@ function blamed(repo, sha, parent) {
   if (names === null) return null;
   const fields = names.split('\0'),
     commits = new Set<string>();
-  for (let i = 0; fields[i];) {
+  for (let i = 0; fields[i]; ) {
     const status = fields[i++],
       old = fields[i++],
       name = /^[RC]/.test(status) ? fields[i++] : old;
     if (status[0] === 'A') continue;
-    const patch = git(
-      repo,
-      'diff',
-      '-w',
-      '-M',
-      '-C',
-      '--no-ext-diff',
-      '--no-color',
-      '--unified=0',
-      parent,
-      sha,
-      '--',
-      old,
-      name,
-    );
+    const patch = git(repo, 'diff', '-w', '-M', '-C', '--no-ext-diff', '--no-color', '--unified=0', parent, sha, '--', old, name);
     if (patch === null) return null;
     const ranges: string[] = [];
     for (const m of patch.matchAll(/^@@ -(\d+)(?:,(\d+))? \+\d+(?:,\d+)? @@/gm)) {
@@ -82,10 +68,7 @@ export function analyzeDefects(repo: string, head: string): RepositoryMetrics {
     const [sha, ts, parents, ...rest] = line.split('\t'),
       ps = parents.split(' ').filter(Boolean),
       subject = rest.join('\t');
-    const branch =
-      ps.length > 1 &&
-      (subject.match(/^Merge branch '([^']+)'/) ||
-        subject.match(/^Merge pull request #\d+ from [^/]+\/(.+)/))?.[1];
+    const branch = ps.length > 1 && (subject.match(/^Merge branch '([^']+)'/) || subject.match(/^Merge pull request #\d+ from [^/]+\/(.+)/))?.[1];
     // First-parent order assigns each reachable commit to its earliest landing.
     const pending = [sha];
     while (pending.length) {

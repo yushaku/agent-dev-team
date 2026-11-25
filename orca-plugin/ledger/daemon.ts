@@ -18,9 +18,14 @@ if (import.meta.main) {
     }
   } else {
     const state = start({
-      home, host: 'launchd',
-      onPass: pass => { for (const message of pass.errors) console.error(message); },
-      onState: s => { if (s.lock === 'waiting' && s.lockedBy) console.error(`waiting: ingest is held by ${s.lockedBy}`); },
+      home,
+      host: 'launchd',
+      onPass: (pass) => {
+        for (const message of pass.errors) console.error(message);
+      },
+      onState: (s) => {
+        if (s.lock === 'waiting' && s.lockedBy) console.error(`waiting: ingest is held by ${s.lockedBy}`);
+      },
     });
     let quitting: Promise<void> | undefined;
     const quit = () => (quitting ??= stop().then(() => process.exit(0))); // a second signal waits for the same drain

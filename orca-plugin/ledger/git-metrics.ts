@@ -20,9 +20,7 @@ function empty(): Repository {
   return { metrics: unavailable('default_branch_unavailable'), refs: new Set(), mergedBranches: null };
 }
 function latest(db: DatabaseSync, repo: string) {
-  return db
-    .prepare('SELECT head,value FROM dashboard_git WHERE repo=? AND version=? ORDER BY rowid DESC LIMIT 1')
-    .get(repo, version);
+  return db.prepare('SELECT head,value FROM dashboard_git WHERE repo=? AND version=? ORDER BY rowid DESC LIMIT 1').get(repo, version);
 }
 export function cachedRepository(db: DatabaseSync, repo: string | null): Repository {
   const row = repo && latest(db, repo);
@@ -39,31 +37,18 @@ async function git(repo: string, ...args: string[]) {
   }
 }
 async function inspect(repo: string) {
-  const branches = await git(
-    repo,
-    'for-each-ref',
-    '--format=%(refname:lstrip=2) %(objectname)',
-    'refs/heads/',
-  );
+  const branches = await git(repo, 'for-each-ref', '--format=%(refname:lstrip=2) %(objectname)', 'refs/heads/');
   const heads = new Map<string, string>();
   for (const line of (branches || '').split('\n')) {
     const [name, sha] = line.split(' ');
     if (sha) heads.set(name, sha);
   }
   const def =
-    (await git(repo, 'symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'))?.replace(
-      /^refs\/remotes\/origin\//,
-      '',
-    ) || ['main', 'master'].find((n) => heads.has(n));
+    (await git(repo, 'symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'))?.replace(/^refs\/remotes\/origin\//, '') ||
+    ['main', 'master'].find((n) => heads.has(n));
   const head = heads.get(def);
   if (!head) throw new Error('default_branch_unavailable');
-  const merged = await git(
-    repo,
-    'for-each-ref',
-    '--merged=' + head,
-    '--format=%(refname:lstrip=2)',
-    'refs/heads/',
-  );
+  const merged = await git(repo, 'for-each-ref', '--merged=' + head, '--format=%(refname:lstrip=2)', 'refs/heads/');
   return {
     head,
     refs: new Set(heads.keys()),
@@ -149,19 +134,12 @@ export class GitMetrics {
   }
   private attempt(repo: string, head: string) {
     return this.db
-      .prepare(
-        'SELECT * FROM dashboard_git_attempts WHERE repo=? AND head=? AND version=? AND error IS NOT NULL AND checked_at>?',
-      )
+      .prepare('SELECT * FROM dashboard_git_attempts WHERE repo=? AND head=? AND version=? AND error IS NOT NULL AND checked_at>?')
       .get(repo, head, version, Date.now() - retryMs);
   }
   private saveAttempt(repo: string, head: string, error: string | null, elapsed: number) {
-    this.db
-      .prepare('INSERT OR REPLACE INTO dashboard_git_attempts VALUES(?,?,?,?,?,?)')
-      .run(repo, head, version, Date.now(), elapsed, error);
-    console.error(
-      '[ledger/git]',
-      JSON.stringify({ repo, head, elapsed_ms: elapsed, outcome: error || 'ok' }),
-    );
+    this.db.prepare('INSERT OR REPLACE INTO dashboard_git_attempts VALUES(?,?,?,?,?,?)').run(repo, head, version, Date.now(), elapsed, error);
+    console.error('[ledger/git]', JSON.stringify({ repo, head, elapsed_ms: elapsed, outcome: error || 'ok' }));
   }
   private failed(state: Entry, error: string, elapsed: number) {
     state.metrics = {
@@ -191,9 +169,7 @@ export class GitMetrics {
             this.revision++;
           Object.assign(state, info);
           if (state.cachedHead === info.head && !state.metrics.loading && !state.metrics.error) continue;
-          const row = this.db
-            .prepare('SELECT value FROM dashboard_git WHERE repo=? AND head=? AND version=?')
-            .get(state.repo, info.head, version);
+          const row = this.db.prepare('SELECT value FROM dashboard_git WHERE repo=? AND head=? AND version=?').get(state.repo, info.head, version);
           if (row) {
             const timing = this.db
               .prepare('SELECT elapsed_ms FROM dashboard_git_attempts WHERE repo=? AND head=? AND version=?')
@@ -209,16 +185,14 @@ export class GitMetrics {
           } else {
             const failed = this.attempt(state.repo, state.head);
             if (failed) {
-              if (state.metrics.error !== failed.error || state.metrics.loading)
-                this.failed(state, String(failed.error), Number(failed.elapsed_ms));
+              if (state.metrics.error !== failed.error || state.metrics.loading) this.failed(state, String(failed.error), Number(failed.elapsed_ms));
               continue;
             }
             if (!state.metrics.loading || state.metrics.error) {
               state.metrics = { ...state.metrics, loading: true, stale: !!state.cachedHead, error: null };
               this.revision++;
             }
-            if (this.active?.state !== state || this.active.head !== state.head)
-              this.jobs.set(state, state.head);
+            if (this.active?.state !== state || this.active.head !== state.head) this.jobs.set(state, state.head);
             this.analyze();
           }
         } catch (error) {
@@ -255,10 +229,7 @@ export class GitMetrics {
       this.active = null;
       this.worker = null;
       this.saveAttempt(state.repo, head, metrics.error, elapsed_ms);
-      if (!metrics.error)
-        this.db
-          .prepare('INSERT OR REPLACE INTO dashboard_git VALUES(?,?,?,?)')
-          .run(state.repo, head, version, JSON.stringify(metrics));
+      if (!metrics.error) this.db.prepare('INSERT OR REPLACE INTO dashboard_git VALUES(?,?,?,?)').run(state.repo, head, version, JSON.stringify(metrics));
       if (state.head === head) {
         if (metrics.error) this.failed(state, metrics.error, elapsed_ms);
         else {

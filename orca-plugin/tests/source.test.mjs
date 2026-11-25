@@ -4,22 +4,51 @@ import { barView, makeFetch } from '../dashboard-web/js/orca-source.js'
 
 const fakeBar = () => {
   const classes = new Set()
-  return { hidden: true, classList: { add: (c) => classes.add(c), remove: (...c) => c.forEach((x) => classes.delete(x)), toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)), has: (c) => classes.has(c) } }
+  return {
+    hidden: true,
+    classList: {
+      add: (c) => classes.add(c),
+      remove: (...c) => c.forEach((x) => classes.delete(x)),
+      toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)),
+      has: (c) => classes.has(c),
+    },
+  }
 }
 const setup = (ask, cache = {}) => {
-  const bar = fakeBar(), msg = { textContent: '' }, view = barView(bar, msg)
+  const bar = fakeBar(),
+    msg = { textContent: '' },
+    view = barView(bar, msg)
   let drawn = false
   const fetchLike = makeFetch({
-    real: async () => 'real', base: 'http://127.0.0.1:4747', ask, cached: (d) => cache[d] ?? null, remember: (d, v) => { cache[d] = v }, firstDays: 7,
-    hasCharts: () => drawn, ok: () => view.ok(), fail: (e, had) => view.fail(e.message, had)
+    real: async () => 'real',
+    base: 'http://127.0.0.1:4747',
+    ask,
+    cached: (d) => cache[d] ?? null,
+    remember: (d, v) => {
+      cache[d] = v
+    },
+    firstDays: 7,
+    hasCharts: () => drawn,
+    ok: () => view.ok(),
+    fail: (e, had) => view.fail(e.message, had),
   })
-  return { bar, msg, fetchLike, draw: () => { drawn = true } }
+  return {
+    bar,
+    msg,
+    fetchLike,
+    draw: () => {
+      drawn = true
+    },
+  }
 }
 const down = Object.assign(new Error('offline'), { code: 'offline' })
 
 test('cold failure hides the empty chart frames, a successful retry shows them again', async () => {
   let up = false
-  const { bar, msg, fetchLike } = setup(async () => { if (!up) throw down; return { sessions: [] } })
+  const { bar, msg, fetchLike } = setup(async () => {
+    if (!up) throw down
+    return { sessions: [] }
+  })
   const first = await fetchLike('/api/data?days=7')
   assert.equal(first.ok, false)
   assert.equal(bar.hidden, false)
@@ -33,7 +62,9 @@ test('cold failure hides the empty chart frames, a successful retry shows them a
 })
 
 test('a failure over drawn charts keeps them (no empty class)', async () => {
-  const { bar, fetchLike, draw } = setup(async () => { throw down })
+  const { bar, fetchLike, draw } = setup(async () => {
+    throw down
+  })
   draw()
   await fetchLike('/api/data?days=7')
   assert.ok(bar.classList.has('error') && !bar.classList.has('empty'))
@@ -42,7 +73,10 @@ test('a failure over drawn charts keeps them (no empty class)', async () => {
 test('the first call paints the cached snapshot, later calls ask the worker and update the cache', async () => {
   const cache = { 7: { cached: true } }
   let asked = 0
-  const { fetchLike } = setup(async () => { asked++; return { fresh: true } }, cache)
+  const { fetchLike } = setup(async () => {
+    asked++
+    return { fresh: true }
+  }, cache)
   assert.deepEqual(await (await fetchLike('/api/data?days=7')).json(), { cached: true })
   assert.equal(asked, 0)
   assert.deepEqual(await (await fetchLike('/api/data?days=7')).json(), { fresh: true })
@@ -66,15 +100,25 @@ test('ask: joins the chunks of the range it opened', async () => {
     return { id: input.id, chunk: input.index === 0 ? '{"days":' : '30}' }
   })
   assert.deepEqual(await ask(30), { days: 30 })
-  assert.deepEqual(calls, [['tasks.open', 30], ['tasks.chunk', 0], ['tasks.chunk', 1]])
+  assert.deepEqual(calls, [
+    ['tasks.open', 30],
+    ['tasks.chunk', 0],
+    ['tasks.chunk', 1],
+  ])
 })
 
 test('ask: after a worker restart the old id expires and the requested range is opened again', async () => {
   let restarted = false
   const opens = []
   const ask = makeAsk(async (name, input) => {
-    if (name === 'tasks.open') { opens.push(input.days); return { id: restarted ? 'new.1' : 'old.1', days: input.days, chunks: 2 } }
-    if (!restarted) { restarted = true; throw expired() } // first chunk call lands on the restarted worker
+    if (name === 'tasks.open') {
+      opens.push(input.days)
+      return { id: restarted ? 'new.1' : 'old.1', days: input.days, chunks: 2 }
+    }
+    if (!restarted) {
+      restarted = true
+      throw expired()
+    } // first chunk call lands on the restarted worker
     return { id: input.id, chunk: input.index === 0 ? '{"range":' : '30}' }
   })
   assert.deepEqual(await ask(30), { range: 30 })
@@ -89,12 +133,25 @@ test('ask: never mixes a chunk of another snapshot, and gives up after repeated 
 })
 
 test('an API error reaches the panel message unchanged: the loading wording and the failure wording stay distinct', async () => {
-  for (const [message, wording] of [['Dashboard API chưa sẵn sàng (HTTP 503, đang tải).', /đang tải/], ['Dashboard API chưa sẵn sàng (HTTP 503: Dashboard data is temporarily unavailable).', /temporarily unavailable/]]) {
+  for (const [message, wording] of [
+    ['Dashboard API chưa sẵn sàng (HTTP 503, đang tải).', /đang tải/],
+    ['Dashboard API chưa sẵn sàng (HTTP 503: Dashboard data is temporarily unavailable).', /temporarily unavailable/],
+  ]) {
     let shown
     const fetchLike = makeFetch({
-      real: async () => 'real', base: 'http://127.0.0.1:4747', cached: () => null, remember: () => {}, firstDays: 7, hasCharts: () => false, ok: () => {},
-      ask: makeAsk(async () => { throw Object.assign(new Error(message), { code: 'offline' }) }),
-      fail: (e) => { shown = e.message }
+      real: async () => 'real',
+      base: 'http://127.0.0.1:4747',
+      cached: () => null,
+      remember: () => {},
+      firstDays: 7,
+      hasCharts: () => false,
+      ok: () => {},
+      ask: makeAsk(async () => {
+        throw Object.assign(new Error(message), { code: 'offline' })
+      }),
+      fail: (e) => {
+        shown = e.message
+      },
     })
     const r = await fetchLike('/api/data?days=7')
     assert.equal(r.ok, false)
@@ -108,8 +165,23 @@ test('extra routes (the skill sheet) are answered by their own handler and a ref
   const { fetchLike } = setup(async () => ({}))
   const asked = []
   const withExtra = makeFetch({
-    real: async () => 'real', base: 'http://127.0.0.1:4747', ask: async () => ({}), cached: () => null, remember: () => {}, firstDays: 7, hasCharts: () => false, ok: () => {}, fail: () => {},
-    extra: { '/api/team/skill': async (url) => { asked.push(url.searchParams.get('name')); if (url.searchParams.get('name') === '..') throw Object.assign(new Error('bad name'), { code: 'http_400' }); if (url.searchParams.get('name') === 'x') throw new Error('worker gone'); return { name: 'ok' } } }
+    real: async () => 'real',
+    base: 'http://127.0.0.1:4747',
+    ask: async () => ({}),
+    cached: () => null,
+    remember: () => {},
+    firstDays: 7,
+    hasCharts: () => false,
+    ok: () => {},
+    fail: () => {},
+    extra: {
+      '/api/team/skill': async (url) => {
+        asked.push(url.searchParams.get('name'))
+        if (url.searchParams.get('name') === '..') throw Object.assign(new Error('bad name'), { code: 'http_400' })
+        if (url.searchParams.get('name') === 'x') throw new Error('worker gone')
+        return { name: 'ok' }
+      },
+    },
   })
   const ok = await withExtra('/api/team/skill?name=team-builder')
   assert.equal(ok.ok, true)
@@ -127,11 +199,22 @@ test('the offline check looks at the view this panel shows, so a rendered Agents
   assert.equal(viewHasCharts(doc, 'tk-agents-tools'), true)
   assert.equal(viewHasCharts(doc, 'tk-theo-repo'), false)
   let up = true
-  const bar = fakeBar(), msg = { textContent: '' }, view = barView(bar, msg)
+  const bar = fakeBar(),
+    msg = { textContent: '' },
+    view = barView(bar, msg)
   const fetchLike = makeFetch({
-    real: async () => 'real', base: 'http://127.0.0.1:4747', cached: () => null, remember: () => {}, firstDays: 7,
-    ask: async () => { if (!up) throw down; return { sessions: [] } },
-    hasCharts: () => viewHasCharts(doc, 'tk-agents-tools'), ok: () => view.ok(), fail: (e, had) => view.fail(e.message, had),
+    real: async () => 'real',
+    base: 'http://127.0.0.1:4747',
+    cached: () => null,
+    remember: () => {},
+    firstDays: 7,
+    ask: async () => {
+      if (!up) throw down
+      return { sessions: [] }
+    },
+    hasCharts: () => viewHasCharts(doc, 'tk-agents-tools'),
+    ok: () => view.ok(),
+    fail: (e, had) => view.fail(e.message, had),
   })
   assert.equal((await fetchLike('/api/data?days=7')).ok, true)
   up = false
@@ -139,8 +222,17 @@ test('the offline check looks at the view this panel shows, so a rendered Agents
   assert.ok(bar.classList.has('error') && !bar.classList.has('empty'), 'the drawn charts are kept under the error bar')
   // The Tasks-only predicate (the old one) would have hidden them:
   const tasksOnly = makeFetch({
-    real: async () => 'real', base: 'http://127.0.0.1:4747', cached: () => null, remember: () => {}, firstDays: 7, ask: async () => { throw down },
-    hasCharts: () => viewHasCharts(doc, 'tk-theo-repo'), ok: () => {}, fail: (e, had) => view.fail(e.message, had),
+    real: async () => 'real',
+    base: 'http://127.0.0.1:4747',
+    cached: () => null,
+    remember: () => {},
+    firstDays: 7,
+    ask: async () => {
+      throw down
+    },
+    hasCharts: () => viewHasCharts(doc, 'tk-theo-repo'),
+    ok: () => {},
+    fail: (e, had) => view.fail(e.message, had),
   })
   await tasksOnly('/api/data?days=7')
   assert.ok(bar.classList.has('empty'), 'checking the wrong view marks a rendered panel as empty')
@@ -148,10 +240,22 @@ test('the offline check looks at the view this panel shows, so a rendered Agents
 
 test('a too-large skill document reaches the sheet as HTTP 413', async () => {
   const withExtra = makeFetch({
-    real: async () => 'real', base: 'http://127.0.0.1:4747', ask: async () => ({}), cached: () => null, remember: () => {}, firstDays: 7, hasCharts: () => false, ok: () => {}, fail: () => {},
-    extra: { '/api/team/skill': async () => { throw Object.assign(new Error('Tài liệu của skill quá lớn'), { code: 'too_large' }) } },
+    real: async () => 'real',
+    base: 'http://127.0.0.1:4747',
+    ask: async () => ({}),
+    cached: () => null,
+    remember: () => {},
+    firstDays: 7,
+    hasCharts: () => false,
+    ok: () => {},
+    fail: () => {},
+    extra: {
+      '/api/team/skill': async () => {
+        throw Object.assign(new Error('Tài liệu của skill quá lớn'), { code: 'too_large' })
+      },
+    },
   })
   const refused = await withExtra('/api/team/skill?name=big')
   assert.equal(refused.status, 413)
-  assert.deepEqual(await refused.json(), { error: 'Tài liệu của skill quá lớn' }, 'the worker\'s message reaches the sheet')
+  assert.deepEqual(await refused.json(), { error: 'Tài liệu của skill quá lớn' }, "the worker's message reaches the sheet")
 })

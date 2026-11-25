@@ -14,7 +14,11 @@ export function makeFetch(d) {
         const data = await extra(url)
         return { ok: true, status: 200, json: async () => data }
       } catch (e) {
-        return { ok: false, status: Number(/^http_(\d+)$/.exec(e.code ?? '')?.[1]) || (e.code === 'too_large' ? 413 : 503), json: async () => ({ error: String(e.message || '') }) }
+        return {
+          ok: false,
+          status: Number(/^http_(\d+)$/.exec(e.code ?? '')?.[1]) || (e.code === 'too_large' ? 413 : 503),
+          json: async () => ({ error: String(e.message || '') }),
+        }
       }
     }
     if (url.pathname !== '/api/data') return d.real(input, init)
@@ -39,8 +43,17 @@ export function makeFetch(d) {
 /** Status bar state: an error over drawn charts keeps them; an error with nothing drawn hides the empty frames until a retry works. */
 export function barView(bar, msg) {
   return {
-    ok() { bar.classList.remove('error', 'empty'); bar.hidden = true; msg.textContent = '' },
-    fail(text, hadCharts) { bar.classList.add('error'); bar.classList.toggle('empty', !hadCharts); bar.hidden = false; msg.textContent = text }
+    ok() {
+      bar.classList.remove('error', 'empty')
+      bar.hidden = true
+      msg.textContent = ''
+    },
+    fail(text, hadCharts) {
+      bar.classList.add('error')
+      bar.classList.toggle('empty', !hadCharts)
+      bar.hidden = false
+      msg.textContent = text
+    },
   }
 }
 

@@ -6,13 +6,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { hostAllowed, sendResponse, type Routes } from './http.ts';
 import type { Store } from './store.ts';
 
-const apiPaths = new Set([
-  '/api/data',
-  '/api/agent/summary',
-  '/api/agent/run',
-  '/api/team/skill',
-  '/api/cli-tools',
-]);
+const apiPaths = new Set(['/api/data', '/api/agent/summary', '/api/agent/run', '/api/team/skill', '/api/cli-tools']);
 type WorkerReply = [number, string, string | Buffer];
 const loading: WorkerReply = [503, 'application/json', JSON.stringify({ loading: true })];
 export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
@@ -86,9 +80,7 @@ export function createApi(ledger: Store | string, { timeoutMs = 10000 } = {}) {
       return response([500, 'text/plain', 'Dashboard request failed']);
     }
   }
-  const routes: Routes = Object.fromEntries(
-    [...apiPaths, ...staticFiles.keys()].map((path) => [path, route]),
-  );
+  const routes: Routes = Object.fromEntries([...apiPaths, ...staticFiles.keys()].map((path) => [path, route]));
   async function handler(req: IncomingMessage, res: ServerResponse) {
     let url: URL;
     try {

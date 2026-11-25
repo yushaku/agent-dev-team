@@ -40,7 +40,12 @@ test('a ledger that cannot run says so, not "waiting"', () => {
 })
 
 test('health is ok only with a clean pass and the lock held, and says what is bound', () => {
-  assert.deepEqual(health({ ...base, lastPass: pass([]) }, { bound: [], busy: [4747] }).listening, { bound: [], waiting: [4747], error: undefined, apiError: undefined })
+  assert.deepEqual(health({ ...base, lastPass: pass([]) }, { bound: [], busy: [4747] }).listening, {
+    bound: [],
+    waiting: [4747],
+    error: undefined,
+    apiError: undefined,
+  })
   assert.equal(health(undefined).ok, false)
   assert.equal(health({ ...base, lastPass: pass([]) }).ok, true)
   assert.equal(health({ ...base, lastPass: pass(['x']) }).ok, false)

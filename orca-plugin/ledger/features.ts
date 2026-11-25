@@ -18,10 +18,7 @@ export function rounds(folder) {
   ).size;
 }
 export function loaded(s) {
-  return Object.fromEntries([
-    ...Object.keys(s.hooks || {}).map((k) => [k, 1]),
-    ...Object.entries(s.skills || {}).map(([k, v]) => [k, v[0]]),
-  ]);
+  return Object.fromEntries([...Object.keys(s.hooks || {}).map((k) => [k, 1]), ...Object.entries(s.skills || {}).map(([k, v]) => [k, v[0]])]);
 }
 export function featureData(parts, runs, available, db, service?: GitMetrics) {
   const groups = new Map(),
@@ -56,8 +53,7 @@ export function featureData(parts, runs, available, db, service?: GitMetrics) {
     for (const s of rows) for (const [k, v] of Object.entries(loaded(s))) skills[k] = (skills[k] || 0) + v;
     const folder = featureDir(root, branch),
       count = rounds(folder),
-      source =
-        count !== null ? 'reports' : skills['code-review'] || !linked.length ? 'code-review' : 'measurement';
+      source = count !== null ? 'reports' : skills['code-review'] || !linked.length ? 'code-review' : 'measurement';
     const fix_rounds = {
       source,
       count:
@@ -133,11 +129,7 @@ export function featureData(parts, runs, available, db, service?: GitMetrics) {
       reports = metrics.filter((m) => m.source === 'reports');
     r.fix_rounds = (reports.length ? reports : metrics).sort((a, b) => b.count - a.count)[0];
     if (r.stage === 'unknown') {
-      r.delivered = linked.every((f) => f.delivered === true)
-        ? true
-        : linked.some((f) => f.delivered === false)
-          ? false
-          : null;
+      r.delivered = linked.every((f) => f.delivered === true) ? true : linked.some((f) => f.delivered === false) ? false : null;
       if (r.delivered) r.stage = 'merged';
     }
   }

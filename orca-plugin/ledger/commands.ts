@@ -26,8 +26,7 @@ export function install(path: string) {
     const pkg = parts.slice(i + 1, i + (parts[i + 1].startsWith('@') ? 3 : 2)).join('/');
     let version = '';
     try {
-      version =
-        JSON.parse(metadata(join(parts.slice(0, i + 1).join('/'), pkg, 'package.json'))).version || '';
+      version = JSON.parse(metadata(join(parts.slice(0, i + 1).join('/'), pkg, 'package.json'))).version || '';
     } catch {}
     return ['npm', pkg, version];
   }
@@ -37,11 +36,9 @@ export function install(path: string) {
   }
   const parent = dirname(path);
   if (parent === join(process.env.CARGO_HOME || join(home, '.cargo'), 'bin')) return ['Cargo', '', ''];
-  if (/^\/(usr|bin|sbin|System|Library\/Apple)\//.test(path) && !path.startsWith('/usr/local/'))
-    return ['Hệ thống', '', ''];
+  if (/^\/(usr|bin|sbin|System|Library\/Apple)\//.test(path) && !path.startsWith('/usr/local/')) return ['Hệ thống', '', ''];
   if (parent === join(home, 'Library/pnpm/bin')) return ['pnpm', '', ''];
-  for (const root of ['/Applications', join(home, '.local/share')])
-    if (path.startsWith(root + '/')) return [root, '', ''];
+  for (const root of ['/Applications', join(home, '.local/share')]) if (path.startsWith(root + '/')) return [root, '', ''];
   return [parent, '', ''];
 }
 function details(t) {
@@ -51,9 +48,7 @@ function details(t) {
     for (const sect of ['1', '8', '6'])
       for (const suffix of ['', '.gz']) {
         const man = metadata(join(root, 'share/man/man' + sect, t.name + '.' + sect + suffix));
-        const section = man.match(
-          /^\.(?:SH|Sh)\s+"?NAME"?\s*\n([\s\S]*?)(?=^\.(?:SH|Sh|SS|Ss)\s|(?![\s\S]))/m,
-        )?.[1];
+        const section = man.match(/^\.(?:SH|Sh)\s+"?NAME"?\s*\n([\s\S]*?)(?=^\.(?:SH|Sh|SS|Ss)\s|(?![\s\S]))/m)?.[1];
         if (!section) continue;
         const nd = section.match(/^\.Nd\s+(.+)/m)?.[1];
         let val = (
@@ -88,9 +83,7 @@ function details(t) {
         ?.replaceAll('\\"', '"') || '';
   if (t.source === 'npm')
     try {
-      const value = JSON.parse(
-        metadata(join(parts.slice(0, parts.lastIndexOf('node_modules') + 1).join('/'), t.package, 'package.json')),
-      ).description;
+      const value = JSON.parse(metadata(join(parts.slice(0, parts.lastIndexOf('node_modules') + 1).join('/'), t.package, 'package.json'))).description;
       desc = typeof value === 'string' ? value : ''; // a package.json can hold anything: only text is a description
     } catch {}
   if (['uv', 'pipx'].includes(t.source)) {
@@ -133,9 +126,7 @@ export function discover(pathEnv?: string, shell?: string | (() => string)): Cli
       warnings.push('Không đọc được PATH của login shell; đang dùng PATH của dashboard.');
     }
   }
-  const directories = Array.from(
-    new Set(pathEnv.split(':').map((p) => resolve(p.replace(/^~(?=\/|$)/, home) || '.'))),
-  );
+  const directories = Array.from(new Set(pathEnv.split(':').map((p) => resolve(p.replace(/^~(?=\/|$)/, home) || '.'))));
   const tools = new Map(),
     sources: Record<string, number> = Object.create(null);
   for (const directory of directories) {
@@ -174,11 +165,7 @@ export function discover(pathEnv?: string, shell?: string | (() => string)): Cli
         r = JSON.parse(metadata(receipt));
       } catch {}
       t.install_kind =
-        r?.installed_on_request === true
-          ? 'app'
-          : r?.installed_on_request === false || r?.installed_as_dependency === true
-            ? 'dependency'
-            : 'unknown';
+        r?.installed_on_request === true ? 'app' : r?.installed_on_request === false || r?.installed_as_dependency === true ? 'dependency' : 'unknown';
     }
     [t.description, t.description_source] = details(t);
     sources[t.source] = (sources[t.source] || 0) + 1;

@@ -7,11 +7,7 @@ function measurement(t) {
   const result = { kind: 'unknown', round: null, cause: null, source: 'unknown' };
   if (match) {
     const d = json(match[1]);
-    if (
-      ['build', 'review', 'fix', 're-review', 'delivery', 'close', 'spec', 'qa', 'merge', 'other'].includes(
-        d?.kind,
-      )
-    )
+    if (['build', 'review', 'fix', 're-review', 'delivery', 'close', 'spec', 'qa', 'merge', 'other'].includes(d?.kind))
       Object.assign(result, { kind: d.kind, source: 'metadata' });
     if (Number.isInteger(d?.round) && d.round > 0) result.round = d.round;
     if (['defect', 'requirements', 'scope', 'standards'].includes(d?.cause)) result.cause = d.cause;
@@ -60,24 +56,17 @@ function routing(t) {
         ['catalog', 'agent'].every((k) => typeof d[k] === 'string' && d[k].trim()) &&
         ['model', 'effort', 'dispatch'].every((k) => d[k] == null || typeof d[k] === 'string'),
     )
-    .map((d) =>
-      Object.fromEntries(
-        ['tier', 'catalog', 'agent', 'model', 'effort', 'dispatch'].map((k) => [k, d[k] ?? null]),
-      ),
-    );
+    .map((d) => Object.fromEntries(['tier', 'catalog', 'agent', 'model', 'effort', 'dispatch'].map((k) => [k, d[k] ?? null])));
 }
 function stage(r, ts, gs) {
-  if (['merged', 'cancelled', 'canceled'].includes(r.status))
-    return r.status === 'canceled' ? 'cancelled' : r.status;
+  if (['merged', 'cancelled', 'canceled'].includes(r.status)) return r.status === 'canceled' ? 'cancelled' : r.status;
   if (ts.some((t) => t.measurement.kind === 'merge' && t.status === 'completed')) return 'merged';
   const pending = gs.filter((g) => g.kind === 'pending');
-  if (pending.length)
-    return pending.some((g) => g.stage === 'delivery') ? 'awaiting_delivery' : 'awaiting_approval';
+  if (pending.length) return pending.some((g) => g.stage === 'delivery') ? 'awaiting_delivery' : 'awaiting_approval';
   for (const s of ['failed', 'blocked']) if (ts.some((t) => t.status === s)) return s;
   if (ts.length && ts.every((t) => ['cancelled', 'canceled'].includes(t.status))) return 'cancelled';
   if (ts.some((t) => !['completed', 'cancelled', 'canceled'].includes(t.status))) return 'in_progress';
-  return gs.some((g) => g.stage === 'delivery' && g.kind === 'approve') &&
-    ts.some((t) => t.measurement.kind === 'delivery' && t.status === 'completed')
+  return gs.some((g) => g.stage === 'delivery' && g.kind === 'approve') && ts.some((t) => t.measurement.kind === 'delivery' && t.status === 'completed')
     ? 'delivered'
     : 'unknown';
 }
@@ -113,8 +102,7 @@ export function runData(rows, now: number, fetched_at: number | null) {
     const rid = args[args.indexOf('--run') + 1];
     if (!details.has(rid)) details.set(rid, {});
     const info = details.get(rid);
-    for (const key of ['tasks', 'gates', 'workers', 'messages'])
-      if (d[key]) (info[key] ??= []).push(...d[key]);
+    for (const key of ['tasks', 'gates', 'workers', 'messages']) if (d[key]) (info[key] ??= []).push(...d[key]);
   }
   const errors = [];
   for (const r of listed.values()) {
@@ -154,14 +142,7 @@ export function runData(rows, now: number, fetched_at: number | null) {
     });
     const gates = info.gates.map((g) => {
       const answer = (g.resolution || '').trim(),
-        kind =
-          g.status !== 'resolved'
-            ? 'pending'
-            : /^approve/i.test(answer)
-              ? 'approve'
-              : /^changes/i.test(answer)
-                ? 'changes'
-                : 'other';
+        kind = g.status !== 'resolved' ? 'pending' : /^approve/i.test(answer) ? 'approve' : /^changes/i.test(answer) ? 'changes' : 'other';
       return {
         id: g.id,
         task: g.task_id ?? null,
@@ -215,20 +196,10 @@ export function runData(rows, now: number, fetched_at: number | null) {
       const w =
         workers.find((w) => w.dispatchId === handle?.replace(/^dispatch:/, '')) ||
         workers
-          .filter(
-            (w) =>
-              w.agentTerminalHandle === handle &&
-              known.get(w.dispatchId)?.from > 0 &&
-              known.get(w.dispatchId).from <= at,
-          )
+          .filter((w) => w.agentTerminalHandle === handle && known.get(w.dispatchId)?.from > 0 && known.get(w.dispatchId).from <= at)
           .sort((a, b) => known.get(b.dispatchId).from - known.get(a.dispatchId).from)[0];
       return w
-        ? [
-            tasks.get(w.taskId)?.title || w.dispatchId,
-            true,
-            w.taskId ?? null,
-            w.agentTerminalHandle || w.dispatchId,
-          ]
+        ? [tasks.get(w.taskId)?.title || w.dispatchId, true, w.taskId ?? null, w.agentTerminalHandle || w.dispatchId]
         : [handle || 'Không rõ', false, null, handle || 'unknown'];
     }
     for (const m of info.messages || []) {
@@ -264,21 +235,13 @@ export function runData(rows, now: number, fetched_at: number | null) {
       [t.repo, t.worktree] = d.wt ? repoOf(d.wt) : [null, null];
     }
     const repos = rtasks.map((t) => t.repo).filter(Boolean);
-    const repo =
-      repos.sort((a, b) => repos.filter((r) => r === b).length - repos.filter((r) => r === a).length)[0] ||
-      objective.trim().split(/\s+/)[0] ||
-      '?';
-    const delivery = gates
-      .filter((g) => g.stage === 'delivery' && g.kind === 'approve' && g.resolved)
-      .map((g) => g.resolved);
-    const delivered_at =
-        ['delivered', 'merged'].includes(state) && delivery.length ? Math.max(...delivery) : null,
+    const repo = repos.sort((a, b) => repos.filter((r) => r === b).length - repos.filter((r) => r === a).length)[0] || objective.trim().split(/\s+/)[0] || '?';
+    const delivery = gates.filter((g) => g.stage === 'delivery' && g.kind === 'approve' && g.resolved).map((g) => g.resolved);
+    const delivered_at = ['delivered', 'merged'].includes(state) && delivery.length ? Math.max(...delivery) : null,
       end = delivered_at || now;
     let last = 0,
       wait = 0;
-    for (const g of gates
-      .filter((g) => g.created && g.created <= end)
-      .sort((a, b) => a.created - b.created)) {
+    for (const g of gates.filter((g) => g.created && g.created <= end).sort((a, b) => a.created - b.created)) {
       const b = Math.min(end, g.resolved || end);
       wait += Math.max(0, b - Math.max(last, g.created));
       last = Math.max(last, b);
@@ -290,11 +253,7 @@ export function runData(rows, now: number, fetched_at: number | null) {
         text: g.question,
         waiting_seconds: g.created ? Math.max(0, now - g.created) : null,
       }));
-    attention.push(
-      ...rtasks
-        .filter((t) => ['blocked', 'failed'].includes(t.status))
-        .map((t) => ({ kind: 'task', text: t.title, waiting_seconds: null })),
-    );
+    attention.push(...rtasks.filter((t) => ['blocked', 'failed'].includes(t.status)).map((t) => ({ kind: 'task', text: t.title, waiting_seconds: null })));
     runs.push({
       id: rid,
       objective,

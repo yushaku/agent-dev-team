@@ -160,8 +160,7 @@ export function skillDoc(name: string): TeamSkill | null {
           break;
         }
         try {
-          for (const e of readdirSync(p, { withFileTypes: true }))
-            if (e.isDirectory()) stack.push(join(p, e.name));
+          for (const e of readdirSync(p, { withFileTypes: true })) if (e.isDirectory()) stack.push(join(p, e.name));
         } catch {}
       }
     }
@@ -176,9 +175,7 @@ export function skillDoc(name: string): TeamSkill | null {
     path: where,
     ...(local || body
       ? {
-          description: (front?.[1].match(/^description\s*:\s*(.*)$/m)?.[1] || '')
-            .trim()
-            .replace(/^(['"])(.*)\1$/, '$2'),
+          description: (front?.[1].match(/^description\s*:\s*(.*)$/m)?.[1] || '').trim().replace(/^(['"])(.*)\1$/, '$2'),
         }
       : {}),
   };

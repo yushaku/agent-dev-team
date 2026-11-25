@@ -6,19 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 export type Time = number | null;
 type Event = [string, Time];
 type Context = { cwd: string | null; branch: string | null; branch_source?: string };
-export type Call = [
-  Time,
-  string,
-  string | null,
-  number,
-  number,
-  number,
-  number,
-  number,
-  string | null,
-  number?,
-  Context?,
-];
+export type Call = [Time, string, string | null, number, number, number, number, number, string | null, number?, Context?];
 export interface Session {
   agent: string;
   id: string;
@@ -75,8 +63,7 @@ export const aliases: Record<string, string> = Object.fromEntries(
     'solution-architect': 'solution sa solution-architect arch-review',
   }).flatMap(([role, words]) => words.split(' ').map((w) => [w, role])),
 );
-const roleFile =
-  /(?:roles|checks)\/([a-z0-9-]+)\.md|skills\/(researcher|solution-architect)\/SKILL\.md|skills\/team-([a-z0-9-]+)\//;
+const roleFile = /(?:roles|checks)\/([a-z0-9-]+)\.md|skills\/(researcher|solution-architect)\/SKILL\.md|skills\/team-([a-z0-9-]+)\//;
 export function role(word: string) {
   if (Object.hasOwn(aliases, word)) return aliases[word];
   if (['anti-ai', 'security', 'perf-a11y', 'tech-lead', 'designer'].includes(word)) return word;
@@ -107,9 +94,7 @@ export function newSession(agent: string, id: string): Session {
 function command(args) {
   let v = typeof args === 'string' ? json(args) : args;
   if (!v && typeof args === 'string')
-    return Array.from(args.matchAll(/\bcmd\s*:\s*(["'`])((?:\\.|(?!\1).)*)\1/gs), (m) =>
-      m[2].replaceAll('\\n', '\n'),
-    ).join('\n');
+    return Array.from(args.matchAll(/\bcmd\s*:\s*(["'`])((?:\\.|(?!\1).)*)\1/gs), (m) => m[2].replaceAll('\\n', '\n')).join('\n');
   if (v && !Array.isArray(v) && typeof v === 'object') v = v.command || v.cmd;
   if (Array.isArray(v)) return v.filter((x) => String(x).includes(' ')).join('\n') || v.join(' ');
   return typeof v === 'string' ? v : '';
@@ -143,15 +128,12 @@ function symbolSearch(cmd: string, cwd: string) {
     if (root === dirname(root)) return false;
     root = dirname(root);
   }
-  const decl =
-    '(?:(?:export\\s+)?(?:async\\s+)?(?:function|class|def|interface|type|const|let|var|func|fn)\\s+)?';
+  const decl = '(?:(?:export\\s+)?(?:async\\s+)?(?:function|class|def|interface|type|const|let|var|func|fn)\\s+)?';
   const ident = decl + '[A-Za-z_$][A-Za-z0-9_$]*',
     symbol = new RegExp('^' + ident + '(?:\\|' + ident + ')*$');
-  const shape =
-    /[a-z][A-Z]|[A-Z][a-z]+[A-Z]|[A-Za-z]_[A-Za-z]|^(?:function|class|def|interface|type|func|fn)\s/;
+  const shape = /[a-z][A-Z]|[A-Z][a-z]+[A-Z]|[A-Za-z]_[A-Za-z]|^(?:function|class|def|interface|type|func|fn)\s/;
   function search(argv: string[]) {
-    while (argv.length && (['rtk', 'command', 'sudo', 'git'].includes(argv[0]) || argv[0].includes('=')))
-      argv.shift();
+    while (argv.length && (['rtk', 'command', 'sudo', 'git'].includes(argv[0]) || argv[0].includes('='))) argv.shift();
     if (!['rg', 'grep', 'egrep'].includes(basename(argv.shift() || ''))) return false;
     const pats = [];
     for (let i = 0; i < argv.length; i++) {
@@ -211,29 +193,18 @@ function tool(s: Session, name: string, args, ts: Time) {
     s.discussion_read =
       m && ['researcher', 'solution-architect'].includes(m[1] || m[2])
         ? m[1] || m[2]
-        : cmd
-            .match(
-              /\b(?:cat|sed|head)\b[^;&|\n]*\b(?:roles\/|skills\/)(researcher|solution-architect)(?:\.md|\/SKILL\.md)/i,
-            )?.[1]
-            ?.toLowerCase() || null;
+        : cmd.match(/\b(?:cat|sed|head)\b[^;&|\n]*\b(?:roles\/|skills\/)(researcher|solution-architect)(?:\.md|\/SKILL\.md)/i)?.[1]?.toLowerCase() || null;
   }
   s.tool_count = (s.tool_count || 0) + 1;
   const search = (k: string) => (s.search ??= []).push([k, ts]);
   if (
     /codegraph/i.test(name) ||
-    /(?:^|[;&|(\s'"`])codegraph\s+(?:explore|query|node|callers|callees|impact|affected|files|context|search)\b|codegraph_/.test(
-      cmd,
-    )
+    /(?:^|[;&|(\s'"`])codegraph\s+(?:explore|query|node|callers|callees|impact|affected|files|context|search)\b|codegraph_/.test(cmd)
   )
     search('codegraph');
   else if (/^(read|view|read_file)$/i.test(name))
-    search(
-      ['limit', 'offset', 'start_line', 'end_line', 'view_range', 'line_range'].some((k) => a?.[k])
-        ? 'read_part'
-        : 'read_full',
-    );
-  else if (/^(grep|glob|find_files|search_files|agentgrep)$/i.test(name))
-    search(/glob|find/i.test(name) ? 'find' : 'grep');
+    search(['limit', 'offset', 'start_line', 'end_line', 'view_range', 'line_range'].some((k) => a?.[k]) ? 'read_part' : 'read_full');
+  else if (/^(grep|glob|find_files|search_files|agentgrep)$/i.test(name)) search(/glob|find/i.test(name) ? 'find' : 'grep');
   else {
     for (const [kind, re] of Object.entries({
       rg: /(?:^|[;&|(\s'"`])rg\s/,
@@ -253,8 +224,7 @@ function tool(s: Session, name: string, args, ts: Time) {
     if (skill) s.skills.push([skill, ts]);
   } else if (s.agent !== 'hermes' && (s.agent !== 'claude' || ['Read', 'Bash'].includes(name))) {
     const raw = typeof args === 'string' ? args : JSON.stringify(args);
-    for (const re of [/\/skills\/([\w.-]+)\/SKILL\.md/g, /orca skills get ([\w.-]+)/g])
-      for (const m of raw.matchAll(re)) s.skills.push([m[1], ts]);
+    for (const re of [/\/skills\/([\w.-]+)\/SKILL\.md/g, /orca skills get ([\w.-]+)/g]) for (const m of raw.matchAll(re)) s.skills.push([m[1], ts]);
   }
   for (const m of cmd.matchAll(
     /(?:^|[;&|(\n]|\bsh\s+-l?c\s+['"])\s*(?:rtk\s+(?:proxy\s+)?)?orca\s+orchestration\s+(worker-start|task-create|dispatch|run-use)\b(?![^;&|\n]*--help)/g,
@@ -270,28 +240,22 @@ function tool(s: Session, name: string, args, ts: Time) {
   }
 }
 function tasks(s: Session, txt: string, ts: Time) {
-  for (const m of txt.matchAll(/Your task ID is:\s*(task_[0-9a-f]+)/g))
-    if (s.tasks.at(-1)?.[0] !== m[1]) s.tasks.push([m[1], ts]);
+  for (const m of txt.matchAll(/Your task ID is:\s*(task_[0-9a-f]+)/g)) if (s.tasks.at(-1)?.[0] !== m[1]) s.tasks.push([m[1], ts]);
 }
 function hook(s: Session, txt: string, ts: Time) {
   const head = (txt || '').slice(0, 200);
-  if (head.includes('PONYTAIL MODE ACTIVE'))
-    s.hooks!.ponytail ??= [ts, head.match(/level:\s*([\w-]+)/)?.[1] || ''];
+  if (head.includes('PONYTAIL MODE ACTIVE')) s.hooks!.ponytail ??= [ts, head.match(/level:\s*([\w-]+)/)?.[1] || ''];
 }
 function finish(s: Session, first: string) {
   s.preview = Array.from(first.replace(/\s+/g, ' ').trim()).slice(0, 160).join('');
   const line = first.match(/^\s*role\s*:\s*(.+)$/im)?.[1] || '';
   const m = roleFile.exec(line);
-  s.role_line = m
-    ? role(m[1] || m[2] || m[3]) || m[1] || m[2] || m[3]
-    : role(line.match(/^\s*([a-z][\w+-]*)/i)?.[1]?.toLowerCase() || '');
+  s.role_line = m ? role(m[1] || m[2] || m[3]) || m[1] || m[2] || m[3] : role(line.match(/^\s*([a-z][\w+-]*)/i)?.[1]?.toLowerCase() || '');
   const head = first.slice(0, 400);
   s.discussion =
     s.subagent || s.title?.startsWith('Subagent:')
       ? null
-      : /\blàm\s+researcher\b|\b(?:act|work)\s+as\s+(?:the\s+)?researcher\b|^\s*role\s*:\s*research(er)?\b/im.test(
-            head,
-          )
+      : /\blàm\s+researcher\b|\b(?:act|work)\s+as\s+(?:the\s+)?researcher\b|^\s*role\s*:\s*research(er)?\b/im.test(head)
         ? 'researcher'
         : /\blàm\s+(?:solution\s+architect(?:ure)?|SA)\b|\b(?:act|work)\s+as\s+(?:the\s+)?solution\s+architect\b|^\s*role\s*:\s*solution\s+architect(?:ure)?\b/im.test(
               head,
@@ -313,12 +277,7 @@ function branch(s: Session, ts: Time, cwd, branch, source = 'message_context'): 
   const ctx = {
     cwd: cwd || prev?.cwd || null,
     branch: branch ?? (cwd && cwd !== prev?.cwd ? null : (prev?.branch ?? null)),
-    branch_source:
-      branch != null
-        ? source
-        : cwd && cwd !== prev?.cwd
-          ? 'unavailable'
-          : prev?.branch_source || 'unavailable',
+    branch_source: branch != null ? source : cwd && cwd !== prev?.cwd ? 'unavailable' : prev?.branch_source || 'unavailable',
   };
   if (!prev || ctx.cwd !== prev.cwd || ctx.branch !== prev.branch || ctx.branch_source !== prev.branch_source)
     (s.branch_segments ??= []).push({ ...ctx, at: ts });
@@ -357,8 +316,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
     if (s.cwd) {
       try {
         let git = join(s.cwd, '.git');
-        if (statSync(git).isFile())
-          git = resolve(s.cwd, readFileSync(git, 'utf8').split('gitdir:')[1].trim());
+        if (statSync(git).isFile()) git = resolve(s.cwd, readFileSync(git, 'utf8').split('gitdir:')[1].trim());
         const ref = readFileSync(join(git, 'HEAD'), 'utf8').trim();
         s.branch = ref.startsWith('ref: refs/heads/') ? ref.slice(16) : ref.slice(0, 8);
       } catch {}
@@ -400,13 +358,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
     return s;
   }
   for (const line of text.split('\n')) {
-    if (
-      agent === 'codex' &&
-      /"(custom_tool_call_output|function_call_output|reasoning|item_completed|world_state)"/.test(
-        line.slice(0, 220),
-      )
-    )
-      continue;
+    if (agent === 'codex' && /"(custom_tool_call_output|function_call_output|reasoning|item_completed|world_state)"/.test(line.slice(0, 220))) continue;
     const d = json(line);
     if (!d) continue;
     const ts = tsOf(d.timestamp),
@@ -439,10 +391,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
           const name = raw.split(':').at(-1);
           if (
             raw.includes(':') ||
-            [
-              process.env.AGENT_SKILLS_DIR || join(homedir(), '.agents/skills'),
-              join(homedir(), '.claude/skills'),
-            ].some((dir) => existsSync(join(dir, name)))
+            [process.env.AGENT_SKILLS_DIR || join(homedir(), '.agents/skills'), join(homedir(), '.claude/skills')].some((dir) => existsSync(join(dir, name)))
           )
             s.skills.push([name, ts]);
         }
@@ -462,8 +411,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
             0,
             ctx,
           ]);
-        if (Array.isArray(content))
-          for (const c of content) if (c?.type === 'tool_use') tool(s, c.name, c.input || {}, ts);
+        if (Array.isArray(content)) for (const c of content) if (c?.type === 'tool_use') tool(s, c.name, c.input || {}, ts);
       }
     } else if (agent === 'codex') {
       const p = d.payload || {};
@@ -501,16 +449,12 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
           context,
         ]);
       } else if (t === 'response_item') {
-        if (p.type === 'message' && p.role === 'developer')
-          for (const c of p.content || []) hook(s, c?.text, ts);
+        if (p.type === 'message' && p.role === 'developer') for (const c of p.content || []) hook(s, c?.text, ts);
         if (p.type === 'message' && p.role === 'user') {
           const txt = (p.content || []).map((c) => c?.text || '').join(' ');
           tasks(s, txt, ts);
           if (!first && !/^(<|# AGENTS.md)/.test(txt.trimStart())) first = txt;
-        } else if (
-          ['custom_tool_call', 'function_call', 'local_shell_call'].includes(p.type) &&
-          p.name !== 'apply_patch'
-        )
+        } else if (['custom_tool_call', 'function_call', 'local_shell_call'].includes(p.type) && p.name !== 'apply_patch')
           tool(s, p.name, p.input || p.arguments || p.action || '', ts);
       }
     } else if (agent === 'copilot') {
@@ -561,10 +505,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
           cr: td.cache_read?.tokenCount || 0,
           cw: td.cache_write?.tokenCount || 0,
           out: td.output?.tokenCount || 0,
-          requests: Object.keys(a.modelMetrics || {}).reduce(
-            (n, k) => n + (a.modelMetrics[k]?.requests?.count || 0),
-            0,
-          ),
+          requests: Object.keys(a.modelMetrics || {}).reduce((n, k) => n + (a.modelMetrics[k]?.requests?.count || 0), 0),
         };
       }
     }
@@ -596,16 +537,12 @@ export function parseHermes(r, messages) {
       const match = txt.match(/^\[IMPORTANT: The user has invoked the "([^"]+)" skill/);
       if (match) {
         s.skills.push([match[1], m.timestamp]);
-        txt = txt
-          .split('The user has provided the following instruction alongside the skill invocation:')
-          .slice(1)
-          .join('');
+        txt = txt.split('The user has provided the following instruction alongside the skill invocation:').slice(1).join('');
       }
       if (!first && !/^[<\[]/.test(txt)) first = txt;
     } else if (m.role === 'assistant') {
       const calls = json(m.tool_calls);
-      if (Array.isArray(calls))
-        for (const c of calls) tool(s, c?.function?.name, c?.function?.arguments || '', m.timestamp);
+      if (Array.isArray(calls)) for (const c of calls) tool(s, c?.function?.name, c?.function?.arguments || '', m.timestamp);
     } else if (m.role === 'tool' && m.tool_name === 'skill_view') {
       const name = json(m.content)?.name;
       if (name) s.skills.push([name, m.timestamp]);

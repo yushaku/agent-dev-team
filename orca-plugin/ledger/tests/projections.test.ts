@@ -93,26 +93,15 @@ test('SQLite inode replacement retains disjoint sessions and commands and applie
     renameSync(path + '.new', path);
     ingestFile(store, path === hermes ? 'hermes' : 'rtk', path);
   }
-  const hs =
-    'CREATE TABLE sessions(id,started_at,input_tokens); CREATE TABLE messages(id,session_id,role,active,content,timestamp);';
-  const rs =
-    'CREATE TABLE commands(timestamp,rtk_cmd,project_path,input_tokens,output_tokens,saved_tokens,exec_time_ms);';
-  const common =
-    "INSERT INTO sessions VALUES('stable',10,11);INSERT INTO messages VALUES(1,'stable','user',1,'preview',10);";
+  const hs = 'CREATE TABLE sessions(id,started_at,input_tokens); CREATE TABLE messages(id,session_id,role,active,content,timestamp);';
+  const rs = 'CREATE TABLE commands(timestamp,rtk_cmd,project_path,input_tokens,output_tokens,saved_tokens,exec_time_ms);';
+  const common = "INSERT INTO sessions VALUES('stable',10,11);INSERT INTO messages VALUES(1,'stable','user',1,'preview',10);";
   const command = "INSERT INTO commands VALUES('2026-11-01','git','/a',15,10,5,1);";
   replace(hermes, hs + common + "INSERT INTO sessions VALUES('old',11,13);");
   replace(rtk, rs + command + "INSERT INTO commands VALUES('2026-11-02','rg','/a',18,10,8,1);");
   refresh();
-  replace(
-    hermes,
-    hs + common + "UPDATE sessions SET input_tokens=12; INSERT INTO sessions VALUES('fresh',12,14);",
-  );
-  replace(
-    rtk,
-    rs +
-      command +
-      "UPDATE commands SET saved_tokens=6; INSERT INTO commands VALUES('2026-11-03','ls','/a',19,10,9,2);",
-  );
+  replace(hermes, hs + common + "UPDATE sessions SET input_tokens=12; INSERT INTO sessions VALUES('fresh',12,14);");
+  replace(rtk, rs + command + "UPDATE commands SET saved_tokens=6; INSERT INTO commands VALUES('2026-11-03','ls','/a',19,10,9,2);");
   refresh();
   assert.deepEqual(
     sessions().map((s) => [s.id, s.calls[0][3]]),
@@ -152,10 +141,7 @@ test('projection errors roll back one source, advance its cursor and clear on co
   assert.deepEqual(projectionStatus(store), { errors: 0, lag: 3 });
   assert.deepEqual(refresh.step(), { revision: 2, pending: true });
   assert.deepEqual(projectionStatus(store), { errors: 1, lag: 1 });
-  assert.equal(
-    store.db.prepare('SELECT count(*) AS n FROM dashboard_commands WHERE version=?').get(PARSER_VERSION).n,
-    0,
-  );
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_commands WHERE version=?').get(PARSER_VERSION).n, 0);
   assert.deepEqual(refresh.step(), { revision: 3, pending: false });
   assert.deepEqual(
     sessions().map((s) => s.id),
@@ -171,34 +157,18 @@ test('projection errors roll back one source, advance its cursor and clear on co
   );
   record('commands/2', '{"timestamp":"2026-01-02","rtk_cmd":"git"}');
   refresh();
-  assert.equal(
-    store.db.prepare('SELECT count(*) AS n FROM dashboard_commands WHERE version=?').get(PARSER_VERSION).n,
-    2,
-  );
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_commands WHERE version=?').get(PARSER_VERSION).n, 2);
   assert.deepEqual(projectionStatus(store), { errors: 0, lag: 0 });
-  assert.equal(
-    store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION - 1).n,
-    1,
-  );
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION - 1).n, 1);
 
   // A corrected parser replays failed rows even when the archive receives no new data.
   store.db.exec(`CREATE TEMP TRIGGER old_parser BEFORE INSERT ON dashboard_sessions
     WHEN NEW.version=${PARSER_VERSION + 1} BEGIN SELECT RAISE(ABORT,'old parser failed'); END`);
   projections(store, PARSER_VERSION + 1)();
-  assert.equal(
-    store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION + 1).n,
-    1,
-  );
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION + 1).n, 1);
   projections(store, PARSER_VERSION + 2)();
-  assert.equal(
-    store.db.prepare('SELECT count(*) AS n FROM dashboard_sessions WHERE version=?').get(PARSER_VERSION + 2)
-      .n,
-    1,
-  );
-  assert.equal(
-    store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION + 2).n,
-    0,
-  );
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_sessions WHERE version=?').get(PARSER_VERSION + 2).n, 1);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION + 2).n, 0);
 });
 
 test('a malformed Codex record keeps its last good session while other files advance', (t) => {
@@ -224,9 +194,7 @@ test('a malformed Codex record keeps its last good session while other files adv
       ['b', 1],
     ],
   );
-  const error = store.db
-    .prepare('SELECT source,generation,error,at FROM dashboard_errors WHERE version=?')
-    .get(PARSER_VERSION);
+  const error = store.db.prepare('SELECT source,generation,error,at FROM dashboard_errors WHERE version=?').get(PARSER_VERSION);
   assert.equal(error.source, a);
   assert.equal(error.generation, 1);
   assert.match(String(error.error), /TypeError/);
@@ -316,9 +284,7 @@ test('two workers racing a projection cursor each commit a source once', async (
   );
   const exits = workers.map((w) => once(w, 'exit'));
   await Promise.all(workers.map((w) => once(w, 'message')));
-  store.db.exec(
-    `CREATE TABLE writes(sid TEXT); CREATE TRIGGER tally AFTER INSERT ON dashboard_sessions BEGIN INSERT INTO writes VALUES(NEW.sid); END`,
-  );
+  store.db.exec(`CREATE TABLE writes(sid TEXT); CREATE TRIGGER tally AFTER INSERT ON dashboard_sessions BEGIN INSERT INTO writes VALUES(NEW.sid); END`);
   for (const sid of ['a', 'b', 'c']) {
     const source = store.source('codex', sid + '.jsonl');
     store.record(source, 1, '0', Buffer.from(meta(sid) + usage(1)));

@@ -31,9 +31,7 @@ function featureScope(d: DashboardData, repo, run) {
     orca_loading: d.features.orca_loading,
     runs,
     repositories: Object.fromEntries(
-      Object.entries(d.features.repositories).filter(
-        ([name]) => (!repo || name === repo) && (!run || runs.some((r) => r.repo === name)),
-      ),
+      Object.entries(d.features.repositories).filter(([name]) => (!repo || name === repo) && (!run || runs.some((r) => r.repo === name))),
     ),
   };
 }
@@ -47,13 +45,10 @@ function runSummary(r: DashboardRun) {
     stage: r.stage,
     tasks: r.tasks.length,
     kinds: count(r.tasks, (t) => t.measurement.kind),
-    fix_rounds:
-      r.fix_rounds?.count ?? new Set(fixes.map((t) => t.measurement.round).filter(Boolean)).size + unknown,
+    fix_rounds: r.fix_rounds?.count ?? new Set(fixes.map((t) => t.measurement.round).filter(Boolean)).size + unknown,
     fix_causes: count(fixes, (t) => t.measurement.cause || 'unknown'),
     fix_rounds_source: r.fix_rounds?.source || 'measurement',
-    fix_rounds_estimated:
-      r.fix_rounds?.source === 'code-review' ||
-      ((r.fix_rounds?.source || 'measurement') === 'measurement' && !!unknown),
+    fix_rounds_estimated: r.fix_rounds?.source === 'code-review' || ((r.fix_rounds?.source || 'measurement') === 'measurement' && !!unknown),
     gate_wait_seconds: r.gate_wait_seconds,
     lead_seconds: r.lead_seconds,
     delivered: Object.hasOwn(r, 'delivered') ? r.delivered : !!r.delivered_at || r.stage === 'merged',
@@ -74,32 +69,22 @@ function issues(data, sessions: UsageRow[], runs) {
       filter: Object.fromEntries(Object.entries(filter).filter(([, v]) => v)),
     });
   const cards = new Map();
-  for (const name of installed(join(teams, 'skills')).filter(
-    (n) => n.startsWith('team-') || ['researcher', 'solution-architect'].includes(n),
-  )) {
+  for (const name of installed(join(teams, 'skills')).filter((n) => n.startsWith('team-') || ['researcher', 'solution-architect'].includes(n))) {
     const line = read(join(teams, 'skills', name, 'SKILL.md')).match(/^- \*\*Skills:\*\*\s*(.+)$/m)?.[1];
     if (!line) continue;
     const required = [];
     for (const segment of line.replace(/\([^)]*\)/g, '').split(';')) {
       if (/^load /i.test(segment.trim())) continue;
       for (const clause of segment.split(','))
-        if (!/\bwhen\b|on demand|\bwith\b/.test(clause))
-          for (const m of clause.matchAll(/`([a-z0-9][a-z0-9-]*)`/g)) required.push(m[1]);
+        if (!/\bwhen\b|on demand|\bwith\b/.test(clause)) for (const m of clause.matchAll(/`([a-z0-9][a-z0-9-]*)`/g)) required.push(m[1]);
     }
     cards.set(name.replace(/^team-/, ''), { required, name });
   }
-  const tasks = new Map<string, { measurement: { kind: string; round: number } }>(
-      data.orca.runs.flatMap((r) => r.tasks.map((t) => [t.id, t])),
-    ),
+  const tasks = new Map<string, { measurement: { kind: string; round: number } }>(data.orca.runs.flatMap((r) => r.tasks.map((t) => [t.id, t]))),
     top = new Set(data.sessions.filter((s) => s.routing?.tier === 'top').map((s) => s.model));
   const reviewers = sessions.filter((s) => {
     const m = tasks.get(s.task_id)?.measurement;
-    return (
-      s.role === 'reviewer' &&
-      m &&
-      (m.kind === 're-review' || m.round > 1) &&
-      (s.routing?.tier === 'top' || (!s.routing?.tier && top.has(s.model)))
-    );
+    return s.role === 'reviewer' && m && (m.kind === 're-review' || m.round > 1) && (s.routing?.tier === 'top' || (!s.routing?.tier && top.has(s.model)));
   });
   for (const [run, x] of by(reviewers, (s) => s.run_id)) {
     const tok = sum(x, 'total');
@@ -107,13 +92,7 @@ function issues(data, sessions: UsageRow[], runs) {
       'top-rereview:' + run,
       tok >= 5e6 ? 'high' : 'medium',
       'Reviewer chạy tier top cho re-review hẹp',
-      x.length +
-        ' phiên reviewer, ' +
-        fmt(tok) +
-        ' token trên tier top/model top (' +
-        ids(x.map((s) => s.id)) +
-        ') trong Run ' +
-        run,
+      x.length + ' phiên reviewer, ' + fmt(tok) + ' token trên tier top/model top (' + ids(x.map((s) => s.id)) + ') trong Run ' + run,
       'Re-review hẹp phải dùng tier của Builder (tối thiểu work); chỉ review đầy đủ mới dùng top (skills/team-reviewer/SKILL.md).',
       { run, role: 'reviewer', repo: x[0].repo },
     );
@@ -129,20 +108,8 @@ function issues(data, sessions: UsageRow[], runs) {
           'missing-skill:' + run + ':' + role,
           'medium',
           'Vai ' + role + ' không nạp skill bắt buộc',
-          'Run ' +
-            run +
-            ': ' +
-            x.length +
-            ' phiên ' +
-            role +
-            ' không nạp ' +
-            missing.join(', ') +
-            ' (' +
-            ids(x.map((s) => s.id)) +
-            ')',
-          'Nhắc trong Task spec nạp skill theo skills/' +
-            card.name +
-            '/SKILL.md, hoặc sửa skill vai nếu skill không còn bắt buộc.',
+          'Run ' + run + ': ' + x.length + ' phiên ' + role + ' không nạp ' + missing.join(', ') + ' (' + ids(x.map((s) => s.id)) + ')',
+          'Nhắc trong Task spec nạp skill theo skills/' + card.name + '/SKILL.md, hoặc sửa skill vai nếu skill không còn bắt buộc.',
           { run, role, repo: x[0].repo },
         );
     }
@@ -204,10 +171,8 @@ function issues(data, sessions: UsageRow[], runs) {
     const groups = [[], []];
     for (const s of x) {
       const r = s.routing;
-      if (r.agent !== s.agent || (r.model && !s.model.toLowerCase().includes(r.model.toLowerCase())))
-        groups[0].push(s);
-      else if (r.model && efforts.includes(r.effort) && efforts.indexOf(s.effort) > efforts.indexOf(r.effort))
-        groups[1].push(s);
+      if (r.agent !== s.agent || (r.model && !s.model.toLowerCase().includes(r.model.toLowerCase()))) groups[0].push(s);
+      else if (r.model && efforts.includes(r.effort) && efforts.indexOf(s.effort) > efforts.indexOf(r.effort)) groups[1].push(s);
     }
     const bad = groups.flat();
     if (!bad.length) continue;
@@ -286,13 +251,9 @@ export function summary(d: DashboardData, q: URLSearchParams): AgentSummary {
     role = q.get('role') || null,
     agent = q.get('agent') || null;
   const scope = d.sessions.filter((s) => (!repo || s.repo === repo) && (!run || s.run_id === run));
-  const sessions: UsageRow[] = scope.filter(
-      (s) => (!role || s.role === role) && (!agent || s.agent === agent),
-    ),
+  const sessions: UsageRow[] = scope.filter((s) => (!role || s.role === role) && (!agent || s.agent === agent)),
     total = sum(sessions, 'total');
-  const runs = d.orca.runs.filter((r) =>
-    run ? r.id === run : (!repo || r.repo === repo) && scope.some((s) => s.run_id === r.id),
-  );
+  const runs = d.orca.runs.filter((r) => (run ? r.id === run : (!repo || r.repo === repo) && scope.some((s) => s.run_id === r.id)));
   const tokens_by_role = [],
     search_by_role = [],
     skills_by_role = Object.create(null);
@@ -357,9 +318,7 @@ export function summary(d: DashboardData, q: URLSearchParams): AgentSummary {
     },
     features: featureScope(d, repo, run),
     tokens_by_role: tokens_by_role.sort((a, b) => b.tokens - a.tokens),
-    search_by_role: search_by_role.sort(
-      (a, b) => b.rg_symbol - a.rg_symbol || b.codegraph + b.rg_grep - a.codegraph - a.rg_grep,
-    ),
+    search_by_role: search_by_role.sort((a, b) => b.rg_symbol - a.rg_symbol || b.codegraph + b.rg_grep - a.codegraph - a.rg_grep),
     skills_by_role,
     runs: runs.map(runSummary),
     issues: issues(d, sessions, runs),
@@ -375,8 +334,7 @@ export function runDetail(d: DashboardData, id: string | null): AgentRun | null 
     .sort((a, b) => (a.created || 0) - (b.created || 0))
     .map((t) => {
       const skills = Object.create(null);
-      for (const s of sessions.filter((s) => s.task_id === t.id))
-        for (const [k, v] of Object.entries(loaded(s))) skills[k] = (skills[k] || 0) + v;
+      for (const s of sessions.filter((s) => s.task_id === t.id)) for (const [k, v] of Object.entries(loaded(s))) skills[k] = (skills[k] || 0) + v;
       const start = t.started || t.created,
         end = t.ended || t.completed;
       return {
@@ -474,18 +432,7 @@ export function markdown(s) {
       '## Tasks',
       '',
       table(
-        [
-          '#',
-          'Role',
-          'Kind',
-          'Round',
-          'Agent/model/effort',
-          'Tier',
-          'Tokens',
-          'Duration',
-          'Status',
-          'Skills',
-        ],
+        ['#', 'Role', 'Kind', 'Round', 'Agent/model/effort', 'Tier', 'Tokens', 'Duration', 'Status', 'Skills'],
         s.tasks.map((t, i) => [
           i + 1,
           t.role,
@@ -567,13 +514,7 @@ export function markdown(s) {
     s.search_by_role.length
       ? table(
           ['Role', 'codegraph', 'rg/grep', 'rg_symbol', 'codegraph share'],
-          s.search_by_role.map((r) => [
-            r.role,
-            r.codegraph,
-            r.rg_grep,
-            r.rg_symbol,
-            (100 * r.codegraph_share).toFixed(0) + '%',
-          ]),
+          s.search_by_role.map((r) => [r.role, r.codegraph, r.rg_grep, r.rg_symbol, (100 * r.codegraph_share).toFixed(0) + '%']),
         )
       : 'No code searches.',
     '',
@@ -601,18 +542,7 @@ export function markdown(s) {
     '',
     s.runs.length
       ? table(
-          [
-            'Run',
-            'Repo',
-            'Stage',
-            'Tasks',
-            'Fix rounds',
-            'Gate wait',
-            'Lead',
-            'Worker tok',
-            'Orch tok',
-            'Objective',
-          ],
+          ['Run', 'Repo', 'Stage', 'Tasks', 'Fix rounds', 'Gate wait', 'Lead', 'Worker tok', 'Orch tok', 'Objective'],
           s.runs.map((r) => [
             r.id,
             r.repo,
@@ -635,13 +565,7 @@ export function markdown(s) {
     '',
     table(
       ['Repo / branch', 'Variant', 'Escaped defects', 'Median days', 'Source'],
-      s.features.runs.map((f) => [
-        f.repo + ' / ' + f.branch,
-        f.variant,
-        f.escaped_defects,
-        f.median_days_to_surface,
-        f.source,
-      ]),
+      s.features.runs.map((f) => [f.repo + ' / ' + f.branch, f.variant, f.escaped_defects, f.median_days_to_surface, f.source]),
     ),
     '',
     '## Issues (' + s.issues.length + ')',

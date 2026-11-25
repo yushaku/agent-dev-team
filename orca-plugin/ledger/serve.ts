@@ -18,9 +18,7 @@ if (import.meta.main) {
     process.exitCode = 1;
     void api.close();
   });
-  server.listen(port, host, () =>
-    console.log('Ledger dashboard listening on ' + (host === '::1' ? '[::1]' : host) + ':' + port),
-  );
+  server.listen(port, host, () => console.log('Ledger dashboard listening on ' + (host === '::1' ? '[::1]' : host) + ':' + port));
   const stop = () => {
     server.close();
     void api.close();

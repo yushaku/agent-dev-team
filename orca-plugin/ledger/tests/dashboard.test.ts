@@ -3,15 +3,7 @@ import { golden } from './golden.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import {
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-  appendFileSync,
-  unlinkSync,
-  mkdirSync,
-} from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, appendFileSync, unlinkSync, mkdirSync } from 'node:fs';
 import { hostname, tmpdir, type as osType } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer, get } from 'node:http';
@@ -50,9 +42,7 @@ test('archived sessions and snapshots match Python across branch changes, append
     ingestFile(store, agent, path);
     refresh();
     const expected = golden('session-' + agent, root);
-    const row = store.db
-      .prepare("select data from dashboard_sessions where json_extract(data,'$.agent')=?")
-      .get(agent);
+    const row = store.db.prepare("select data from dashboard_sessions where json_extract(data,'$.agent')=?").get(agent);
     assert.deepEqual(JSON.parse(String(row.data)), expected);
   }
   const now = Date.parse('2026-11-13T23:59:59Z') / 1000;
@@ -68,10 +58,7 @@ test('archived sessions and snapshots match Python across branch changes, append
   unlinkSync(files[0]);
   unlinkSync(files[1]);
   refresh();
-  const all = () =>
-    store.db
-      .prepare('SELECT data FROM dashboard_sessions WHERE version=? ORDER BY source')
-      .all(PARSER_VERSION);
+  const all = () => store.db.prepare('SELECT data FROM dashboard_sessions WHERE version=? ORDER BY source').all(PARSER_VERSION);
   const before = all();
   assert.equal(before.length, 2);
   assert.equal(JSON.parse(String(before[1].data)).calls.at(-1)[3], 19);
@@ -87,9 +74,7 @@ test('Copilot sidecar, JCode and Hermes use the Python parser contract', (t) => 
       'session.json',
       JSON.stringify({
         id: 'j',
-        messages: [
-          { role: 'assistant', timestamp: '2026-11-13T10:00:00Z', token_usage: { input_tokens: 6 } },
-        ],
+        messages: [{ role: 'assistant', timestamp: '2026-11-13T10:00:00Z', token_usage: { input_tokens: 6 } }],
       }),
     ],
     [
@@ -105,10 +90,7 @@ test('Copilot sidecar, JCode and Hermes use the Python parser contract', (t) => 
     const path = join(root, name);
     writeFileSync(path, doc);
     writeFileSync(join(root, 'workspace.yaml'), 'id: test\nclient_name: golden\n');
-    assert.deepEqual(
-      parseFile(agent, path, doc, { id: 'test', client_name: 'golden' }),
-      golden('parse-' + agent, root),
-    );
+    assert.deepEqual(parseFile(agent, path, doc, { id: 'test', client_name: 'golden' }), golden('parse-' + agent, root));
   }
   const expected = golden('hermes-contract', root);
   assert.deepEqual(parseHermes(expected[0], expected[1]), expected[2]);
@@ -128,10 +110,7 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
   assert.ok(address && typeof address !== 'string');
   const base = 'http://127.0.0.1:' + address.port;
   for (const path of ['/', '/js/main.js', '/vendor/marked.min.js'])
-    assert.deepEqual(
-      Buffer.from(await (await fetch(base + path)).arrayBuffer()),
-      readFileSync(join(web, path === '/' ? 'index.html' : path)),
-    );
+    assert.deepEqual(Buffer.from(await (await fetch(base + path)).arrayBuffer()), readFileSync(join(web, path === '/' ? 'index.html' : path)));
   assert.equal(
     await new Promise((done) =>
       get(base + '/api/data', { headers: { Host: 'example.com' } }, (r) => {
@@ -160,10 +139,7 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
   assert.deepEqual(JSON.parse(JSON.stringify(cli)), old);
   const name = 'team-builder';
   const doc = skillDoc(name);
-  assert.deepEqual(
-    doc,
-    golden('skill-doc-team-builder', root),
-  );
+  assert.deepEqual(doc, golden('skill-doc-team-builder', root));
 });
 test('archived Orca requests and agent run match Python JSON and Markdown', (t) => {
   const { root, store } = scratch(t);
@@ -204,20 +180,12 @@ test('archived Orca requests and agent run match Python JSON and Markdown', (t) 
       ],
     },
     inbox: {
-      messages: [
-        { id: 'm', from_handle: 'dispatch:d', to_handle: 'run:run_a', created_at: date, body: 'sent' },
-      ],
+      messages: [{ id: 'm', from_handle: 'dispatch:d', to_handle: 'run:run_a', created_at: date, body: 'sent' }],
     },
   };
   for (const [cmd, data] of Object.entries(calls)) {
-    const args =
-      cmd === 'run-list' ? ['--page', '0'] : cmd === 'worker-show' ? ['--dispatch', 'd'] : ['--run', 'run_a'];
-    store.record(
-      store.source('orca', JSON.stringify([cmd, ...args])),
-      1,
-      'result',
-      Buffer.from(JSON.stringify(data)),
-    );
+    const args = cmd === 'run-list' ? ['--page', '0'] : cmd === 'worker-show' ? ['--dispatch', 'd'] : ['--run', 'run_a'];
+    store.record(store.source('orca', JSON.stringify([cmd, ...args])), 1, 'result', Buffer.from(JSON.stringify(data)));
   }
   const fixture = join(root, 'orca.json');
   writeFileSync(fixture, JSON.stringify(calls));
@@ -248,11 +216,7 @@ test('SQLite row corrections update only the affected session and RTK commands m
   );
   put(source, 'messages/1', { session_id: 'a', role: 'user', content: 'after', timestamp: 101, active: 1 });
   refresh();
-  assert.equal(
-    JSON.parse(String(store.db.prepare("SELECT data FROM dashboard_sessions WHERE sid='a'").get().data))
-      .preview,
-    'after',
-  );
+  assert.equal(JSON.parse(String(store.db.prepare("SELECT data FROM dashboard_sessions WHERE sid='a'").get().data)).preview, 'after');
 });
 
 test('feature defect history matches Python across merge, fix, and a cached rebuild', async (t) => {
@@ -265,7 +229,15 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
     return execFileSync('git', ['-C', repo, ...args], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, GIT_AUTHOR_DATE: when, GIT_COMMITTER_DATE: when, GIT_AUTHOR_NAME: 'A', GIT_AUTHOR_EMAIL: 'a@example.test', GIT_COMMITTER_NAME: 'A', GIT_COMMITTER_EMAIL: 'a@example.test' },
+      env: {
+        ...process.env,
+        GIT_AUTHOR_DATE: when,
+        GIT_COMMITTER_DATE: when,
+        GIT_AUTHOR_NAME: 'A',
+        GIT_AUTHOR_EMAIL: 'a@example.test',
+        GIT_COMMITTER_NAME: 'A',
+        GIT_COMMITTER_EMAIL: 'a@example.test',
+      },
     }).trim();
   }
   git('init', '--object-format=sha1', '-b', 'main');
@@ -304,8 +276,7 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
   } finally {
     gitMetrics.close();
   }
-  for (let i = 0; i < 2; i++)
-    assert.deepEqual(JSON.parse(JSON.stringify(build(store, 7).features.repositories.repo)), expected);
+  for (let i = 0; i < 2; i++) assert.deepEqual(JSON.parse(JSON.stringify(build(store, 7).features.repositories.repo)), expected);
   assert.equal(store.db.prepare('SELECT count(*) n FROM dashboard_git').get().n, 1);
 });
 
@@ -344,9 +315,7 @@ test('query worker follows appended history without HTTP requests', async (t) =>
     const until = Date.now() + 10000;
     while (Date.now() < until) {
       if (store.db.prepare("SELECT 1 FROM sqlite_schema WHERE name='dashboard_sessions'").get()) {
-        const row = store.db
-          .prepare('SELECT data FROM dashboard_sessions WHERE version=?')
-          .get(PARSER_VERSION);
+        const row = store.db.prepare('SELECT data FROM dashboard_sessions WHERE version=?').get(PARSER_VERSION);
         if (row && JSON.parse(String(row.data)).calls.length === count) return;
       }
       await new Promise((done) => setTimeout(done, 25));

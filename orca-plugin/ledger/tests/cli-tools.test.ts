@@ -80,7 +80,7 @@ test('npm and Python tool descriptions come from the matching installed package 
   const site = join(venv, 'lib/python3.12/site-packages');
   file(join(site, 'dependency.dist-info/METADATA'), 'Name: dependency\nSummary: Incorrect description\n', 0o644);
   const uv = () => only('', join(venv, 'bin'));
-  assert.deepEqual([uv().description, uv().description_source], ['', ''], 'another package\'s metadata is not this tool\'s');
+  assert.deepEqual([uv().description, uv().description_source], ['', ''], "another package's metadata is not this tool's");
   file(join(site, 'new_tool.dist-info/METADATA'), 'Name: New_Tool\nSummary: Check local projects\n', 0o644);
   assert.deepEqual([uv().description, uv().description_source], ['Check local projects', 'uv · new-tool']);
 });
@@ -101,7 +101,8 @@ test('the manual parser reads the NAME section in common formats and nothing els
 
 test('the live inventory follows PATH precedence and ignores what is not a command', (t) => {
   const { root, file } = tree(t);
-  const first = join(root, 'first'), second = join(root, 'second');
+  const first = join(root, 'first'),
+    second = join(root, 'second');
   mkdirSync(first);
   mkdirSync(second);
   const installed = file(join(root, 'Cellar/new-package/2.5/bin/new-command'), '#!/bin/sh\ntouch ' + join(root, 'should-not-exist'));
@@ -142,7 +143,10 @@ test('provenance comes from paths and local package metadata', (t) => {
   assert.deepEqual(install(join(root, 'custom/run')), [join(root, 'custom'), '', ''], 'anything else is grouped by its folder');
   const saved = process.env.CARGO_HOME;
   process.env.CARGO_HOME = join(root, 'rust');
-  t.after(() => { if (saved === undefined) delete process.env.CARGO_HOME; else process.env.CARGO_HOME = saved; });
+  t.after(() => {
+    if (saved === undefined) delete process.env.CARGO_HOME;
+    else process.env.CARGO_HOME = saved;
+  });
   assert.deepEqual(install(join(root, 'rust/bin/run')), ['Cargo', '', '']);
 });
 
@@ -161,14 +165,18 @@ test('application and local-share subdirectories share their root group', () => 
 
 test('default system commands are excluded without hiding installed copies of the same name', (t) => {
   const { root, file } = tree(t);
-  const system = join(root, 'system'), downloaded = join(root, 'downloaded');
+  const system = join(root, 'system'),
+    downloaded = join(root, 'downloaded');
   mkdirSync(system);
   mkdirSync(downloaded);
   symlinkSync('/bin/sh', join(system, 'default-only'));
   symlinkSync('/bin/sh', join(system, 'extra-command'));
   const executable = file(join(downloaded, 'extra-command'));
   const data = discover([system, downloaded].join(delimiter));
-  assert.deepEqual(data.tools.map((tool) => tool.name), ['extra-command']);
+  assert.deepEqual(
+    data.tools.map((tool) => tool.name),
+    ['extra-command'],
+  );
   assert.equal(data.tools[0].path, executable);
   assert.deepEqual(data.tools[0].alternatives, []);
   assert.ok(!('Hệ thống' in data.sources));
@@ -181,7 +189,9 @@ test('the login shell PATH comes first, and a failing shell falls back to this p
   const { root, file } = tree(t);
   const saved = process.env.PATH;
   process.env.PATH = '/server/bin';
-  t.after(() => { process.env.PATH = saved; });
+  t.after(() => {
+    process.env.PATH = saved;
+  });
   const good = file(join(root, 'good-shell'), '#!/bin/sh\nprintf "startup noise\\n__TEAM_DASHBOARD_PATH__/user/bin:/usr/bin\\n"\n');
   const ok = discover(undefined, good);
   assert.deepEqual(ok.directories.slice(0, 3), ['/user/bin', '/usr/bin', '/server/bin']);
@@ -194,7 +204,8 @@ test('the login shell PATH comes first, and a failing shell falls back to this p
 
 test('an unreadable directory keeps the rest of the inventory and says so', (t) => {
   const { root, file } = tree(t);
-  const locked = join(root, 'locked'), open = join(root, 'open');
+  const locked = join(root, 'locked'),
+    open = join(root, 'open');
   mkdirSync(locked);
   mkdirSync(open);
   file(join(open, 'visible'));
@@ -205,17 +216,29 @@ test('an unreadable directory keeps the rest of the inventory and says so', (t) 
   } finally {
     chmodSync(locked, 0o755); // before the scratch directory is removed
   }
-  assert.deepEqual(data.tools.map((tool) => tool.name), ['visible']);
+  assert.deepEqual(
+    data.tools.map((tool) => tool.name),
+    ['visible'],
+  );
   assert.ok(data.warnings.some((w) => w.includes(locked)) || process.getuid?.() === 0);
 });
 
 test('a login shell that cannot even be found falls back to this process PATH with a warning', (t) => {
   const saved = process.env.PATH;
   process.env.PATH = '/server/bin';
-  t.after(() => { process.env.PATH = saved; });
-  const data = discover(undefined, () => { throw new Error('cannot resolve the effective user'); });
+  t.after(() => {
+    process.env.PATH = saved;
+  });
+  const data = discover(undefined, () => {
+    throw new Error('cannot resolve the effective user');
+  });
   assert.deepEqual(data.directories, ['/server/bin']);
   assert.ok(data.warnings.length > 0);
   // With an explicit PATH the shell is never needed, so nothing about it can fail the call.
-  assert.deepEqual(discover('/server/bin', () => { throw new Error('never called'); }).warnings, []);
+  assert.deepEqual(
+    discover('/server/bin', () => {
+      throw new Error('never called');
+    }).warnings,
+    [],
+  );
 });

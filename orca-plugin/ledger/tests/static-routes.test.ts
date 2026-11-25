@@ -27,7 +27,9 @@ function bundle(t: import('node:test').TestContext) {
 }
 async function serveApi(t: import('node:test').TestContext, root: string) {
   process.env.AGENT_DASHBOARD_WEB = root;
-  t.after(() => { delete process.env.AGENT_DASHBOARD_WEB; });
+  t.after(() => {
+    delete process.env.AGENT_DASHBOARD_WEB;
+  });
   const api = createApi(join(root, '..', 'ledger'));
   const server = createServer((req, res) => void api(req, res));
   server.listen(0, '127.0.0.1');
@@ -39,13 +41,16 @@ async function serveApi(t: import('node:test').TestContext, root: string) {
   });
   const { port } = server.address() as { port: number };
   // http.request keeps the path exactly as given (fetch may normalize it)
-  const get = (path: string) => new Promise<{ status: number; body: string }>((resolve, reject) => {
-    request({ port, host: '127.0.0.1', path }, (res) => {
-      let body = '';
-      res.on('data', (d) => (body += d));
-      res.on('end', () => resolve({ status: res.statusCode!, body }));
-    }).on('error', reject).end();
-  });
+  const get = (path: string) =>
+    new Promise<{ status: number; body: string }>((resolve, reject) => {
+      request({ port, host: '127.0.0.1', path }, (res) => {
+        let body = '';
+        res.on('data', (d) => (body += d));
+        res.on('end', () => resolve({ status: res.statusCode!, body }));
+      })
+        .on('error', reject)
+        .end();
+    });
   return { get, routes: api.routes };
 }
 
@@ -63,7 +68,9 @@ test('a linked index.html is refused at startup, so the root alias never serves 
   rmSync(join(root, 'index.html'));
   symlinkSync(join(outside, 'page.html'), join(root, 'index.html'));
   process.env.AGENT_DASHBOARD_WEB = root;
-  t.after(() => { delete process.env.AGENT_DASHBOARD_WEB; });
+  t.after(() => {
+    delete process.env.AGENT_DASHBOARD_WEB;
+  });
   assert.throws(() => webRoot(), /AGENT_DASHBOARD_WEB must contain index.html/);
   assert.throws(() => createApi(join(root, '..', 'ledger')), /must contain index.html/);
 });
@@ -88,7 +95,15 @@ test('over HTTP those entries answer 404 and nothing outside the bundle is retur
   symlinkSync(join(outside, 'secret.js'), join(root, 'js', 'linked.js'));
   symlinkSync(outside, join(root, 'linked-dir'));
   const { get } = await serveApi(t, root);
-  for (const path of ['/.hidden.js', '/js/linked.js', '/linked-dir/secret.js', '/linked-dir/page.html', '/../outside/secret.js', '/%2e%2e/outside/secret.js', '/js/%2e%2e/%2e%2e/outside/secret.js']) {
+  for (const path of [
+    '/.hidden.js',
+    '/js/linked.js',
+    '/linked-dir/secret.js',
+    '/linked-dir/page.html',
+    '/../outside/secret.js',
+    '/%2e%2e/outside/secret.js',
+    '/js/%2e%2e/%2e%2e/outside/secret.js',
+  ]) {
     const answer = await get(path);
     assert.equal(answer.status, 404, path);
     assert.doesNotMatch(answer.body, /do not serve|outside/, path);
@@ -123,14 +138,14 @@ test('assets with spaces and non-ASCII names are reachable under their percent-e
   mkdirSync(join(root, 'ảnh đẹp'));
   writeFileSync(join(root, 'ảnh đẹp', 'tệp lạ.js'), 'export const unicode = 1');
   writeFileSync(join(root, 'with space.css'), 'body { color: red }');
-  writeFileSync(join(root, 'a+b(1)\'.js'), 'export const odd = 1');
+  writeFileSync(join(root, "a+b(1)'.js"), 'export const odd = 1');
   const keys = [...scanBundle(root).keys()];
   assert.ok(keys.includes('/with%20space.css'));
   assert.ok(keys.includes('/%E1%BA%A3nh%20%C4%91%E1%BA%B9p/t%E1%BB%87p%20l%E1%BA%A1.js'));
   const { get } = await serveApi(t, root);
   assert.equal((await get('/with%20space.css')).status, 200);
   assert.match((await get('/%E1%BA%A3nh%20%C4%91%E1%BA%B9p/t%E1%BB%87p%20l%E1%BA%A1.js')).body, /unicode/);
-  assert.equal((await get('/a%2Bb(1)\'.js')).status, 200);
+  assert.equal((await get("/a%2Bb(1)'.js")).status, 200);
   assert.equal((await get('/with space.css'.replace(' ', '%20'))).status, 200);
   assert.equal((await get('/missing%20file.css')).status, 404);
 });
@@ -139,7 +154,13 @@ test('an unreadable file is a request failure, not a crash', async (t) => {
   const { root } = bundle(t);
   const { get } = await serveApi(t, root);
   chmodSync(join(root, 'js', 'app.js'), 0o000);
-  t.after(() => { try { chmodSync(join(root, 'js', 'app.js'), 0o644); } catch { /* the scratch directory is already gone */ } });
+  t.after(() => {
+    try {
+      chmodSync(join(root, 'js', 'app.js'), 0o644);
+    } catch {
+      /* the scratch directory is already gone */
+    }
+  });
   assert.equal((await get('/js/app.js')).status, process.getuid?.() === 0 ? 200 : 500);
   assert.equal((await get('/')).status, 200);
 });
@@ -151,7 +172,14 @@ test('a registered asset that becomes a FIFO is refused without blocking, over H
   assert.equal((await get('/js/app.js')).status, 200);
   rmSync(join(root, 'js', 'app.js'));
   execFileSync('mkfifo', [join(root, 'js', 'app.js')]); // a plain open(O_RDONLY) of this would wait for a writer forever
-  const settled = (promise: Promise<unknown>) => Promise.race([promise.then(() => 'settled', () => 'settled'), new Promise((done) => setTimeout(() => done('blocked'), 3000))]);
+  const settled = (promise: Promise<unknown>) =>
+    Promise.race([
+      promise.then(
+        () => 'settled',
+        () => 'settled',
+      ),
+      new Promise((done) => setTimeout(() => done('blocked'), 3000)),
+    ]);
   assert.equal(await settled(readAsset(root, asset)), 'settled');
   await assert.rejects(readAsset(root, asset), /not a regular file/);
   const answer = await Promise.race([get('/js/app.js'), new Promise<{ status: number }>((done) => setTimeout(() => done({ status: -1 }), 3000))]);

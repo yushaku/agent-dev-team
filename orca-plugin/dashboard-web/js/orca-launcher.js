@@ -10,8 +10,12 @@ export const MARKER = /<meta\s+name="team-dashboard"\s+content="page"\s*\/?>/i
 /** @param {{ fetch: typeof fetch, doc: { getElementById(id: string): any, open(): void, write(html: string): void, close(): void },
  *  target: { __orcaView?: string }, view: string, page?: string }} env */
 export function launch({ fetch, doc, target, view, page = 'index.html' }) {
-  const text = doc.getElementById('state'), retry = doc.getElementById('retry')
-  const show = (message, failed) => { text.textContent = message; retry.hidden = !failed }
+  const text = doc.getElementById('state'),
+    retry = doc.getElementById('retry')
+  const show = (message, failed) => {
+    text.textContent = message
+    retry.hidden = !failed
+  }
   async function attempt() {
     show('Đang tải dashboard…', false)
     try {
@@ -28,6 +32,8 @@ export function launch({ fetch, doc, target, view, page = 'index.html' }) {
       show('Không tải được dashboard (' + (e && e.message ? e.message : 'lỗi') + ').', true)
     }
   }
-  retry.onclick = () => { void attempt() }
+  retry.onclick = () => {
+    void attempt()
+  }
   return attempt()
 }

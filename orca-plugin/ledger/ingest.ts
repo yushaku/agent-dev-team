@@ -22,7 +22,7 @@ class Runner {
   timer?: NodeJS.Timeout;
   debounce?: NodeJS.Timeout;
   /** Why an event pass is wanted, and when that was first asked; cleared when it is dispatched. */
-  wanted?: { reason: string, since: number };
+  wanted?: { reason: string; since: number };
   inflight?: Promise<void>;
   periodicAt = 0;
   lastStart = 0;
@@ -31,29 +31,48 @@ class Runner {
   status: Status;
   constructor(o: Settings) {
     this.o = o;
-    this.status = { host: o.host, home: o.home, pid: process.pid, node: process.version, startedAt: new Date().toISOString(),
-      lock: 'waiting', running: false, passes: 0 };
+    this.status = {
+      host: o.host,
+      home: o.home,
+      pid: process.pid,
+      node: process.version,
+      startedAt: new Date().toISOString(),
+      lock: 'waiting',
+      running: false,
+      passes: 0,
+    };
   }
-  emit() { this.o.onState?.(this.status); }
+  emit() {
+    this.o.onState?.(this.status);
+  }
   /** The periodic pass keeps its own fixed deadlines: event passes neither move nor replace it. */
   armPeriodic() {
     if (this.stopped) return;
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => {
-      this.periodicAt += this.o.intervalMs;
-      if (this.periodicAt <= Date.now()) this.periodicAt = Date.now() + this.o.intervalMs; // slept or stalled past several periods
-      this.armPeriodic();
-      void this.pass('interval');
-    }, Math.max(0, this.periodicAt - Date.now()));
+    this.timer = setTimeout(
+      () => {
+        this.periodicAt += this.o.intervalMs;
+        if (this.periodicAt <= Date.now()) this.periodicAt = Date.now() + this.o.intervalMs; // slept or stalled past several periods
+        this.armPeriodic();
+        void this.pass('interval');
+      },
+      Math.max(0, this.periodicAt - Date.now()),
+    );
     this.timer.unref?.();
   }
   /** One pass at most in flight; a request during a pass queues exactly one more. */
   pass(reason: string): Promise<void> {
     if (this.stopped) return Promise.resolve();
-    if (this.inflight) { this.again = true; return this.inflight; }
+    if (this.inflight) {
+      this.again = true;
+      return this.inflight;
+    }
     this.inflight = this.run(reason).finally(() => {
       this.inflight = undefined;
-      if (this.again && !this.stopped) { this.again = false; void this.pass('queued'); }
+      if (this.again && !this.stopped) {
+        this.again = false;
+        void this.pass('queued');
+      }
       this.armEvent(); // an event wanted during the pass is judged against the newest pass start
     });
     return this.inflight;
@@ -66,51 +85,79 @@ class Runner {
   armEvent() {
     if (!this.wanted || this.debounce || this.stopped || this.inflight) return;
     const at = Math.max(this.wanted.since + this.o.debounceMs, this.lastStart + this.o.minGapMs);
-    this.debounce = setTimeout(() => {
-      this.debounce = undefined;
-      if (!this.wanted || this.stopped) return;
-      if (this.inflight || Date.now() < this.lastStart + this.o.minGapMs) return void this.armEvent(); // the pass's end re-arms
-      const { reason } = this.wanted;
-      this.wanted = undefined;
-      void this.pass(reason);
-    }, Math.max(0, at - Date.now()));
+    this.debounce = setTimeout(
+      () => {
+        this.debounce = undefined;
+        if (!this.wanted || this.stopped) return;
+        if (this.inflight || Date.now() < this.lastStart + this.o.minGapMs) return void this.armEvent(); // the pass's end re-arms
+        const { reason } = this.wanted;
+        this.wanted = undefined;
+        void this.pass(reason);
+      },
+      Math.max(0, at - Date.now()),
+    );
     this.debounce.unref?.();
   }
   async run(reason: string) {
-    const started = performance.now(), startedAt = new Date().toISOString();
+    const started = performance.now(),
+      startedAt = new Date().toISOString();
     this.lastStart = Date.now();
     try {
       if (!this.lock) {
         const got = acquire(this.o.home, this.o.host);
         if ('by' in got) {
-          this.status.lock = 'waiting'; this.status.lockedBy = got.by;
+          this.status.lock = 'waiting';
+          this.status.lockedBy = got.by;
           this.emit();
           return;
         }
-        this.lock = got.held; this.status.lock = 'held'; delete this.status.lockedBy;
+        this.lock = got.held;
+        this.status.lock = 'held';
+        delete this.status.lockedBy;
       }
       this.store ??= new Store(this.o.home);
-      this.status.running = true; this.emit();
+      this.status.running = true;
+      this.emit();
       const timings: Record<string, number> = {};
       const errors = await cycle(this.store, this.o.env, timings);
       const pass: Pass = { reason, startedAt, finishedAt: new Date().toISOString(), ms: Math.round(performance.now() - started), timings, errors };
-      this.status.passes++; this.status.lastPass = pass; delete this.status.lastError;
+      this.status.passes++;
+      this.status.lastPass = pass;
+      delete this.status.lastError;
       this.status.counts = this.counts();
       this.o.onPass?.(pass);
     } catch (error) {
       this.status.lastError = String(error);
-      this.status.lastPass = { reason, startedAt, finishedAt: new Date().toISOString(), ms: Math.round(performance.now() - started), timings: {}, errors: [String(error)] };
+      this.status.lastPass = {
+        reason,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        ms: Math.round(performance.now() - started),
+        timings: {},
+        errors: [String(error)],
+      };
       this.o.onPass?.(this.status.lastPass);
     } finally {
-      this.status.running = false; this.emit();
+      this.status.running = false;
+      this.emit();
     }
   }
   counts(): NonNullable<Status['counts']> {
-    const db = this.store!.db, sources: Record<string, number> = {};
+    const db = this.store!.db,
+      sources: Record<string, number> = {};
     for (const row of db.prepare('SELECT kind, COUNT(*) AS n FROM sources GROUP BY kind').all()) sources[String(row.kind)] = Number(row.n);
-    const size = (name: string) => { try { return statSync(join(this.o.home, name)).size; } catch { return 0; } };
-    return { sources, blobs: Number(db.prepare('SELECT COUNT(*) AS n FROM archive.blobs').get()!.n),
-      bytes: { ledger: size('ledger.sqlite'), archive: size('archive.sqlite') } };
+    const size = (name: string) => {
+      try {
+        return statSync(join(this.o.home, name)).size;
+      } catch {
+        return 0;
+      }
+    };
+    return {
+      sources,
+      blobs: Number(db.prepare('SELECT COUNT(*) AS n FROM archive.blobs').get()!.n),
+      bytes: { ledger: size('ledger.sqlite'), archive: size('archive.sqlite') },
+    };
   }
 }
 
@@ -119,9 +166,15 @@ export function start(options: Options = {}): Status {
   if (stopping) throw new Error('ingest is still stopping; await stop() first');
   if (current) return current.status;
   const env = options.env ?? process.env;
-  const runner = new Runner({ ...options, env, host: options.host ?? 'node', intervalMs: options.intervalMs ?? 60_000,
-    debounceMs: options.debounceMs ?? 1_500, minGapMs: options.minGapMs ?? 5_000,
-    home: options.home ?? env.AGENT_LEDGER_HOME ?? join(homedir(), '.agents/ledger') });
+  const runner = new Runner({
+    ...options,
+    env,
+    host: options.host ?? 'node',
+    intervalMs: options.intervalMs ?? 60_000,
+    debounceMs: options.debounceMs ?? 1_500,
+    minGapMs: options.minGapMs ?? 5_000,
+    home: options.home ?? env.AGENT_LEDGER_HOME ?? join(homedir(), '.agents/ledger'),
+  });
   current = runner;
   runner.periodicAt = Date.now() + runner.o.intervalMs;
   runner.armPeriodic();
@@ -135,24 +188,36 @@ export function trigger(reason = 'trigger') {
   r.wanted ??= { reason, since: Date.now() };
   r.armEvent();
 }
-export function status(): Status | undefined { return current?.status; }
+export function status(): Status | undefined {
+  return current?.status;
+}
 /** Stops the loop, waits for a pass in flight, closes the store, then releases the lock. Every caller gets the same promise. */
 export function stop(): Promise<void> {
   if (stopping) return stopping;
   const r = current;
   if (!r) return Promise.resolve();
   r.stopped = true;
-  clearTimeout(r.timer); clearTimeout(r.debounce);
+  clearTimeout(r.timer);
+  clearTimeout(r.debounce);
   stopping = (async () => {
     await r.inflight?.catch(() => {});
-    try { r.store?.db.close(); } finally { r.lock?.release(); }
-    r.status.lock = 'stopped'; r.emit();
-  })().finally(() => { current = undefined; stopping = undefined; });
+    try {
+      r.store?.db.close();
+    } finally {
+      r.lock?.release();
+    }
+    r.status.lock = 'stopped';
+    r.emit();
+  })().finally(() => {
+    current = undefined;
+    stopping = undefined;
+  });
   return stopping;
 }
 /** One pass under the lock; resolves {by} instead of running when another host holds it. */
 export async function once(options: Options = {}) {
-  const env = options.env ?? process.env, home = options.home ?? env.AGENT_LEDGER_HOME ?? join(homedir(), '.agents/ledger');
+  const env = options.env ?? process.env,
+    home = options.home ?? env.AGENT_LEDGER_HOME ?? join(homedir(), '.agents/ledger');
   const got = acquire(home, options.host ?? 'node-once');
   if ('by' in got) return { by: got.by };
   let store: Store | undefined;
@@ -161,7 +226,13 @@ export async function once(options: Options = {}) {
     const timings: Record<string, number> = {};
     const errors = await cycle(store, env, timings);
     return { timings, errors };
-  } finally { try { store?.db.close(); } finally { got.held.release(); } }
+  } finally {
+    try {
+      store?.db.close();
+    } finally {
+      got.held.release();
+    }
+  }
 }
 
 const _shape: IngestApi = { start, stop, status, trigger };

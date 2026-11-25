@@ -1,7 +1,7 @@
 /* Skill side panel: a click on any [data-skill] opens #sheet with the SKILL.md body from /api/team/skill. */
 import { esc, lex, shift, parse, decorate } from "./md.js";
 
-const $ = s => document.querySelector(s);
+const $ = (s) => document.querySelector(s);
 const ORIGIN = {
   own: ["info", "Tự tạo"],
   dl: ["neutral", "Tải về"],
@@ -14,7 +14,10 @@ async function getJSON(url) {
   if (!r.ok) {
     /* A refusal may explain itself ({error}): the panel's worker says when a document is too large for it. Shown as text. */
     let reason = "";
-    try { const body = await r.json(); if (body && typeof body.error === "string") reason = body.error; } catch (e) {}
+    try {
+      const body = await r.json();
+      if (body && typeof body.error === "string") reason = body.error;
+    } catch (e) {}
     throw Object.assign(new Error(reason || url + ": HTTP " + r.status), { status: r.status });
   }
   return r.json();
@@ -33,23 +36,37 @@ function mdBlock(tokens) {
 function kv(pairs) {
   const dl = document.createElement("dl");
   dl.className = "kv";
-  dl.innerHTML = pairs.filter(p => p[1]).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("");
+  dl.innerHTML = pairs
+    .filter((p) => p[1])
+    .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`)
+    .join("");
   return dl;
 }
 
 function openSheet(title, build) {
-  const dlg = $("#sheet"), body = $("#sheet-body");
+  const dlg = $("#sheet"),
+    body = $("#sheet-body");
   $("#sheet-title").textContent = title;
   body.replaceChildren(Object.assign(document.createElement("p"), { className: "muted", textContent: "Đang tải" }));
   if (!dlg.open) dlg.showModal();
   dlg.scrollTop = 0;
   $("#sheet-close").focus();
-  Promise.resolve().then(build).then(nodes => { if ($("#sheet-title").textContent === title) body.replaceChildren(...nodes); })
-    .catch(e => {
+  Promise.resolve()
+    .then(build)
+    .then((nodes) => {
+      if ($("#sheet-title").textContent === title) body.replaceChildren(...nodes);
+    })
+    .catch((e) => {
       const nodes = [Object.assign(document.createElement("p"), { className: "muted", textContent: "Lỗi: " + e.message })];
       /* Inside Orca's panel a document the panel cannot carry (HTTP 413) can still be read in the browser. */
       if (e.status === 413 && globalThis.orca?.shell?.openExternal)
-        nodes.push(Object.assign(document.createElement("button"), { type: "button", textContent: "Mở trên trình duyệt ↗", onclick: () => globalThis.orca.shell.openExternal(DASHBOARD) }));
+        nodes.push(
+          Object.assign(document.createElement("button"), {
+            type: "button",
+            textContent: "Mở trên trình duyệt ↗",
+            onclick: () => globalThis.orca.shell.openExternal(DASHBOARD),
+          }),
+        );
       body.replaceChildren(...nodes);
     });
 }
@@ -58,29 +75,36 @@ function openSkill(name) {
   openSheet(name, async () => {
     const s = await getJSON("/api/team/skill?name=" + encodeURIComponent(name));
     const [cls, lab] = ORIGIN[s.origin] || ORIGIN.missing;
-    const out = [kv([
-      ["Nguồn gốc", `<span class="chip ${cls}">${esc(lab)}</span> <span class="muted">${esc(s.source)}</span>`],
-      ["Mô tả", /^[>|][+-]?$/.test(s.description || "") ? "" : esc(s.description || "")],  // folded YAML scalar, no text on the line
-      ["Đường dẫn", s.path ? `<code>${esc(s.path)}</code>` : ""],
-      ["references/", s.refs.length ? s.refs.map(f => `<code>${esc(f)}</code>`).join(" ") : ""],
-    ])];
+    const out = [
+      kv([
+        ["Nguồn gốc", `<span class="chip ${cls}">${esc(lab)}</span> <span class="muted">${esc(s.source)}</span>`],
+        ["Mô tả", /^[>|][+-]?$/.test(s.description || "") ? "" : esc(s.description || "")], // folded YAML scalar, no text on the line
+        ["Đường dẫn", s.path ? `<code>${esc(s.path)}</code>` : ""],
+        ["references/", s.refs.length ? s.refs.map((f) => `<code>${esc(f)}</code>`).join(" ") : ""],
+      ]),
+    ];
     if (s.body) {
-      out.push(mdBlock(shift(lex(s.body), d => d + 2)));  // # -> h3, ## -> h4, ### -> h5
+      out.push(mdBlock(shift(lex(s.body), (d) => d + 2))); // # -> h3, ## -> h4, ### -> h5
     } else {
-      out.push(Object.assign(document.createElement("div"), { className: "callout warn", innerHTML: `<p><span class="callout-label">Không có nội dung</span>Skill này không có trong shared hub${s.path ? `; bản gốc ở <code>${esc(s.path)}</code>` : ""}. Agent ngoài Hermes không đọc được nó theo tên.</p>` }));
+      out.push(
+        Object.assign(document.createElement("div"), {
+          className: "callout warn",
+          innerHTML: `<p><span class="callout-label">Không có nội dung</span>Skill này không có trong shared hub${s.path ? `; bản gốc ở <code>${esc(s.path)}</code>` : ""}. Agent ngoài Hermes không đọc được nó theo tên.</p>`,
+        }),
+      );
     }
     return out;
   });
 }
 
 export function initSheet() {
-  document.addEventListener("click", e => {
+  document.addEventListener("click", (e) => {
     const sk = e.target.closest("[data-skill]");
     if (sk) openSkill(sk.dataset.skill);
   });
   const dlg = $("#sheet");
   $("#sheet-close").addEventListener("click", () => dlg.close());
-  dlg.addEventListener("click", e => {
+  dlg.addEventListener("click", (e) => {
     if (e.target !== dlg) return;
     const r = dlg.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dlg.close();

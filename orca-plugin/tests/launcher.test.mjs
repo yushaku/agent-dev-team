@@ -6,9 +6,15 @@ import { launch, MARKER } from '../dashboard-web/js/orca-launcher.js'
 
 const page = '<!doctype html><html><head><meta name="team-dashboard" content="page"></head><body>dashboard</body></html>'
 function stage() {
-  const state = { textContent: 'Đang tải dashboard…' }, retry = { hidden: true, onclick: null }
+  const state = { textContent: 'Đang tải dashboard…' },
+    retry = { hidden: true, onclick: null }
   const written = []
-  const doc = { getElementById: (id) => (id === 'state' ? state : retry), open: () => written.push('open'), write: (html) => written.push(html), close: () => written.push('close') }
+  const doc = {
+    getElementById: (id) => (id === 'state' ? state : retry),
+    open: () => written.push('open'),
+    write: (html) => written.push(html),
+    close: () => written.push('close'),
+  }
   const target = {}
   return { state, retry, written, doc, target }
 }
@@ -32,7 +38,14 @@ test('a non-success response leaves the launcher in place with a message and a r
 
 test('a rejected request does the same, and a page that is not the dashboard is refused', async () => {
   const s = stage()
-  await launch({ fetch: async () => { throw new TypeError('failed to fetch') }, doc: s.doc, target: s.target, view: 'tk-agents-tools' })
+  await launch({
+    fetch: async () => {
+      throw new TypeError('failed to fetch')
+    },
+    doc: s.doc,
+    target: s.target,
+    view: 'tk-agents-tools',
+  })
   assert.deepEqual(s.written, [])
   assert.match(s.state.textContent, /failed to fetch/)
   assert.equal(s.retry.hidden, false)

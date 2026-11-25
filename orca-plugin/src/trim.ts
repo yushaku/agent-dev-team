@@ -5,10 +5,19 @@ type Json = Record<string, unknown>
 
 /** Top-level keys the Tasks and Agents tools views read (dash.js, charts.js, tabs/{overall,roles,role-skills,repos,search,sessions,skills,tokens}.js). */
 const KEEP = [
-  'generated_at', 'days', 'range_start', 'dates', 'sessions', 'orca', 'roles_cfg', 'known_roles',
-  'attribution', 'copilot_dirs',
+  'generated_at',
+  'days',
+  'range_start',
+  'dates',
+  'sessions',
+  'orca',
+  'roles_cfg',
+  'known_roles',
+  'attribution',
+  'copilot_dirs',
   // the Agents tools view: RTK by command and the installed skills (a few KB, sessions carry the rest)
-  'rtk', 'skills_installed'
+  'rtk',
+  'skills_installed',
 ]
 /** Per-session fields only the Runs tab or nothing reads. */
 const SESSION_DROP = ['feature_segments', 'ctx', 'cwd', 'models']
@@ -40,8 +49,8 @@ export function trim(data: Json, bodyCap: number): Json {
         const { body, ...rest } = e
         const short = cut(body, bodyCap)
         return short === undefined ? rest : { ...rest, body: short }
-      })
-    }))
+      }),
+    })),
   }
   // The repo filter (dash.js) also lists repos of feature runs: keep their names, not the records.
   const repos = [...new Set((((data.features as Json)?.runs as Json[]) || []).map((r) => r.repo).filter(Boolean))]

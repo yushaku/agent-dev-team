@@ -7,16 +7,16 @@ prints wall time in milliseconds for each source kind to stdout, writes source e
 Ingest lives in `ingest.ts` (`start(options)`, `trigger()`, `stop()`, `once()`); `daemon.ts` is the launchd entry and the Orca plugin worker (`orca-plugin/src/ledger-host.ts`) is the other host. Only one host ingests into a ledger directory: the lock is an exclusive SQLite lock on `ingest.lock.db` that the OS drops when the holder dies (a second connection in the same process is refused too, so a reload cannot overlap), held from before the databases open until after they close; `ingest.lock.info` only names the holder. A second host waits and retries each interval; `--once` exits 75 with a message. The periodic pass keeps a fixed 60 s schedule; passes asked for by events are coalesced (1.5 s) and start at least 5 s apart. An existing ledger directory is tightened to 0700 and its files to 0600 (a directory owned by someone else is refused). `http.ts` is a small loopback route server (the plugin mounts the API next to `/health` on 4747; `serve()` answers 403 to a non-loopback `Host` on every route). Code runs on Node 24 (Orca's worker) and Node 26.
 Run the tests as the plugin README says ("Verify").
 
-| Environment variable | Default | Input |
-| --- | --- | --- |
-| AGENT_LEDGER_HOME | ~/.agents/ledger | Private output directory |
-| AGENT_LEDGER_CLAUDE | ~/.claude/projects | Recursive *.jsonl |
-| AGENT_LEDGER_CODEX | ~/.codex/sessions | Recursive *.jsonl |
-| AGENT_LEDGER_COPILOT | ~/.copilot/session-state | */events.jsonl and */workspace.yaml |
-| AGENT_LEDGER_JCODE | ~/.jcode/sessions | *.json |
-| AGENT_LEDGER_HERMES | ~/.hermes/state.db | sessions, messages, system_prompts and session_model_usage |
-| AGENT_LEDGER_RTK | ~/Library/Application Support/rtk/history.db | commands |
-| AGENT_LEDGER_ORCA | orca on PATH | CLI executable |
+| Environment variable | Default                                      | Input                                                      |
+| -------------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| AGENT_LEDGER_HOME    | ~/.agents/ledger                             | Private output directory                                   |
+| AGENT_LEDGER_CLAUDE  | ~/.claude/projects                           | Recursive *.jsonl                                          |
+| AGENT_LEDGER_CODEX   | ~/.codex/sessions                            | Recursive *.jsonl                                          |
+| AGENT_LEDGER_COPILOT | ~/.copilot/session-state                     | */events.jsonl and */workspace.yaml                        |
+| AGENT_LEDGER_JCODE   | ~/.jcode/sessions                            | *.json                                                     |
+| AGENT_LEDGER_HERMES  | ~/.hermes/state.db                           | sessions, messages, system_prompts and session_model_usage |
+| AGENT_LEDGER_RTK     | ~/Library/Application Support/rtk/history.db | commands                                                   |
+| AGENT_LEDGER_ORCA    | orca on PATH                                 | CLI executable                                             |
 
 Use absolute paths for overrides. Choose a private output directory outside
 the inputs. Raw archives contain complete conversations and command lines.

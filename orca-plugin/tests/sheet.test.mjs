@@ -4,20 +4,56 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 class Node_ {
-  constructor(tag) { this.tag = tag; this.children = []; this.className = ''; this.textContent = ''; this.innerHTML = ''; this.listeners = {}; this.dataset = {} }
-  replaceChildren(...nodes) { this.children = nodes }
-  append(...nodes) { this.children.push(...nodes) }
-  addEventListener(type, fn) { this.listeners[type] = fn }
+  constructor(tag) {
+    this.tag = tag
+    this.children = []
+    this.className = ''
+    this.textContent = ''
+    this.innerHTML = ''
+    this.listeners = {}
+    this.dataset = {}
+  }
+  replaceChildren(...nodes) {
+    this.children = nodes
+  }
+  append(...nodes) {
+    this.children.push(...nodes)
+  }
+  addEventListener(type, fn) {
+    this.listeners[type] = fn
+  }
   focus() {}
-  querySelectorAll() { return [] }
+  querySelectorAll() {
+    return []
+  }
 }
 const byId = new Map()
-const el = (id) => { if (!byId.has(id)) byId.set(id, Object.assign(new Node_('div'), { id })); return byId.get(id) }
+const el = (id) => {
+  if (!byId.has(id)) byId.set(id, Object.assign(new Node_('div'), { id }))
+  return byId.get(id)
+}
 let click
 globalThis.document = {
-  querySelector: (selector) => { const e = el(selector.slice(1)); if (selector === '#sheet') Object.assign(e, { open: e.open ?? false, showModal() { this.open = true }, close() { this.open = false }, scrollTop: 0, getBoundingClientRect: () => ({}) }); return e },
+  querySelector: (selector) => {
+    const e = el(selector.slice(1))
+    if (selector === '#sheet')
+      Object.assign(e, {
+        open: e.open ?? false,
+        showModal() {
+          this.open = true
+        },
+        close() {
+          this.open = false
+        },
+        scrollTop: 0,
+        getBoundingClientRect: () => ({}),
+      })
+    return e
+  },
   createElement: (tag) => new Node_(tag),
-  addEventListener: (type, fn) => { if (type === 'click') click = fn },
+  addEventListener: (type, fn) => {
+    if (type === 'click') click = fn
+  },
 }
 const { initSheet } = await import('../dashboard-web/js/sheet.js')
 initSheet()
@@ -30,17 +66,28 @@ const open = async (name) => {
 const refusal = (status, error) => ({ ok: false, status, json: async () => (error === undefined ? { throws: true } : { error }) })
 
 test('a skill document is shown in the sheet', async () => {
-  globalThis.fetch = async (url) => ({ ok: true, status: 200, json: async () => ({ origin: 'own', source: 'team', description: 'Builds', path: '~/x/SKILL.md', refs: [], body: '# Builder\n\ntext' }) })
+  globalThis.fetch = async (url) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ origin: 'own', source: 'team', description: 'Builds', path: '~/x/SKILL.md', refs: [], body: '# Builder\n\ntext' }),
+  })
   const nodes = await open('team-builder')
   assert.equal(el('sheet-title').textContent, 'team-builder')
   assert.ok(nodes.length >= 2)
   assert.equal(el('sheet').open, true)
 })
 
-test('a too-large document shows the worker\'s message as text, with a way to read it in the browser', async () => {
+test("a too-large document shows the worker's message as text, with a way to read it in the browser", async () => {
   const message = 'Tài liệu của skill quá lớn để mở trong panel (1200123 byte, tối đa 900000). Mở trên trình duyệt.'
   const opened = []
-  globalThis.orca = { shell: { openExternal: (url) => { opened.push(url); return Promise.resolve({ opened: true }) } } }
+  globalThis.orca = {
+    shell: {
+      openExternal: (url) => {
+        opened.push(url)
+        return Promise.resolve({ opened: true })
+      },
+    },
+  }
   globalThis.fetch = async () => refusal(413, message)
   const nodes = await open('big-skill')
   assert.equal(nodes[0].textContent, 'Lỗi: ' + message, 'the message is text, not HTML')
@@ -60,7 +107,11 @@ test('an HTML-looking refusal text is shown literally, other refusals have no br
   globalThis.fetch = async () => refusal(400, 'bad name')
   nodes = await open('..')
   assert.equal(nodes[0].textContent, 'Lỗi: bad name')
-  assert.equal(nodes.some((n) => n.tag === 'button'), false, 'only a too-large document gets the browser button')
+  assert.equal(
+    nodes.some((n) => n.tag === 'button'),
+    false,
+    'only a too-large document gets the browser button',
+  )
   globalThis.fetch = async () => refusal(503, undefined)
   nodes = await open('x')
   assert.match(nodes[0].textContent, /\/api\/team\/skill\?name=x: HTTP 503/)
@@ -71,5 +122,8 @@ test('outside Orca (no bridge) a too-large refusal shows the message and no butt
   globalThis.fetch = async () => refusal(413, 'quá lớn')
   const nodes = await open('big')
   assert.equal(nodes[0].textContent, 'Lỗi: quá lớn')
-  assert.equal(nodes.some((n) => n.tag === 'button'), false)
+  assert.equal(
+    nodes.some((n) => n.tag === 'button'),
+    false,
+  )
 })

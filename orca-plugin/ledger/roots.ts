@@ -9,11 +9,8 @@ export function teamRoot() {
   return realpathSync(root);
 }
 export function webRoot() {
-  const root = resolve(
-    process.env.AGENT_DASHBOARD_WEB || fileURLToPath(new URL('../dashboard-web', import.meta.url)),
-  );
+  const root = resolve(process.env.AGENT_DASHBOARD_WEB || fileURLToPath(new URL('../dashboard-web', import.meta.url)));
   // lstat, not stat: a linked index.html is not an approved page
-  if (!lstatSync(join(root, 'index.html'), { throwIfNoEntry: false })?.isFile())
-    throw new Error('AGENT_DASHBOARD_WEB must contain index.html (' + root + ')');
+  if (!lstatSync(join(root, 'index.html'), { throwIfNoEntry: false })?.isFile()) throw new Error('AGENT_DASHBOARD_WEB must contain index.html (' + root + ')');
   return root;
 }

@@ -28,7 +28,10 @@ export default function activate(orca: OrcaWorkerApi): void {
     const doc = await skillDoc(String(name ?? ''))
     // One reply may not pass 1 MiB: say so specifically instead of letting the bridge fail it generically.
     const size = new TextEncoder().encode(JSON.stringify({ output: doc })).length
-    if (size > REPLY_LIMIT) throw Object.assign(new Error(`Tài liệu của skill quá lớn để mở trong panel (${size} byte, tối đa ${REPLY_LIMIT}). Mở trên trình duyệt.`), { code: 'too_large' })
+    if (size > REPLY_LIMIT)
+      throw Object.assign(new Error(`Tài liệu của skill quá lớn để mở trong panel (${size} byte, tối đa ${REPLY_LIMIT}). Mở trên trình duyệt.`), {
+        code: 'too_large',
+      })
     return doc
   })
   orca.panels.handle('tasks.chunk', async ({ id, index }) => {

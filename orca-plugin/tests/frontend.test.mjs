@@ -7,5 +7,13 @@ import { join } from 'node:path'
 
 test('the dashboard frontend tests pass (tests/frontend.impl.mjs)', () => {
   const run = spawnSync(process.execPath, ['--experimental-vm-modules', '--test', join(import.meta.dirname, 'frontend.impl.mjs')], { encoding: 'utf8' })
-  assert.equal(run.status, 0, run.stdout.split('\n').filter((l) => /^(✖|\s+(Assertion|Error)|not ok)/.test(l) || /^\s+at /.test(l)).slice(0, 40).join('\n') || run.stdout + run.stderr)
+  assert.equal(
+    run.status,
+    0,
+    run.stdout
+      .split('\n')
+      .filter((l) => /^(✖|\s+(Assertion|Error)|not ok)/.test(l) || /^\s+at /.test(l))
+      .slice(0, 40)
+      .join('\n') || run.stdout + run.stderr,
+  )
 })

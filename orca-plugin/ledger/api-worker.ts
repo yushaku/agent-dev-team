@@ -44,10 +44,7 @@ function cliTools() {
   }));
 }
 
-const snapshots = new Map<
-  number,
-  { revision: number; gitRevision: number; at: number; body: string; errors: number; lag: number }
->();
+const snapshots = new Map<number, { revision: number; gitRevision: number; at: number; body: string; errors: number; lag: number }>();
 const json = 'application/json',
   plain = 'text/plain';
 async function answer(url: string) {
@@ -85,9 +82,7 @@ async function answer(url: string) {
   const data = JSON.parse(snap.body);
   const result = pathname === '/api/agent/run' ? runDetail(data, q.get('id')) : summary(data, q);
   if (!result) return [404, plain, 'unknown run id'];
-  return q.get('format') === 'json'
-    ? [200, json, JSON.stringify(result)]
-    : [200, 'text/markdown; charset=utf-8', markdown(result)];
+  return q.get('format') === 'json' ? [200, json, JSON.stringify(result)] : [200, 'text/markdown; charset=utf-8', markdown(result)];
 }
 parentPort!.on('message', async ({ id, url }) => {
   try {

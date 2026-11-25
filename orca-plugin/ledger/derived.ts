@@ -45,18 +45,12 @@ function mergeFile(kind: string, old: string, fresh: string) {
   if (kind === 'jcode') {
     const a = JSON.parse(old),
       b = JSON.parse(fresh);
-    b.messages = union(a.messages || [], b.messages || [], (m: any) =>
-      m.id != null ? 'id:' + m.id : JSON.stringify(m),
-    );
+    b.messages = union(a.messages || [], b.messages || [], (m: any) => (m.id != null ? 'id:' + m.id : JSON.stringify(m)));
     return JSON.stringify(b);
   }
   if (fresh.startsWith(old)) return fresh;
   if (old.startsWith(fresh)) return old;
-  return (
-    union(old.replace(/\n$/, '').split('\n'), fresh.replace(/\n$/, '').split('\n'), (line) => line).join(
-      '\n',
-    ) + '\n'
-  );
+  return union(old.replace(/\n$/, '').split('\n'), fresh.replace(/\n$/, '').split('\n'), (line) => line).join('\n') + '\n';
 }
 
 export function projectionStatus({ db }: Store) {
@@ -115,21 +109,14 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
   const message = db.prepare('INSERT OR REPLACE INTO dashboard_hermes VALUES(?,?,?,?,?,?)');
   const sessionRows = db.prepare(`SELECT item,bytes FROM dashboard_hermes JOIN archive.blobs USING(hash)
     WHERE version=? AND source=? AND sid=? ORDER BY generation,item`);
-  const priorSession = db.prepare(
-    'SELECT sid FROM dashboard_hermes WHERE version=? AND source=? AND generation=? AND item=?',
-  );
+  const priorSession = db.prepare('SELECT sid FROM dashboard_hermes WHERE version=? AND source=? AND generation=? AND item=?');
   const directory = db.prepare("SELECT 1 FROM versions WHERE source=? AND generation=? AND item='directory'");
   function file(source, generation, endId?: number) {
-    const chunks =
-      endId === undefined ? parts.all(source, generation) : historicParts.all(source, generation, endId);
+    const chunks = endId === undefined ? parts.all(source, generation) : historicParts.all(source, generation, endId);
     return Buffer.concat(chunks.map((r) => Buffer.from(r.bytes as Uint8Array))).toString();
   }
   function sibling(path: string) {
-    return db
-      .prepare(
-        "SELECT id,generation FROM sources JOIN cursors ON sources.id=cursors.source WHERE kind='copilot' AND path=?",
-      )
-      .get(path);
+    return db.prepare("SELECT id,generation FROM sources JOIN cursors ON sources.id=cursors.source WHERE kind='copilot' AND path=?").get(path);
   }
   function parse(kind, path, source, generation) {
     const meta: Record<string, string> = Object.create(null);
@@ -147,43 +134,23 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
     try {
       let s = parseFile(kind, path, bytes, meta);
       let sid = s.id;
-      if (
-        (kind === 'codex' && sid === basename(path, '.jsonl') && !/"session_meta"/.test(bytes)) ||
-        (kind === 'claude' && !s.sid)
-      ) {
+      if ((kind === 'codex' && sid === basename(path, '.jsonl') && !/"session_meta"/.test(bytes)) || (kind === 'claude' && !s.sid)) {
         sid = String(
           db
-            .prepare(
-              'SELECT sid FROM dashboard_files WHERE version=? AND source=? AND generation<? ORDER BY generation DESC LIMIT 1',
-            )
+            .prepare('SELECT sid FROM dashboard_files WHERE version=? AND source=? AND generation<? ORDER BY generation DESC LIMIT 1')
             .get(version, source, generation)?.sid ?? sid,
         );
       }
-      const previous = db
-        .prepare('SELECT sid FROM dashboard_files WHERE version=? AND source=? AND generation=?')
-        .get(version, source, generation);
-      const end = Number(
-        db
-          .prepare('SELECT max(id) AS id FROM ingest_log WHERE source=? AND generation=?')
-          .get(source, generation)!.id,
-      );
-      db.prepare('INSERT OR REPLACE INTO dashboard_files VALUES(?,?,?,?,?)').run(
-        version,
-        source,
-        generation,
-        sid,
-        end,
-      );
+      const previous = db.prepare('SELECT sid FROM dashboard_files WHERE version=? AND source=? AND generation=?').get(version, source, generation);
+      const end = Number(db.prepare('SELECT max(id) AS id FROM ingest_log WHERE source=? AND generation=?').get(source, generation)!.id);
+      db.prepare('INSERT OR REPLACE INTO dashboard_files VALUES(?,?,?,?,?)').run(version, source, generation, sid, end);
       const history = db
-        .prepare(
-          'SELECT generation,end_id FROM dashboard_files WHERE version=? AND source=? AND sid=? ORDER BY generation',
-        )
+        .prepare('SELECT generation,end_id FROM dashboard_files WHERE version=? AND source=? AND sid=? ORDER BY generation')
         .all(version, source, sid);
       if (history.length > 1) {
         let merged = '';
         for (const old of history) {
-          const text =
-            old.generation === generation ? bytes : file(source, old.generation, Number(old.end_id));
+          const text = old.generation === generation ? bytes : file(source, old.generation, Number(old.end_id));
           if (old.generation !== generation) replayBytes += Buffer.byteLength(text);
           merged = merged ? mergeFile(kind, merged, text) : text;
         }
@@ -193,9 +160,7 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
       removeSession.run(version, source, sid);
       save.run(version, source, history.at(-1)!.generation, sid, JSON.stringify(s));
     } finally {
-      console.info(
-        `dashboard replay source=${source} generation=${generation} bytes=${replayBytes} ms=${Math.round(performance.now() - start)}`,
-      );
+      console.info(`dashboard replay source=${source} generation=${generation} bytes=${replayBytes} ms=${Math.round(performance.now() - start)}`);
     }
   }
   function project(job: Record<string, SQLOutputValue>, last: number) {
@@ -208,29 +173,13 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
         if (!['commands', 'sessions', 'messages'].includes(table)) continue;
         const r = JSON.parse(Buffer.from(bytes as Uint8Array).toString());
         if (kind === 'rtk') {
-          removeRestoredCommand.run(
-            version,
-            source,
-            generation,
-            item,
-            r.timestamp ?? null,
-            r.rtk_cmd ?? null,
-            r.project_path ?? null,
-          );
+          removeRestoredCommand.run(version, source, generation, item, r.timestamp ?? null, r.rtk_cmd ?? null, r.project_path ?? null);
           command.run(
             version,
             source,
             generation,
             item,
-            ...[
-              'timestamp',
-              'rtk_cmd',
-              'project_path',
-              'input_tokens',
-              'output_tokens',
-              'saved_tokens',
-              'exec_time_ms',
-            ].map((k) => r[k] ?? null),
+            ...['timestamp', 'rtk_cmd', 'project_path', 'input_tokens', 'output_tokens', 'saved_tokens', 'exec_time_ms'].map((k) => r[k] ?? null),
           );
         } else {
           const sid = table === 'sessions' ? r.id : r.session_id;
@@ -251,20 +200,12 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
         }
         removeSession.run(version, source, sid);
         if (session && session.started_at != null) {
-          const active = [...messages.values()]
-            .filter((r) => r.active === 1)
-            .sort((a, b) => a.timestamp - b.timestamp);
+          const active = [...messages.values()].filter((r) => r.active === 1).sort((a, b) => a.timestamp - b.timestamp);
           save.run(version, source, generation, sid, JSON.stringify(parseHermes(session, active)));
         }
       }
     } else if (kind === 'orca')
-      db.prepare('INSERT OR REPLACE INTO dashboard_orca VALUES(?,?,?,?,?)').run(
-        version,
-        source,
-        generation,
-        path,
-        file(source, generation),
-      );
+      db.prepare('INSERT OR REPLACE INTO dashboard_orca VALUES(?,?,?,?,?)').run(version, source, generation, path, file(source, generation));
     else if (kind === 'copilot' && String(path).endsWith('/workspace.yaml')) {
       const events = join(dirname(String(path)), 'events.jsonl'),
         e = sibling(events);
@@ -293,21 +234,14 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
       }
       if (job) {
         const keys = [version, job.source, job.generation];
-        const failed = db
-          .prepare('SELECT 1 FROM dashboard_errors WHERE version=? AND source=? AND generation=?')
-          .get(...keys);
+        const failed = db.prepare('SELECT 1 FROM dashboard_errors WHERE version=? AND source=? AND generation=?').get(...keys);
         db.exec('SAVEPOINT projection');
         try {
           project(job, failed ? 0 : last);
-          db.prepare('DELETE FROM dashboard_errors WHERE version=? AND source=? AND generation=?').run(
-            ...keys,
-          );
+          db.prepare('DELETE FROM dashboard_errors WHERE version=? AND source=? AND generation=?').run(...keys);
         } catch (error) {
           db.exec('ROLLBACK TO projection');
-          db.prepare('INSERT OR REPLACE INTO dashboard_errors VALUES(?,?,?,?,CURRENT_TIMESTAMP)').run(
-            ...keys,
-            String(error),
-          );
+          db.prepare('INSERT OR REPLACE INTO dashboard_errors VALUES(?,?,?,?,CURRENT_TIMESTAMP)').run(...keys, String(error));
         }
         db.exec('RELEASE projection');
         db.prepare('DELETE FROM dashboard_jobs WHERE version=? AND source=? AND generation=?').run(...keys);
