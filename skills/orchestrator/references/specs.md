@@ -4,6 +4,7 @@ Pass each Task's spec by absolute path. Follow-ups may reuse the file; new Tasks
 
 ```text
 Role: <role id: builder|reviewer|support-engineer>
+Run: <owning Orca Run ID from start.md "Run selection">
 Measurement: {"kind":"build","round":null,"cause":null}
 Routing: {"tier":"work","catalog":"<alias>","agent":"<agent-id>","model":null,"effort":null}
 Routing-log: <absolute .team/<feature>/routing.jsonl path>

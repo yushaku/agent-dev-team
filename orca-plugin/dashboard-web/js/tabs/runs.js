@@ -125,7 +125,7 @@ export function renderRunTimeline(info, selectedId, role = C.state.role, contain
     document.querySelectorAll("#" + id + "-events [data-event]").forEach((el) => el.setAttribute("aria-pressed", el === target));
     $("#detail-title").textContent = "Chi tiết trao đổi";
     $("#detail-body").innerHTML =
-      `<div class="event-message"><p><strong>${esc(EVENT_NAMES[event.kind] || "Inbox")}</strong> · ${esc(dt(event.at))} · ${esc(event.from)} → ${esc(event.to)}</p><p>${esc(event.text)}</p>${event.body ? `<p>${esc(event.body)}</p>` : ""}</div>`;
+      `<div class="event-message"><p><strong>${esc(EVENT_NAMES[event.kind] || "Inbox")}</strong> · ${esc(dt(event.at))} · ${esc(event.from)} → ${esc(event.to)}</p><p>${esc(event.text)}</p>${event.body ? `<p>${esc(event.body)}</p>` : ""}${i.r.coordinator_handle && [event.from_actor, event.to_actor].includes("coordinator") ? `<p><strong>Địa chỉ Orchestrator:</strong> <code>${esc(i.r.coordinator_handle)}</code></p>` : ""}</div>`;
     if (!$("#detail").open) $("#detail").showModal();
   };
   $("#" + id + "-events").addEventListener("click", selectEvent);

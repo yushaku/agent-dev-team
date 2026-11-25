@@ -31,4 +31,4 @@ Coordinate planning, worker Tasks, PO gates and delivery from an Orca chat or ag
 | Worker result, review, fix or UI round | `references/review.md` |
 | Deliver, merge or clean up | `references/delivery.md` |
 
-Before dispatch, satisfy `start.md` "Coordinator delivery". After dispatch, end the turn; follow the receipt's `next` or wake's `check`. Process results through `review.md` and update the Run handoff through `start.md` "Handoff".
+On entry/resume, complete `start.md` "Preflight", including Run selection, before planning or dispatch. After dispatch, end the turn; follow the receipt's `next` or wake's `check`. Process results through `review.md` and update the Run handoff through `start.md` "Handoff".

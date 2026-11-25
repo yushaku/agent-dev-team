@@ -339,6 +339,7 @@ export interface RunEvent {
 }
 export interface DashboardRun {
   id: string;
+  coordinator_handle?: string;
   objective: string;
   created: number | null;
   tasks: RunTask[];

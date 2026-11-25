@@ -1,6 +1,6 @@
 // Hosts the ledger in the plugin worker: ingest (one pass now, one every 60 s, one soon after agent or
 // workspace events), the dashboard API and web UI plus GET /health on 127.0.0.1:4747 (kept retrying while
-// another server holds it), and a status bar item that says whether the port is bound.
+// another server holds it).
 //
 // The modules come from the plugin's own folders (../ledger, ../dashboard-web), never from outside it. They are Node-typed and Orca's plugin types carry no Node typings, so they are
 // loaded by a computed specifier (tsc does not follow it) and typed by ledger/types.ts, which needs none.
@@ -9,69 +9,12 @@ import type { ApiModule, HttpApi, IngestApi, Pass, Status } from '../ledger/type
 export type { Pass, Status }
 /** The dashboard's port: the API, the web UI and /health all answer here. */
 export const API_PORT = 4747
-type Report = { ok: boolean; text: string; tone: 'success' | 'warning' | 'danger' | 'neutral'; tooltip: string }
 type Env = { process?: { env: Record<string, string | undefined> } }
 const env = (name: string) => (globalThis as Env).process?.env[name]
 
 /** What is listening: the port when bound, or waiting because another server holds it, and failures. */
 export type Net = { bound: number[]; busy: number[]; error?: string; apiError?: string }
 const noNet: Net = { bound: [], busy: [] }
-
-const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-
-const ports = (net: Net) => {
-  const bound = [...net.bound].sort().join('·')
-  const busy = [...net.busy].sort().join('·')
-  return bound ? ` ${bound}` : busy ? ` ${busy} busy` : ''
-}
-const listening = (net: Net) =>
-  [
-    net.bound.length ? `Listening on 127.0.0.1:${[...net.bound].sort().join(', ')}` : '',
-    net.busy.length ? `Waiting for port ${[...net.busy].sort().join(', ')} (in use by another server; retrying)` : '',
-    net.error ? `Listener error: ${net.error}` : '',
-    net.apiError ? `Dashboard API not started: ${net.apiError}` : '',
-  ]
-    .filter(Boolean)
-    .map((l) => '\n' + l)
-    .join('')
-
-/** What the status bar shows for the current state, e.g. "Ledger 12:04 ✓ 4747"; `net` says whether the port is bound. */
-export function report(s: Status, net: Net = noNet): Report {
-  const pass = s.lastPass
-  const note = listening(net)
-  const warn = net.error || net.apiError ? ' ⚠' : ''
-  const where = ports(net)
-  if (s.lastError && s.lock !== 'held')
-    return { ok: false, text: 'Ledger ✗ not running' + warn, tone: 'danger', tooltip: `${s.lastError.split('\n')[0]}${note}` }
-  if (s.lock === 'waiting' && !pass?.finishedAt)
-    return {
-      ok: false,
-      text: 'Ledger waiting' + where + warn,
-      tone: 'warning',
-      tooltip: `Another host holds the ingest lock${s.lockedBy ? ` (${s.lockedBy})` : ''}${note}`,
-    }
-  if (s.lock === 'waiting')
-    return {
-      ok: false,
-      text: `Ledger ${clock(pass!.finishedAt)} waiting${where}${warn}`,
-      tone: 'warning',
-      tooltip: `Lock held by ${s.lockedBy ?? 'another host'}${note}`,
-    }
-  if (!pass)
-    return {
-      ok: true,
-      text: 'Ledger starting' + where + warn,
-      tone: warn ? 'warning' : 'neutral',
-      tooltip: `First pass running (a backfill can take a minute)${note}`,
-    }
-  const bad = pass.errors.length
-  return {
-    ok: !bad,
-    text: `Ledger ${clock(pass.finishedAt)} ${bad ? `✗ ${bad}` : '✓'}${where}${warn}`,
-    tone: bad ? 'danger' : warn ? 'warning' : 'success',
-    tooltip: (bad ? pass.errors.slice(0, 3).join('\n') : `Pass took ${pass.ms} ms (${pass.reason})`) + note,
-  }
-}
 
 export function health(s: Status | undefined, net: Net = noNet) {
   if (!s) return { ok: false, error: 'ledger ingest is not running' }
@@ -215,8 +158,6 @@ async function teardown() {
 export function run(orca: Api): Promise<void> {
   const mine = ++generation
   const cancelled = () => mine !== generation
-  const bar = (text: string, tone: Report['tone'], tooltip: string) =>
-    void orca.host.call('statusBar.update', { id: 'ledger', text, tone, tooltip }).catch((e) => orca.log(`statusBar.update failed: ${e}`))
   return enqueue(async () => {
     if (disabled()) return
     try {
@@ -235,19 +176,10 @@ export function run(orca: Api): Promise<void> {
       await teardown() // the previous activation's host, if it got as far as starting one
       if (cancelled()) return
       const mynet: Net = (net = { bound: [], busy: [] })
-      let failed = false // a terminal listener error: the activation is being torn down, the status bar keeps saying why
-      const show = () => {
-        const s = ing.status()
-        if (s && !cancelled() && !failed) {
-          const r = report(s, mynet)
-          bar(r.text, r.tone, r.tooltip)
-        }
-      }
       ingest = ing
       const state = ing.start({
         host: 'orca-plugin',
         onPass: (p: Pass) => orca.log(`ledger pass (${p.reason}) ${p.ms} ms, ${p.errors.length} errors${p.errors[0] ? `: ${p.errors[0]}` : ''}`),
-        onState: show,
       })
       // The dashboard API is a separate concern: if its module cannot load or it cannot start, ingest and /health still run.
       let routes: Record<string, Handler> = {}
@@ -267,7 +199,7 @@ export function run(orca: Api): Promise<void> {
       }
       const retryMs = Number(env('TEAM_DASHBOARD_RETRY_MS')) || 5000
       // The handle is kept the moment it exists, so shutdown and a failed startup can always close it.
-      // While another server holds the port the listener retries (and says so in the status bar).
+      // While another server holds the port the listener retries.
       listener = ht.serve(
         { '/health': () => health(ing.status(), mynet), ...routes },
         {
@@ -279,14 +211,11 @@ export function run(orca: Api): Promise<void> {
               if (mynet.busy.includes(port)) return // still held: the retry is not news
               mynet.busy.push(port)
               orca.log(`listener ${port} ${code}`)
-              show()
               return
             }
             // Anything but a busy port is terminal: tear the whole activation down through the lifecycle chain.
             mynet.error = `${port} ${code}`
-            failed = true
             orca.log(`listener ${port} ${code}: tearing the host down`)
-            if (!cancelled()) bar('Ledger ✗ not started', 'danger', `The dashboard listener failed on port ${port} (${code}); the ledger host was stopped.`)
             // Only this activation's host is cleaned up: when a newer activation (or a shutdown) exists, it owns the
             // cleanup (it tears down what is left before it starts), and running ours now could close its listener.
             void enqueue(async () => {
@@ -296,7 +225,6 @@ export function run(orca: Api): Promise<void> {
           onListening: () => {
             mynet.busy = mynet.busy.filter((p) => p !== port)
             if (!mynet.bound.includes(port)) mynet.bound.push(port)
-            show()
           },
         },
       )
@@ -311,7 +239,6 @@ export function run(orca: Api): Promise<void> {
       } catch (again) {
         orca.log(`cleanup after the failed start also failed: ${again}`)
       } // nothing stays half started
-      if (!cancelled()) bar('Ledger ✗ not started', 'danger', `The ledger host could not start: ${String(e).split('\n')[0]}`)
     }
   })
 }

@@ -6,7 +6,7 @@ import type { SQLOutputValue } from 'node:sqlite';
 import type { DashboardRun, RunEvent, RunGate, RunTask } from './protocol.ts';
 
 // Orca CLI JSON (`orchestration ... --json --full`), only the fields read here.
-type OrcaRunEntry = { id: string; status?: string; objective?: string; created_at?: string };
+type OrcaRunEntry = { id: string; status?: string; objective?: string; created_at?: string; coordinator_handle?: string };
 type OrcaTaskEntry = { id: string; title?: string; task_title?: string; spec?: string; status?: string; created_at?: string; completed_at?: string };
 type OrcaGateEntry = { id: string; task_id?: string; question?: string; resolution?: string; status?: string; created_at?: string; resolved_at?: string };
 type OrcaWorkerEntry = { dispatchId?: string; taskId?: string; agentTerminalHandle?: string };
@@ -231,7 +231,7 @@ export function runData(rows: readonly Record<string, SQLOutputValue>[], now: nu
         });
       }
     function endpoint(handle: string | undefined, at: number): [string, boolean, string | null, string] {
-      if (handle === 'run:' + rid) return ['Orchestrator', false, null, 'coordinator'];
+      if (handle === 'run:' + rid || (handle && handle === r.coordinator_handle)) return ['Orchestrator', false, null, 'coordinator'];
       const w =
         workers.find((w) => w.dispatchId === handle?.replace(/^dispatch:/, '')) ||
         workers
@@ -305,6 +305,7 @@ export function runData(rows: readonly Record<string, SQLOutputValue>[], now: nu
     );
     runs.push({
       id: rid,
+      ...(r.coordinator_handle ? { coordinator_handle: r.coordinator_handle } : {}),
       objective,
       created,
       tasks: rtasks,

@@ -8,10 +8,10 @@ Open the panel: `orca plugin open local.team-dashboard --panel tasks`. It has th
 
 | Path | What it is |
 | --- | --- |
-| `orca-plugin.json` | Manifest: a trusted worker (`src/worker.ts`), one HTML panel, `tasks` (`dashboard-web/index.html`), and a status bar item |
+| `orca-plugin.json` | Manifest: a trusted worker (`src/worker.ts`), one HTML panel, `tasks` (`dashboard-web/index.html`) |
 | `ledger/` | The ledger: ingest of agent histories into SQLite, projections, the dashboard API (`api.ts`), the small HTTP server (`http.ts`). Own README: `ledger/README.md`. Also the launchd fallback entry `ledger/daemon.ts` and `ledger/agent-ledger.plist` |
 | `dashboard-web/` | The web UI, one set of files for both uses: `index.html` plus `js/`, `css/`, `vendor/`. The API serves every regular file of this directory with a supported extension (`.html .js .css .json .svg .png .ico .woff2`) under its percent-encoded URL (names with spaces or non-ASCII characters work); dot files, links and other file types are never served, and `/` is an alias of `index.html` only when that is a regular file. Inside Orca's panel `js/main.js` loads `js/orca-panel.js` (data from the worker, the tab bar with the link to the web UI, status bar, the skill sheet; `js/orca-source.js` is its fetch shim). The page's top bar is hidden in the sidebar; the panel's own tab bar switches between the Overview, Tasks and Agents tools views and remembers the last tab, and `css/orca-panel.css` styles it (scoped to `html.orca` and Orca's `html.light`) |
-| `src/` | The worker: `ledger-host.ts` (ingest, API, listener, status bar), `worker.ts` (the panel's `tasks.open`/`tasks.chunk`), `trim.ts`, `protocol.ts` |
+| `src/` | The worker: `ledger-host.ts` (ingest, API, listener), `worker.ts` (the panel's `tasks.open`/`tasks.chunk`), `trim.ts`, `protocol.ts` |
 | `tests/` | Frontend tests (`frontend.impl.mjs` under a wrapper) and the panel's fetch shim tests |
 
 Nothing is generated and nothing is copied: `src/ledger-host.ts` imports `../ledger/*.ts` and the API serves `../dashboard-web`, both inside this folder, so the folder works from a copy outside the repository (`git archive HEAD orca-plugin`). The team root (`AGENT_TEAM_HOME`, the checkout containing `skills/`) is the only thing read from outside: it defaults to `~/.agents/teams`.
@@ -19,8 +19,7 @@ Nothing is generated and nothing is copied: `src/ledger-host.ts` imports `../led
 ## Ledger host and dashboard server (`src/ledger-host.ts`)
 
 - Ingest into `~/.agents/ledger` (or `AGENT_LEDGER_HOME`) at once and every 60 s, plus a debounced pass on `agent.status.changed` and `workspace.created/removed`.
-- The dashboard API, the web UI and `GET /health` on one listener, **127.0.0.1:4747**. While another server holds the port the listener retries (every 5 s) and the status bar says so; any other listener error tears the host down. Every route answers only to a loopback `Host` header (403 otherwise).
-- A status bar item such as `Ledger 12:04 ✓ 4747` (`4747 busy` while another server holds the port; ⚠ means the listener or the API failed, the tooltip says why).
+- The dashboard API, the web UI and `GET /health` on one listener, **127.0.0.1:4747**. While another server holds the port the listener retries (every 5 s); any other listener error tears the host down. Every route answers only to a loopback `Host` header (403 otherwise).
 - Shutdown order: the listener, the API's worker, then ingest; every step is attempted even if one fails. A failed start rolls back whatever it had started. Activation and shutdown run one after another on one chain.
 - The Tasks panel reads the snapshot from the in-process API (`dashboardData`, no network hop). `src/trim.ts` cuts it to what the panel views read (message bodies to 600 characters, repo names kept for the filter). A 30-day snapshot is over 1 MiB, so the worker holds it as numbered chunks (`tasks.open`, then `tasks.chunk` per piece, each reply under 900 KB; ids are unique per worker lifetime, so a restart answers `expired` and the panel reopens the range it asked for).
 

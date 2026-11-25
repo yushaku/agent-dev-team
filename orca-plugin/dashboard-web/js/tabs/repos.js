@@ -18,6 +18,7 @@ export function repoTree(S) {
     const r = (tree[repo] = tree[repo] || {});
     const group = (r[key] = r[key] || {
       wt: run?.objective || s.run_id || s.worktree,
+      label: s.run_id ? "Run " + s.run_id : "Worktree · chưa gắn Run",
       filter: s.run_id ? "runF:" + s.run_id : "wt:" + repo + "/" + s.worktree,
       sessions: [],
     });
@@ -31,7 +32,7 @@ export function repoTree(S) {
         repo,
         a: agg(all),
         wts: Object.values(wts)
-          .map((w) => ({ wt: w.wt, filter: w.filter, a: agg(w.sessions) }))
+          .map((w) => ({ wt: w.wt, label: w.label, filter: w.filter, a: agg(w.sessions) }))
           .sort((p, q) => q.a.t - p.a.t),
       };
     })
@@ -68,16 +69,21 @@ export function renderRepos(S) {
       const wt = t.item.w,
         a = wt.a;
       g.push(
-        `<rect x="${r1(t.x)}" y="${r1(t.y)}" width="${r1(Math.max(0, t.w))}" height="${r1(Math.max(0, t.h))}" rx="3" style="fill:${workColour(wt.filter)};stroke:var(--mantle);stroke-width:2"${A({ f: wt.filter, tip: [r.repo + " / " + wt.wt, "Tổng: " + fmt(a.t) + " token", a.n + " phiên, " + fmt(a.calls) + " lượt gọi", "Hoạt động cuối: " + dt(a.last), "Bấm để lọc nhóm công việc"] })}/>`,
+        `<rect x="${r1(t.x)}" y="${r1(t.y)}" width="${r1(Math.max(0, t.w))}" height="${r1(Math.max(0, t.h))}" rx="3" style="fill:${workColour(wt.filter)};stroke:var(--mantle);stroke-width:2"${A({ f: wt.filter, tip: [wt.label, r.repo + " / " + wt.wt, "Tổng: " + fmt(a.t) + " token", a.n + " phiên, " + fmt(a.calls) + " lượt gọi", "Hoạt động cuối: " + dt(a.last), "Bấm để lọc nhóm công việc"] })}/>`,
       );
       if (t.w > 56 && t.h > 22)
-        g.push(`<text x="${r1(t.x + 6)}" y="${r1(t.y + 16)}" class="v" pointer-events="none">${esc(cut(wt.wt, Math.floor((t.w - 10) / 7)))}</text>`);
+        g.push(`<text x="${r1(t.x + 6)}" y="${r1(t.y + 16)}" class="v" pointer-events="none">${esc(cut(wt.label, Math.floor((t.w - 10) / 7)))}</text>`);
       if (t.w > 56 && t.h > 40)
-        g.push(`<text x="${r1(t.x + 6)}" y="${r1(t.y + 32)}" class="v" style="font-weight:400" pointer-events="none">${fmt(a.t)}</text>`);
+        g.push(
+          `<text x="${r1(t.x + 6)}" y="${r1(t.y + 32)}" class="v" style="font-weight:400" pointer-events="none">${esc(cut(wt.wt, Math.floor((t.w - 10) / 7)))}</text>`,
+        );
+      if (t.w > 56 && t.h > 58)
+        g.push(`<text x="${r1(t.x + 6)}" y="${r1(t.y + 48)}" class="v" style="font-weight:400" pointer-events="none">${fmt(a.t)}</text>`);
     });
   });
   fig("#c-tree", {
     title: "Token theo công việc",
+    subtitle: "Gộp theo Run ID. Chỉ phiên chưa có Run ID mới được nhóm theo worktree.",
     body: R.length ? svg(W, H, "Treemap repo rồi Run hoặc worktree, diện tích theo token, màu theo nhóm công việc", g.join("")) : "",
   });
 }

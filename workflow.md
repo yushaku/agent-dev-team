@@ -4,7 +4,7 @@ The PO gives a software change to the Orchestrator. The team delivers a reviewed
 
 ## Default flow
 
-The Orchestrator and the PO run `grill-with-docs`, `to-spec` and `to-tickets` (Gate 1: spec and seams, then tickets and blocking edges). Each ticket becomes one Orca Task; blocking edges are Task dependencies. One Builder builds the tickets test-first, measures the changed behavior, updates related docs and prepares delivery. One independent Reviewer on a different agent runs `code-review` on tickets, code, evidence and risks. The Builder resolves blocking findings in the fix round. The Orchestrator delivers the reviewed change at Gate 2.
+On `/orchestrator` entry, establish the objective's Orca Run through `skills/orchestrator/references/start.md` "Preflight" and "Run selection". The Orchestrator and the PO then run `grill-with-docs`, `to-spec` and `to-tickets` (Gate 1: spec and seams, then tickets and blocking edges). Each ticket becomes one Orca Task; blocking edges are Task dependencies. One Builder builds the tickets test-first, measures the changed behavior, updates related docs and prepares delivery. One independent Reviewer on a different agent runs `code-review` on tickets, code, evidence and risks. The Builder resolves blocking findings in the fix round. The Orchestrator delivers the reviewed change at Gate 2.
 
 Planning, build and review share the Orchestrator's Orca worktree and feature branch, with separate agent sessions. Workspace selection and isolation exceptions follow `skills/orchestrator/references/start.md` "Shared feature workspace".
 

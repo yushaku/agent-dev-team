@@ -50,7 +50,7 @@ globalThis.location = { hash: "" };
 globalThis.history = { replaceState() {} };
 
 const C = await import("../dashboard-web/js/lib/charts.js");
-const { repoTree } = await import("../dashboard-web/js/tabs/repos.js");
+const { repoTree, renderRepos } = await import("../dashboard-web/js/tabs/repos.js");
 const { renderRoles, roleStats } = await import("../dashboard-web/js/tabs/roles.js");
 const { renderRoleSkills } = await import("../dashboard-web/js/tabs/role-skills.js");
 const { runDetail, renderRunTimeline, communicationDiagram, renderFeatures, featureTimeline } = await import("../dashboard-web/js/tabs/runs.js");
@@ -543,13 +543,23 @@ test("repo chart groups main and worker worktrees by Run without merging differe
     },
   };
   const row = (run_id, worktree, total) => ({ repo: "bisou", run_id, worktree, total, agent: "codex", calls: 1, end: 1 });
-  const tree = repoTree([row("one", "(main)", 10), row("one", "tab-cache", 20), row("two", "tab-cache", 5), row(null, "(main)", 2)]);
+  const sessions = [row("one", "(main)", 10), row("one", "tab-cache", 20), row("two", "tab-cache", 5), row(null, "(main)", 2)];
+  const tree = repoTree(sessions);
   assert.equal(tree.length, 1);
   assert.equal(tree[0].a.t, 37);
   assert.equal(tree[0].wts.length, 3);
   const run = tree[0].wts.find((x) => x.filter === "runF:one");
   assert.equal(run.wt, "Tab cache");
   assert.equal(run.a.t, 30);
+  assert.equal(run.label, "Run one");
+  const fallback = tree[0].wts.find((x) => x.filter === "wt:bisou/(main)");
+  assert.equal(fallback.label, "Worktree · chưa gắn Run");
+  assert.equal(fallback.a.t, 2);
+  renderRepos(sessions);
+  const html = element("#c-tree").innerHTML;
+  assert.match(html, /Run one/);
+  assert.match(html, /Run two/);
+  assert.match(html, /chưa gắn Run/);
 });
 
 test("timeline includes observed orchestrator activity and respects role filters", () => {
@@ -675,6 +685,7 @@ test("peer inbox marks appear on participating tasks instead of the orchestrator
 test("communication diagram orders arrows, keeps worker lanes stable and opens escaped details", () => {
   const r = {
     id: "mail",
+    coordinator_handle: "term_coordinator<address>",
     tasks: [
       { id: "build1", role: "builder" },
       { id: "build2", role: "builder" },
@@ -747,6 +758,8 @@ test("communication diagram orders arrows, keeps worker lanes stable and opens e
   });
   assert.equal(prevented, true);
   assert.match(element("#detail-body").innerHTML, /Giao việc/);
+  assert.match(element("#detail-body").innerHTML, /Địa chỉ Orchestrator/);
+  assert.match(element("#detail-body").innerHTML, /term_coordinator&lt;address&gt;/);
 });
 
 test("run detail needs an explicit Run filter matching the filtered sessions", () => {

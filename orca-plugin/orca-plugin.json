@@ -20,13 +20,6 @@
         "ui": "html"
       }
     ],
-    "statusBarItems": [
-      {
-        "id": "ledger",
-        "text": "Ledger starting",
-        "icon": "database"
-      }
-    ],
     "events": [
       {
         "on": "agent.status.changed"

@@ -15,7 +15,7 @@
 - Before Gate 2, amend/fixup review fixes into the commits they correct. Each round gets one scoped re-review of prior findings, rejection evidence, fix commits and finalized docs/delivery text. New findings cover only fix-induced regressions; security review follows the affected path.
 - After two failed fix rounds, ask the PO how to proceed; offer one tier up. No silent third round or automatic tier increase. Delivery must satisfy `delivery.md` "Definition of Done (feature)"; list nonblocking leftovers and risks at Gate 2.
 
-## UI rounds (one Builder Task, no full Run)
+## UI rounds (one Builder Task within the selected Run)
 
 - Send concrete inline UI asks to one Builder in the feature worktree. Reuse the Task for component follow-ups; state the exact change and behavior to preserve. Batch element polish into one commit when the PO closes the round.
 - For an area-wide complaint, fix the screen with most hits; list affected siblings and ask before expanding scope. Ambiguous layout: ask with recommended options.
