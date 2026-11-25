@@ -1,7 +1,7 @@
 import type { CliTools } from './protocol.ts';
 import { accessSync, constants, readFileSync, realpathSync, readdirSync, statSync } from 'node:fs';
 import { hostname, type, userInfo } from 'node:os';
-import { dirname, basename, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { gunzipSync } from 'node:zlib';
 import { home, ls } from './metadata.ts';

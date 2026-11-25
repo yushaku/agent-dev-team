@@ -54,14 +54,14 @@ export function renderRoles(S) {
               .sort((a, b) => b[1] - a[1])
               .map(([k, v]) => ({ v, color: mixCol(k), name: mixName(k), f: "agent:" + k.split("|")[0] })),
             tip: [
-              r.def && r.def.tier
+              r.def?.tier
                 ? (r.def.selected ? "Tier đã chọn: " : "Tier mặc định: ") + r.def.tier + (r.def.agent ? ", " + (AG[r.def.agent] || r.def.agent) : "")
                 : "Không có tier mặc định",
               r.unverified ? r.unverified + " phiên chưa đối chiếu model" : null,
               r.mismatch ? "▲ " + r.mismatch + " phiên khác model/agent đã chọn" : r.effHi ? "▲ " + r.effHi + " phiên effort cao hơn cấu hình" : null,
             ],
             right: [{ t: fmt(r.total) }].concat(
-              r.def && r.def.tier ? [{ t: r.def.tier, color: "var(--subtext0)" }] : [],
+              r.def?.tier ? [{ t: r.def.tier, color: "var(--subtext0)" }] : [],
               r.mismatch
                 ? [{ t: "▲ " + r.mismatch + (W < 520 ? "" : " khác model"), color: "var(--red)" }]
                 : r.effHi

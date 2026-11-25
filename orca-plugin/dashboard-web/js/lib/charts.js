@@ -18,7 +18,7 @@ try {
     searchHidden: Array.isArray(s.searchHidden) ? s.searchHidden : [],
     auto: s.auto !== false,
   });
-} catch (e) {}
+} catch {}
 export const persist = () => {
   try {
     localStorage.setItem(
@@ -35,7 +35,7 @@ export const persist = () => {
         auto: state.auto,
       }),
     );
-  } catch (e) {}
+  } catch {}
 };
 
 /* ---------- colours: one meaning each ---------- */
@@ -122,7 +122,7 @@ export const mixName = (k) => {
 
 /* ---------- formatting ---------- */
 export function fmt(n) {
-  if (n == null || isNaN(n)) return "?";
+  if (n == null || Number.isNaN(Number(n))) return "?";
   const a = Math.abs(n);
   if (a >= 1e9) return +(n / 1e9).toFixed(a >= 1e10 ? 0 : 1) + "B";
   if (a >= 1e6) return +(n / 1e6).toFixed(a >= 1e7 ? 0 : 1) + "M";
@@ -221,8 +221,8 @@ export function widthOf(id) {
   try {
     const cs = getComputedStyle(el);
     padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-  } catch (e) {}
-  const w = el && el.clientWidth ? el.clientWidth - padX : 900;
+  } catch {}
+  const w = el?.clientWidth ? el.clientWidth - padX : 900;
   return Math.max(280, Math.round(w));
 }
 export function fig(id, o) {
@@ -280,7 +280,7 @@ export function vBars(o) {
     pw = W - L - R,
     ph = H - T - B,
     g = [];
-  const tots = o.cats.map((c, i) => o.series.reduce((t, s, j) => t + (o.get(i, j) || 0), 0));
+  const tots = o.cats.map((_c, i) => o.series.reduce((t, _s, j) => t + (o.get(i, j) || 0), 0));
   const sc = scale(Math.max(0, ...tots));
   yAxis(g, { L, R, T, ph, W, top: sc.top, ticks: sc.ticks, f: o.fy || fmt, title: o.yTitle });
   const bw = pw / o.cats.length,
@@ -457,7 +457,7 @@ export function runChart(i, ttok, role = state.role, id = "#g-" + i.r.id, metric
     activity = (r.orchestrator_activity || []).filter((a) => ags.includes(a.agent));
   const events = r.events || [],
     showOrch = !role || role === "orchestrator";
-  const orchTokens = sum(ags, (a) => (r.orchestrator_by_agent || {})[a] || 0);
+  const orchTokens = sum(ags, (a) => r.orchestrator_by_agent?.[a] || 0);
   const rows = r.tasks
     .filter((t) => !role || t.role === role)
     .map((t) => {
@@ -606,17 +606,17 @@ export function hideTip() {
   tipEl.hidden = true;
 }
 document.addEventListener("pointerdown", (e) => {
-  const el = e.target.closest && e.target.closest("[data-tip]");
+  const el = e.target.closest?.("[data-tip]");
   if (el) showTip(el, e.clientX, e.clientY);
 });
 document.addEventListener("pointermove", (e) => {
-  const el = e.target.closest && e.target.closest("[data-tip]");
+  const el = e.target.closest?.("[data-tip]");
   if (el) showTip(el, e.clientX, e.clientY);
   else hideTip();
 });
 document.addEventListener("pointerleave", hideTip);
 document.addEventListener("focusin", (e) => {
-  const el = e.target.closest && e.target.closest("[data-tip]");
+  const el = e.target.closest?.("[data-tip]");
   if (el) {
     const b = el.getBoundingClientRect();
     showTip(el, b.left + b.width / 2, b.bottom);

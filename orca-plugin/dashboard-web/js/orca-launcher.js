@@ -29,7 +29,7 @@ export function launch({ fetch, doc, target, view, page = 'index.html' }) {
       doc.write(html)
       doc.close()
     } catch (e) {
-      show('Không tải được dashboard (' + (e && e.message ? e.message : 'lỗi') + ').', true)
+      show('Không tải được dashboard (' + (e?.message ? e.message : 'lỗi') + ').', true)
     }
   }
   retry.onclick = () => {

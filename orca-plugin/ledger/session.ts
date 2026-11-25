@@ -539,7 +539,7 @@ export function parseHermes(r, messages) {
         s.skills.push([match[1], m.timestamp]);
         txt = txt.split('The user has provided the following instruction alongside the skill invocation:').slice(1).join('');
       }
-      if (!first && !/^[<\[]/.test(txt)) first = txt;
+      if (!first && !/^[<[]/.test(txt)) first = txt;
     } else if (m.role === 'assistant') {
       const calls = json(m.tool_calls);
       if (Array.isArray(calls)) for (const c of calls) tool(s, c?.function?.name, c?.function?.arguments || '', m.timestamp);

@@ -1,5 +1,5 @@
 import * as C from "./lib/charts.js";
-import { $, esc, AG, buildMixColours, sessionsF, agentsF, buckets, splitWhy, fmt, hm, persist, hideTip } from "./lib/charts.js";
+import { $, esc, AG, buildMixColours, sessionsF, splitWhy, hm, persist, hideTip } from "./lib/charts.js";
 import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
 import { renderRoleSkills } from "./tabs/role-skills.js";
@@ -102,12 +102,12 @@ function renderRunFilter(d) {
 }
 function filterText(k) {
   const v = C.state[k],
-    runs = (C.state.data && C.state.data.orca.runs) || [],
+    runs = C.state.data?.orca.runs || [],
     run = runs.find((r) => r.id === C.state.runF);
   if (k === "agent") return AG[v];
   if (k === "runF") return run ? run.objective || v : v;
   if (k === "taskF") {
-    const t = run && run.tasks.find((t) => t.id === v);
+    const t = run?.tasks.find((t) => t.id === v);
     return t ? t.title || v : v;
   }
   return v;
@@ -234,7 +234,7 @@ function activate(el) {
   if (el.dataset.clear) return clearFilter(el.dataset.clear);
   if (el.dataset.f) return applyFilter(el.dataset.f);
   if (el.dataset.issue) return applyIssue(JSON.parse(el.dataset.issue));
-  if (el.dataset.toggle && el.dataset.toggle.startsWith("search:") && toggleSearchKind(el.dataset.toggle.slice(7))) {
+  if (el.dataset.toggle?.startsWith("search:") && toggleSearchKind(el.dataset.toggle.slice(7))) {
     persist();
     return render();
   }
@@ -248,7 +248,7 @@ document.addEventListener("click", (e) => {
   }
 });
 document.addEventListener("keydown", (e) => {
-  const el = e.target.closest && e.target.closest("[data-f], [data-toggle], [data-sid], [data-issue]");
+  const el = e.target.closest?.("[data-f], [data-toggle], [data-sid], [data-issue]");
   if (el && (e.key === "Enter" || (e.key === " " && el.tagName !== "BUTTON"))) {
     e.preventDefault();
     activate(el);
@@ -292,7 +292,7 @@ export function showView(id, { hash = true } = {}) {
   });
   try {
     localStorage.setItem(VKEY, id);
-  } catch (e) {}
+  } catch {}
   if (hash && location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
   if (C.state.data) render();
 }
@@ -305,12 +305,12 @@ viewBtns.forEach((b) =>
 let started = false;
 /* Called when the Token tab opens; el is the hash target inside it, if any. */
 export function show(el) {
-  const v = el && el.closest && el.closest(".dash-view");
+  const v = el?.closest?.(".dash-view");
   let id = v ? v.id : null;
   if (!id) {
     try {
       id = localStorage.getItem(VKEY);
-    } catch (e) {}
+    } catch {}
   }
   showView(id || views[0].id, { hash: !!v || false });
   if (!started) {

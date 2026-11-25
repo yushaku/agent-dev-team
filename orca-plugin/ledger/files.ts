@@ -1,7 +1,7 @@
 import { closeSync, fstatSync, openSync, readSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { Store, hash } from './store.ts';
+import { type Store, hash } from './store.ts';
 
 export function missing(error: unknown) {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';

@@ -7,51 +7,28 @@ import {
   zeroAg,
   COL,
   PARTS,
-  GROUPS,
-  ROLE_SRC,
-  GATE,
-  groupOf,
-  roleCol,
-  buildMixColours,
   mixCol,
   mixName,
   fmt,
   pct,
-  pad,
   dt,
-  hm,
-  dm,
-  dur,
   median,
   sum,
   sessionCount,
-  cut,
   r1,
-  splitWhy,
-  sessionsF,
   agentsF,
   buckets,
   bval,
   A,
   svg,
-  fill,
   widthOf,
   fig,
   agentLegend,
   partLegend,
-  groupLegend,
-  scale,
-  timeTicks,
-  yAxis,
   vBars,
   hBars,
-  arcPath,
   donut,
-  squarify,
   spark,
-  mixc,
-  gantt,
-  hideTip,
 } from "../lib/charts.js";
 
 const SEV = { high: "Cao", medium: "Trung bình", low: "Thấp" };
@@ -79,7 +56,7 @@ async function loadIssues() {
     if (!r.ok) throw new Error("HTTP " + r.status);
     const body = await r.json();
     if (seq === issuesSeq) renderIssues(body.issues || []);
-  } catch (e) {
+  } catch {
     if (seq === issuesSeq) $("#issues").innerHTML = '<p class="empty">Không tải được danh sách vấn đề.</p>';
   }
 }

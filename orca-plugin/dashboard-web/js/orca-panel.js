@@ -33,14 +33,14 @@ const CACHE = (days) => `team-dashboard-plugin:tasks:${days}` // shared by both 
 const cached = (days) => {
   try {
     return JSON.parse(localStorage.getItem(CACHE(days)))
-  } catch (e) {
+  } catch {
     return null
   }
 }
 const remember = (days, data) => {
   try {
     localStorage.setItem(CACHE(days), JSON.stringify(data))
-  } catch (e) {}
+  } catch {}
 }
 const firstFromCache = !!cached(state.days)
 
@@ -63,7 +63,7 @@ const replaceState = history.replaceState.bind(history)
 history.replaceState = (...args) => {
   try {
     replaceState(...args)
-  } catch (e) {}
+  } catch {}
 }
 
 const stale = firstFromCache

@@ -13,7 +13,7 @@ export function roleSkillStats(S) {
   S.forEach((s) => {
     Object.entries(s.skills || {}).forEach(([k, v]) => add(s, k, v[0], v[1]));
     Object.keys(s.hooks || {}).forEach((k) => {
-      if (!(s.skills || {})[k]) add(s, k, 1, s.start);
+      if (!s.skills?.[k]) add(s, k, 1, s.start);
     });
   });
   return by;

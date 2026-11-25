@@ -206,7 +206,6 @@ test('SQLite row corrections update only the affected session and RTK commands m
   const put = (id, item, row) => store.record(id, 1, item, Buffer.from(JSON.stringify(row)));
   for (const id of ['a', 'b']) put(source, 'sessions/' + id, { id, started_at: 100, input_tokens: 5 });
   put(source, 'messages/1', { session_id: 'a', role: 'user', content: 'before', timestamp: 101, active: 1 });
-  const path = join(root, 'oracle.db');
   const expected = golden('rtk-commands', root);
   expected[0].forEach((r, i) => put(rtk, 'commands/' + i, r));
   refresh();

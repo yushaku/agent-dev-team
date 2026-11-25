@@ -3,7 +3,7 @@ import { fmt, widthOf, fig, hBars } from "../lib/charts.js";
 
 export function renderRtkCommands() {
   const d = C.state.data.rtk;
-  if (!d || !d.available) return fig("#c-rtk-cmd", { title: "RTK tool save token", body: "", empty: "Không có dữ liệu RTK." });
+  if (!d?.available) return fig("#c-rtk-cmd", { title: "RTK tool save token", body: "", empty: "Không có dữ liệu RTK." });
   const byCmd = d.by_cmd || [];
   const W = widthOf("#c-rtk-cmd");
   fig("#c-rtk-cmd", {

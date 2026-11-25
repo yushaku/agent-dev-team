@@ -17,7 +17,7 @@ async function getJSON(url) {
     try {
       const body = await r.json();
       if (body && typeof body.error === "string") reason = body.error;
-    } catch (e) {}
+    } catch {}
     throw Object.assign(new Error(reason || url + ": HTTP " + r.status), { status: r.status });
   }
   return r.json();

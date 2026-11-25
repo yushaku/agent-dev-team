@@ -126,7 +126,7 @@ test("Homebrew hides only confirmed dependencies by default and labels each inst
   assert.match(html, /other-tool/);
   assert.doesNotMatch(html, /automatic-library/);
   assert.doesNotMatch(html, /Gom theo package|cli-package-intro/);
-  assert.match(html, /id="cli-homebrew"[^]*?<label class="cli-dependencies">/);
+  assert.match(html, /id="cli-homebrew"[\s\S]*?<label class="cli-dependencies">/);
   renderCliTools(inventory, "", "Homebrew", true);
   html = element("#cli-list").innerHTML;
   assert.match(html, /automatic-library/);

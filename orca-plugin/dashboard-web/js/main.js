@@ -23,7 +23,7 @@ if (window.orca) {
         "tk-search-h": "tk-agents-tools-h",
       }[decodeURIComponent(location.hash.slice(1))] || decodeURIComponent(location.hash.slice(1));
     const el = id ? document.getElementById(id) : null;
-    if (el && el.closest(".dash-view")) {
+    if (el?.closest(".dash-view")) {
       showToken(el);
       if (el.classList.contains("dash-view")) window.scrollTo(0, 0);
       else el.scrollIntoView();

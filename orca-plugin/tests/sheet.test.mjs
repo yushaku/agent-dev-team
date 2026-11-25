@@ -66,7 +66,7 @@ const open = async (name) => {
 const refusal = (status, error) => ({ ok: false, status, json: async () => (error === undefined ? { throws: true } : { error }) })
 
 test('a skill document is shown in the sheet', async () => {
-  globalThis.fetch = async (url) => ({
+  globalThis.fetch = async () => ({
     ok: true,
     status: 200,
     json: async () => ({ origin: 'own', source: 'team', description: 'Builds', path: '~/x/SKILL.md', refs: [], body: '# Builder\n\ntext' }),

@@ -17,7 +17,7 @@ const legend = () =>
     toggle: "search:" + kind,
     pressed: !hiddenKinds().includes(kind),
   }));
-const cnt = (o, k) => (o && o[k]) || 0;
+const cnt = (o, k) => o?.[k] || 0;
 const total = (o) => KINDS.reduce((a, [k]) => a + cnt(o, k), 0);
 
 export function toggleSearchKind(kind) {

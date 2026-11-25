@@ -19,7 +19,7 @@ function tree(t: import('node:test').TestContext) {
   };
   return { root, file };
 }
-const only = (path: string, dir: string) => discover(dir).tools[0];
+const only = (_path: string, dir: string) => discover(dir).tools[0];
 
 test('Homebrew receipts tell requested apps from dependencies from unknown', (t) => {
   const { root, file } = tree(t);

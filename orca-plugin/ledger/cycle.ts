@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { Store } from './store.ts';
+import type { Store } from './store.ts';
 import { files, ingestFile, missing } from './files.ts';
 import { snapshot } from './orca.ts';
 

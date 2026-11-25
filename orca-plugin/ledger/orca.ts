@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { Store, hash } from './store.ts';
+import { type Store, hash } from './store.ts';
 
 const execute = promisify(execFile);
 const endedDispatch = new Set(['completed', 'failed', 'cancelled', 'canceled', 'abandoned']);
