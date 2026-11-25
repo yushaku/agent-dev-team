@@ -180,6 +180,8 @@ test('terminal details survive restart and refresh after list changes or reappea
     join(f.root, 'orca'),
     `#!/bin/sh
 dir=$(dirname "$0")
+# The optional agent inventory (orca agent installed) runs beside the pass; this test counts orchestration calls only.
+[ "$1" = agent ] && exit 1
 echo "$2 $4" >> "$dir/calls"
 case "$2" in
 run-list) result=$(cat "$dir/listing") ;;

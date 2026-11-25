@@ -51,6 +51,9 @@ test('archived sessions and snapshots match Python across branch changes, append
   const actual = build(store, 7, now);
   // build_ms is wall-clock time, so it is dropped before comparing; the typed field itself is not optional.
   Reflect.deleteProperty(actual, 'build_ms');
+  // `agents` (Orca's installed-agent labels) is new since the Python golden files and empty here.
+  assert.deepEqual(actual.agents, []);
+  Reflect.deleteProperty(actual, 'agents');
   assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected[0]);
   const result = summary(actual, new URLSearchParams());
   assert.deepEqual(JSON.parse(JSON.stringify(result)), expected[1]);

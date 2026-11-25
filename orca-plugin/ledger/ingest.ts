@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Store } from './store.ts';
 import { cycle } from './cycle.ts';
+import { inventoryOf } from './agents.ts';
 import { acquire, type Held } from './lock.ts';
 import type { IngestApi, Options, Pass, Status } from './types.ts';
 
@@ -202,6 +203,7 @@ export function stop(): Promise<void> {
   stopping = (async () => {
     await r.inflight?.catch(() => {});
     try {
+      if (r.store) await inventoryOf(r.store).close(); // kill a running inventory command before its ledger closes
       r.store?.db.close();
     } finally {
       r.lock?.release();
@@ -225,9 +227,11 @@ export async function once(options: Options = {}) {
     store = new Store(home);
     const timings: Record<string, number> = {};
     const errors = await cycle(store, env, timings);
+    await inventoryOf(store).close(2000); // a one-shot pass gives a fast inventory a moment to land, then kills a slow one
     return { timings, errors };
   } finally {
     try {
+      if (store) await inventoryOf(store).close();
       store?.db.close();
     } finally {
       got.held.release();

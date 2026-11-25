@@ -3,6 +3,7 @@ import { join, resolve, sep } from 'node:path';
 import type { Store } from './store.ts';
 import { files, ingestFile, missing } from './files.ts';
 import { snapshot } from './orca.ts';
+import { inventoryOf } from './agents.ts';
 
 export async function cycle(store: Store, env = process.env, timings?: Record<string, number>) {
   const errors: string[] = [];
@@ -58,5 +59,7 @@ export async function cycle(store: Store, env = process.env, timings?: Record<st
     errors.push('orca: ' + error);
   }
   if (timings) timings.orca = Math.round(performance.now() - started);
+  // Optional labels: started beside the pass, no database access and never awaited (a hung Orca or a busy ledger must not hold ingest).
+  inventoryOf(store).refresh(env.AGENT_LEDGER_ORCA || 'orca');
   return errors;
 }

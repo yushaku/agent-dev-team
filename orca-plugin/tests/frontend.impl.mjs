@@ -565,7 +565,7 @@ test("timeline includes observed orchestrator activity and respects role filters
     orchestrator_activity: [{ agent: "codex", start: 90, end: 300, tokens: 10 }],
     orchestrator_by_agent: { codex: 10 },
   };
-  C.setAgents({ orca: { runs: [r] } });
+  C.setAgents({ orca: { runs: [r] }, agents: [{ id: "codex", name: "Codex" }] });
   C.gantt(runDetail(r), () => 0, "", "#orch-time");
   assert.match(element("#orch-time").innerHTML, /Orchestrator/);
   assert.match(element("#orch-time").innerHTML, /Codex/);
@@ -794,9 +794,10 @@ test("Tools legend toggles code-search chart categories", () => {
     { agent: "claude", role: "builder", repo: "r", worktree: "w1", total: 100, search: { codegraph: 3, rg: 1 } },
     { agent: "codex", role: "builder", repo: "r", worktree: "w2", total: 300, search: { rg: 4, read_full: 2 } },
   ];
+  C.setAgents({ sessions, agents: [{ id: "claude", name: "Claude Code" }] });
   renderSearch(sessions);
   assert.match(element("#c-search-agent").innerHTML, /Codegraph/);
-  assert.match(element("#c-search-agent").innerHTML, /Claude/);
+  assert.match(element("#c-search-agent").innerHTML, /Claude Code/);
   setSearchView("worktree");
   renderSearch(sessions);
   assert.match(element("#c-search-agent").innerHTML, /r\/w2/);
@@ -1123,4 +1124,68 @@ test("every tab renders an agent outside the legacy four with a label and a stab
   C.state.agent = "jcode";
   assert.deepEqual(C.agentsF(), ["jcode"]);
   C.state.agent = "";
+});
+test("Feature Runs and the Run timeline show Orca's agent names, and the Tasks view falls back to raw ids", () => {
+  const feature = {
+    repo: "sample",
+    branch: "feat/names",
+    variant: "orca",
+    tokens: 100,
+    first_activity: 10,
+    last_activity: 20,
+    lead_seconds: 10,
+    session_count: 2,
+    agents: ["pi", "mystery"],
+    loaded_skills: {},
+    run_ids: [],
+    fix_rounds: { count: 0, source: "code-review" },
+    gate2_findings: null,
+    delivered: null,
+    orchestrator_tokens: 1,
+    worker_tokens: 99,
+  };
+  const task = { id: "t1", title: "Build", role: "builder", status: "completed", agent: "pi", created: 100, started: 100, completed: 200, tokens: { pi: 7 } };
+  const run = { id: "named", objective: "Named", created: 100, repo: "sample", tasks: [task], gates: [], tokens: {}, orchestrator_by_agent: {}, events: [] };
+  C.state.repo = "";
+  C.state.data = { generated_at: 1000, features: { runs: [feature] }, orca: { runs: [run] }, agents: [{ id: "pi", name: "Pi" }] };
+  C.setAgents(C.state.data);
+  renderFeatures([{ repo: "sample", branch: "feat/names" }]);
+  assert.match(element("#feature-runs").innerHTML, /2 phiên · Pi, mystery/, "the table shows the Orca name, and the raw id for an agent Orca does not list");
+  assert.doesNotMatch(element("#feature-runs").innerHTML, /· pi/);
+  assert.match(
+    communicationDiagram(
+      {
+        ...run,
+        events: [{ id: "e", at: 150, kind: "dispatch", from: "Orchestrator", to: "Build", to_task: "t1", from_actor: "c", to_actor: "w", text: "go" }],
+      },
+      "names-view",
+    ),
+    /<span>Pi · #/,
+  );
+  C.setAgents({ ...C.state.data, agents: [] });
+  renderFeatures([{ repo: "sample", branch: "feat/names" }]);
+  assert.match(element("#feature-runs").innerHTML, /pi, mystery/);
+});
+
+test("code search groups by agent id and names the row when drawn", () => {
+  C.state.searchHidden = [];
+  C.state.data = { sessions: [] };
+  const sessions = [
+    { agent: "opencode", role: "builder", repo: "r", worktree: "w1", total: 1, search: { codegraph: 3 } },
+    { agent: "opencode2", role: "builder", repo: "r", worktree: "w2", total: 1, search: { rg: 4 } },
+    { agent: "other", role: "builder", repo: "r", worktree: "w3", total: 1, search: { grep: 2 } },
+  ];
+  C.setAgents({
+    sessions,
+    agents: [
+      { id: "opencode", name: "OpenCode" },
+      { id: "opencode2", name: "OpenCode" },
+      { id: "other", name: "opencode" },
+    ],
+  });
+  setSearchView("agent");
+  renderSearch(sessions);
+  const html = element("#c-search-agent").innerHTML;
+  assert.equal((html.match(/>OpenCode<\/text>/g) || []).length, 2, "two ids with one display name stay two rows");
+  assert.equal((html.match(/>opencode<\/text>/g) || []).length, 1, "a raw id equal to another label is its own row");
 });

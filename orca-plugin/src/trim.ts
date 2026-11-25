@@ -15,6 +15,7 @@ const KEEP = [
   'known_roles',
   'attribution',
   'copilot_dirs',
+  'agents',
   // the Agents tools view: RTK by command and the installed skills (a few KB, sessions carry the rest)
   'rtk',
   'skills_installed',

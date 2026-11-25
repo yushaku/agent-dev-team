@@ -85,6 +85,8 @@ export interface DashboardData {
     attribution: { total: number; assigned: number; unassigned: number };
   };
   copilot_dirs: number;
+  /** Orca's installed agents (id, name), cached; empty when Orca has not answered. Labels only: charts show agents with usage. */
+  agents: { id: string; name: string }[];
   orca: { available: boolean; error: string | null; fetched_at: number | null; runs: DashboardRun[] };
   roles_cfg: {
     tiers: Record<string, string>;

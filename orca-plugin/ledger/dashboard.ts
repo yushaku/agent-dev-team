@@ -7,6 +7,7 @@ import { PARSER_VERSION } from './derived.ts';
 import { featureData, featureDir, median, rounds } from './features.ts';
 import { home, checkout, repoOf, roleConfig } from './metadata.ts';
 import { aliases, tsOf, type Session } from './session.ts';
+import { readAgents } from './agents.ts';
 import { runData } from './run-data.ts';
 import { sessionAssignment } from './assignment.ts';
 type Segment = UsageRow['feature_segments'][number];
@@ -381,6 +382,7 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
         .map((r) => (r.directory ? String(r.path) : dirname(String(r.path))))
         .filter((path) => !basename(path).startsWith('.')),
     ).size,
+    agents: readAgents(db, now * 1000),
     orca: { available: orca.available, error: orca.error, fetched_at: orca.fetched_at, runs: orcaRuns },
     ...roleConfig(),
     rtk: rtk(db, date(start)),
