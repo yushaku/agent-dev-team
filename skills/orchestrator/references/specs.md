@@ -23,6 +23,7 @@ Output: <report path and raw-log paths under .team/<feature>/>
 ```
 
 - Title: `<role>: <what>`. `Role`, `Measurement`, `Routing` and `Routing-log` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
+- Before each `task-create`, check the spec file has all four lines, `Run:` and, for `fix`/`re-review`, a positive `round`. Every new unit of work (build, fix, re-review, retro, close) is its own `task-create`, started by `--task <id>`; reuse the same worker with `--terminal <handle>`. Start Builders and Reviewers with `--keep-open` so that handle stays reusable. Do not hand new work to a settled Dispatch with `send`: Orca turns it into a follow-up Task without this metadata. Use `send` only to steer a worker on its current Task.
 - `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
 - Link tickets without restating them. Put the assigned role skill and resolved project slots in `Skills:` by absolute path, including `disable-model-invocation` skills. Workers load their role skill, resolve its core/conditional skills and read applicable references; the coordinator uses this contract to dispatch.
 - Pass resolved config/skills, not the full config. Models follow `routing.md`; Dispatch records follow "Routing history". Workers use "Report" and relevant `docs-policy.md` sections for docs.
