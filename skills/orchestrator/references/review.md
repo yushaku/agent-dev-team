@@ -1,25 +1,23 @@
 # Verification and fix rounds
 
-- One independent Reviewer, on a different Orca agent than the Builder, reviews tickets, code, tests, changed docs and delivery body with `code-review` (`skills/team-reviewer/SKILL.md`). Include the `anti-ai` pass and, when triggered, `skills/team-reviewer/references/security.md` (set in `Refs:`) at the highest required tier; extra workers follow `start.md` "Team decisions".
-- The review Task names the spec and ticket files as the Spec source and the base branch as the fixed point. Its report keeps `## Standards` and `## Spec` apart. Include Builder leftovers and screenshots when the visual loop ran.
-- The Builder supplies tests and measurements; the Reviewer checks that evidence (`skills/team-reviewer/references/perf-a11y.md`); missing evidence goes back to the Builder, not to another worker.
-- Reuse the Builder's passing `commands.verify` evidence when its sha is the reviewed HEAD and the tree is clean; otherwise the Reviewer reruns it (`skills/team-reviewer/SKILL.md` step 1). Run targeted checks for a disputed finding, changed behavior or suspect evidence. Repeating review or editing prose alone does not require another full suite.
-- The Reviewer sends consolidated findings and reproduction questions directly to the existing Builder via `specs.md` "Worker communication". The Orchestrator authorizes each fix round and supplies the current Dispatch; peer mail alone does not start a new round. Before editing, the Builder reproduces/traces each issue or rejects it with evidence. The independent Reviewer verifies fixes and confirms rejections or supplies counterexamples; send the resulting verdict and remaining blockers to the Orchestrator.
-- Fix only blockers and fix-induced regressions. Defer optional improvements until PO request; accepted tradeoffs are not new defects.
-- Finalize related docs before final review. Behavior changes follow `gates.md`; wording/implementation alignment needs no new Task.
-- Review-finding fixes go into the commit they fix before Gate 2 (amend or fixup); UI asks follow "UI rounds" below.
-- One scoped re-review per fix round covers the prior findings, rejection evidence, named fix commits and finalized docs/delivery text. Add findings only for regressions introduced by the fix; Security checks the affected path, not a second full audit.
-- After 2 failed fix rounds, ask the PO how to proceed, with one tier up as an option. Never start a silent third round or automatically raise the tier.
-- At Gate 2, list nonblocking leftovers and concrete risks; delivery must meet `delivery.md` "Definition of Done (feature)".
+## Worker results
+
+- After each `worker_done`, read the full report, including deviations/leftovers. Reconcile `git status --short` in the worker checkout with reported paths; have an authorized committer finish delivery changes.
+- Quote verify evidence in the PO update; use shas/counts only from output read this turn. Before Gate 2, require passing `commands.verify` evidence for the final revision; rerun with summary output only if missing, stale or contradictory.
+- Record processed Dispatch/report references in the handoff (`start.md` "Handoff"). Missing completion follows "Coordinator delivery"; missing reports follow "Dispatch and follow-ups" there.
+
+## Review and fixes
+
+- Assign the independent Reviewer selected by `routing.md`; use `team-reviewer`, `code-review`, `anti-ai` and triggered security references at the required tier. Name the base branch as fixed point and spec/tickets as Spec sources. Keep `## Standards` and `## Spec` separate; include Builder leftovers and visual-loop screenshots.
+- The Builder supplies tests/measurements; missing evidence returns to that Builder. Reuse passing verify evidence for the reviewed HEAD on a clean tree; otherwise the Reviewer reruns it. Run targeted checks for disputed findings or suspect evidence; prose edits or repeated review alone need no full rerun.
+- Reviewer sends consolidated findings/reproduction questions to the Builder via `specs.md` "Worker communication". Orchestrator authorizes each fix round; peer mail alone does not. Builder reproduces/traces findings or rejects them with evidence; Reviewer verifies fixes/rejections and reports remaining blockers.
+- Fix blockers and fix-induced regressions; defer optional improvements. Accepted tradeoffs are not new defects. Finalize docs before final review; behavior changes use `gates.md`, alignment edits need no new Task.
+- Before Gate 2, amend/fixup review fixes into the commits they correct. Each round gets one scoped re-review of prior findings, rejection evidence, fix commits and finalized docs/delivery text. New findings cover only fix-induced regressions; security review follows the affected path.
+- After two failed fix rounds, ask the PO how to proceed; offer one tier up. No silent third round or automatic tier increase. Delivery must satisfy `delivery.md` "Definition of Done (feature)"; list nonblocking leftovers and risks at Gate 2.
 
 ## UI rounds (one Builder Task, no full Run)
 
-- An inline UI ask with concrete behaviour goes to one Builder Task in the feature worktree, never a full team or your own edit.
-- Send follow-up asks on the same component to the running Task with the exact change and what must keep working.
-- Batch element-by-element polish (selector or DOM excerpt) into one commit once the PO closes the round.
-- If a complaint covers an area, fix the screen with the most hits fully, report sibling screens with the same pattern as a file list, and ask before touching them.
-- Ambiguous element/layout: ask the PO with options, recommended first.
-- A reference screenshot is the chosen redesign: no prototype or G-UI; ask only about placement that changes structure (tab, full page, sheet). Map it to the app's real data and controls using app tokens, not the reference colours.
-- A reference offered as mood: prototype Task and G-UI (`start.md` "Team decisions").
-- If a UI ask implies a missing capability, ship the UI-only part and ask whether to build the capability (recommended: a team Run), keep old behaviour, or reuse what exists.
-- After merge, put such a tweak on a fresh branch from `main` in the delivered worktree.
+- Send concrete inline UI asks to one Builder in the feature worktree. Reuse the Task for component follow-ups; state the exact change and behavior to preserve. Batch element polish into one commit when the PO closes the round.
+- For an area-wide complaint, fix the screen with most hits; list affected siblings and ask before expanding scope. Ambiguous layout: ask with recommended options.
+- A reference screenshot chosen as the redesign skips prototype/G-UI; ask only about structural placement. Map real app data/controls using app tokens. A mood reference uses prototype/G-UI (`start.md` "Team decisions").
+- Missing capability: deliver the UI-only part and ask whether to add the capability, retain behavior or reuse existing functionality. After merge, branch UI tweaks from `main` in the delivered worktree.

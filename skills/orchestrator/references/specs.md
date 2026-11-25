@@ -1,6 +1,6 @@
 # Task specs
 
-New Task: use this template and pass the spec's absolute path per the Orca guide. Same-Task clarifications may point to the existing spec; a new Task must carry its own metadata even when reusing the file.
+Pass each Task's spec by absolute path. Follow-ups may reuse the file; new Tasks carry their own metadata.
 
 ```text
 Role: <role id: builder|reviewer|support-engineer>
@@ -12,6 +12,7 @@ Ticket: <absolute path of the ticket file; replaces Goal and Scope>
 Goal: <only without a ticket (review, delivery, close, investigation): observable result>
 Scope: <only without a ticket: entry points, editable paths, spec/decisions by path>
 Spec: <absolute path of .team/<feature>/spec.md, seams included>
+Workspace: <exact Orca workspace selector, absolute checkout path and branch>
 Peers: <related same-Run Task IDs, roles and current Dispatch IDs when known>
 Constraints: <project rules, `matt.glossary`, `matt.adr`, protected user files, branch/delivery rules, human_only; UI ticket: `ui_rules` and `design` slot skills>
 Skills: <load skill team-<role> first, then other absolute SKILL.md paths; load conditional skills only when needed>
@@ -22,13 +23,12 @@ Output: <report path and raw-log paths under .team/<feature>/>
 
 - Title: `<role>: <what>`. `Role`, `Measurement`, `Routing` and `Routing-log` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
 - `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
-- A ticket Task points at its ticket file and does not restate it. Skills with `disable-model-invocation` (`to-spec`, `to-tickets`, `grill-with-docs`, `triage`, `improve-codebase-architecture`, `retro`) go in `Skills:` by absolute path. Choose `Refs:` from the ticket and Task content using the trigger lines in the role skill's "References"; the worker reads only those.
-- Include resolved skills and config values, not the whole config. Resolve models from `.team/config.yaml` via `routing.md` "Model routing" and record each Dispatch under "Routing history" below. For output, workers read "Report"; for doc changes/review, relevant `docs-policy.md` sections.
+- Link tickets without restating them. Put skills in `Skills:` by absolute path, including `disable-model-invocation` skills. Resolve `Refs:` from the role's trigger lines; workers read only applicable references.
+- Pass resolved config/skills, not the full config. Models follow `routing.md`; Dispatch records follow "Routing history". Workers use "Report" and relevant `docs-policy.md` sections for docs.
 - Include an absolute pointer to "Worker communication" below in each Task's Constraints; supply related peer Dispatch IDs when available and refresh them after reassignment.
+- Set `Workspace:` per `start.md` "Shared feature workspace"; isolated Tasks name their child worktree and integration target. Workers need coordinator approval to change checkout/branch or create another worktree.
 - With `codegraph: on`, add to Constraints: "Code search: codegraph first (`codegraph_explore` MCP or `codegraph explore|callers|impact` CLI) for symbols, callers and impact; `rg` only for literal text. Do not `cat` whole files to find a symbol." (`skills/init-team/references/config-schema.md` "Code search setup").
-- The Builder traces connected code from the ticket; link source decisions. Name approval boundaries; routine reads, scoped edits, tests and authorized delivery proceed.
-- Protect uncommitted/PO-kept files; include related Builder docs in scope. Follow approved business decisions; changes use `gates.md`.
-- Handle observed permission failures via `start.md` "Worker permissions"; do not preemptively forbid commits.
+- Link source decisions and approval boundaries; include related docs and protect user files. Routine scoped reads, edits, tests and authorized delivery proceed; changed decisions use `gates.md`, permission failures use `start.md` "Worker permissions".
 
 ## Routing history
 
@@ -39,11 +39,10 @@ Output: <report path and raw-log paths under .team/<feature>/>
 
 ## Worker communication
 
-- Workers may exchange technical questions, findings, reproductions and integration details directly within approved Tasks in the same Run. Use `orca orchestration send` to the supplied `dispatch:<id>` per the version-matched guide; include Task IDs and relevant file/report references. Send only the question or change needed, to the peers concerned; avoid routine broadcasts or copying full specs/reports.
-- Direct exchanges use current, active peer Dispatches. Route a missing, finished or reassigned peer through the Orchestrator before sending more work; peer messages do not authorize new Tasks, extra edit scope or new workers.
-- The Orchestrator owns assignment, DAG dependencies and fix-round limits. Escalate blockers, unresolved disagreements and proposed scope, acceptance-criteria or shared-contract changes before dependent work proceeds; PO gates follow `gates.md`.
-- The assigned artifact owner records conclusions that affect implementation in the existing spec/report before others rely on them. Notify the Orchestrator once with the conclusion, affected Task IDs and artifact reference; routine questions and answers need no relay. Keep spec and report files as the durable sources.
-- Send `worker_done` to the Orchestrator with the required Task/Dispatch identity and report. Peer mail does not complete Tasks, release dependencies or resolve gates. Use `ask/reply` for questions requiring the Orchestrator.
+- Exchange technical questions/findings/integration details within approved same-Run Tasks using active peer `dispatch:<id>` addresses. Include Task IDs and artifact references; send only needed changes to concerned peers. Missing/finished/reassigned peers go through the Orchestrator.
+- Orchestrator owns assignment, dependencies and fix rounds; peer mail expands no scope, creates no workers and completes no Tasks/gates. Escalate blockers, disagreements and scope/acceptance/shared-contract changes before dependent work (`gates.md`).
+- Artifact owner records implementation conclusions in the existing spec/report before reliance; notify Orchestrator once with affected IDs/references. Routine Q&A needs no relay; coordinator questions use `ask/reply`.
+- After writing the report, send `worker_done` with Task/Dispatch identity, verdict, at most five summary lines and report path. Completion routing follows `start.md` "Coordinator delivery".
 
 ## When UI or a running app is involved
 
@@ -68,7 +67,7 @@ Messages point to files. Store all Run files under `.team/<feature>/` via the wo
 | `decisions.md` | Orchestrator | Numbered PO decisions: Gate 1 answers, scope cuts, Orchestrator defaults |
 | `spec.md` | Orchestrator (`to-spec`) | Spec and test seams |
 | `issues/NN-<slug>.md` | Orchestrator (`to-tickets`) | One ticket per Orca Task; `Blocked by:` line, no status |
-| `handoff.md` | Orchestrator | `skills/orchestrator/SKILL.md` |
+| `handoff.md` | Orchestrator | `start.md` "Handoff" |
 
 ## Report
 
@@ -89,5 +88,4 @@ Use the output path assigned in the Task, normally `.team/<feature>/reports/NN-<
 <open risks and human steps>
 ```
 
-- `worker_done`: verdict, at most five summary lines and report path. The Orchestrator reads the report, not the transcript.
-- Save raw output to `.team/<feature>/logs/`; keep artifacts local and ignored. Retention: `delivery.md`.
+- Keep artifacts local and ignored; retention follows `delivery.md`.
