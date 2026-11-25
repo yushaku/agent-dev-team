@@ -349,7 +349,7 @@ export interface DashboardRun {
   messages_limited: boolean;
   repo: string;
   delivered_at: number | null;
-  delivered?: boolean;
+  delivered?: boolean | null;
   lead_seconds: number | null;
   gate_wait_seconds: number;
   attention: { kind: string; text: string; waiting_seconds: number | null }[];

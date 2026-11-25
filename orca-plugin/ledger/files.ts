@@ -1,14 +1,21 @@
-import { closeSync, fstatSync, openSync, readSync, readdirSync, statSync } from 'node:fs';
+import { type Dirent, closeSync, fstatSync, openSync, readSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { type Store, hash } from './store.ts';
+
+declare global {
+  interface JSON {
+    /** JSON.rawJSON (Node 21+): not in TypeScript's lib yet. */
+    rawJSON(text: string): unknown;
+  }
+}
 
 export function missing(error: unknown) {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
 }
 
 export function* files(root: string, kind: string, onError: (dir: string, error: unknown) => void, depth = 0): Generator<string> {
-  let entries;
+  let entries: Dirent[];
   try {
     entries = readdirSync(root, { withFileTypes: true });
   } catch (error) {

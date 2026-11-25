@@ -33,8 +33,8 @@ export async function snapshot(store: Store, binary: string, errors: string[]) {
   }
   async function pages(command: string, args: string[], field: string, paths: string[]) {
     const items = [];
-    let cursor;
-    const visited = new Set<string>();
+    let cursor: string | undefined;
+    const visited = new Set<string | undefined>();
     do {
       const argsWithCursor = [...args, '--limit', '100', ...(cursor ? ['--cursor', cursor] : [])];
       const key = keyOf(command, [...args, '--page', String(visited.size)]);
@@ -64,8 +64,8 @@ export async function snapshot(store: Store, binary: string, errors: string[]) {
   async function inventory() {
     if (pending.filter((p) => p.unchanged).length < 4) return;
     const groups = new Map<string, typeof runs>();
-    const visited = new Set<string>();
-    let cursor;
+    const visited = new Set<string | undefined>();
+    let cursor: string | undefined;
     try {
       do {
         const page = await read('worker-list', ['--limit', '100', ...(cursor ? ['--cursor', cursor] : [])]);
@@ -94,7 +94,7 @@ export async function snapshot(store: Store, binary: string, errors: string[]) {
     const groups = await inventoryResult;
     const summary = groups?.get(run.id) ?? [];
     const digestWorkers = (workers: typeof runs) => hash(Buffer.from(JSON.stringify(workers)));
-    let workers;
+    let workers: typeof summary;
     if (groups && unchanged && previous?.workerHash === digestWorkers(summary)) {
       workers = summary;
       for (const key of previous.paths) {

@@ -7,9 +7,10 @@ export const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest
 
 export class Store {
   db: DatabaseSync;
-  private version: ReturnType<DatabaseSync['prepare']>;
-  private blob: ReturnType<DatabaseSync['prepare']>;
-  private log: ReturnType<DatabaseSync['prepare']>;
+  // Definitely assigned: the constructor calls init(), which sets all three or throws.
+  private version!: ReturnType<DatabaseSync['prepare']>;
+  private blob!: ReturnType<DatabaseSync['prepare']>;
+  private log!: ReturnType<DatabaseSync['prepare']>;
   constructor(home: string) {
     ensurePrivateHome(home);
     this.db = new DatabaseSync(join(home, 'ledger.sqlite'));

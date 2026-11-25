@@ -31,7 +31,7 @@ export function installed(base: string) {
     .sort();
 }
 export function roleConfig() {
-  const roles = {},
+  const roles: Record<string, { agent: string | null; tier: string | null; text: string }> = {},
     known = ['anti-ai', 'security', 'perf-a11y'];
   for (const name of installed(join(teams, 'skills'))) {
     if (name.startsWith('team-')) {
@@ -123,7 +123,7 @@ export function skillDoc(name: string): TeamSkill | null {
     origin = 'dl';
     const real = dirname(realpathSync(path)),
       lockPath = process.env.AGENT_SKILL_LOCK || join(dirname(skills), '.skill-lock.json');
-    let lock;
+    let lock: { source?: string } | undefined;
     try {
       lock = JSON.parse(read(lockPath)).skills?.[name];
     } catch {}

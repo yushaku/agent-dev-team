@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { type ExecFileException, execFile } from 'node:child_process';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { promisify } from 'node:util';
@@ -32,7 +32,8 @@ async function git(repo: string, ...args: string[]) {
   try {
     return (await run('git', ['-C', repo, ...args], { timeout: 30_000, maxBuffer: 32 << 20 })).stdout.trim();
   } catch (error) {
-    if (error.killed || error.code === 'ETIMEDOUT') throw new Error('git_timeout:' + args[0]);
+    const e = error as ExecFileException;
+    if (e.killed || e.code === 'ETIMEDOUT') throw new Error('git_timeout:' + args[0]);
     return null;
   }
 }
@@ -46,7 +47,7 @@ async function inspect(repo: string) {
   const def =
     (await git(repo, 'symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'))?.replace(/^refs\/remotes\/origin\//, '') ||
     ['main', 'master'].find((n) => heads.has(n));
-  const head = heads.get(def);
+  const head = def ? heads.get(def) : undefined;
   if (!head) throw new Error('default_branch_unavailable');
   const merged = await git(repo, 'for-each-ref', '--merged=' + head, '--format=%(refname:lstrip=2)', 'refs/heads/');
   return {
@@ -198,7 +199,7 @@ export class GitMetrics {
         } catch (error) {
           if (this.closed) return;
           const elapsed = Math.round(performance.now() - start),
-            message = error.message;
+            message = (error as Error).message;
           state.head = '';
           this.jobs.delete(state);
           this.saveAttempt(state.repo, '', message, elapsed);

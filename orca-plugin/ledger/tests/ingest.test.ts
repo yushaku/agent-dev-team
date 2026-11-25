@@ -126,7 +126,7 @@ test('SQLite WAL updates, row additions and restart preserve distinct versions',
   await f.run();
   const rows = f.history('hermes');
   assert.deepEqual(
-    rows.filter((r) => r.item.startsWith('sessions/')).map((r) => JSON.parse(r.text).total),
+    rows.filter((r) => typeof r.item === 'string' && r.item.startsWith('sessions/')).map((r) => JSON.parse(r.text).total),
     [5, 7, 12],
   );
   assert.equal(rows.filter((r) => r.item === 'messages/9').length, 1);
@@ -1300,7 +1300,7 @@ test('plugin host: one listener serves the dashboard, waits for a busy port, and
   } finally {
     await shutdown();
   }
-  await assert.rejects(h.get('/health'), undefined, 'listener closed');
+  await assert.rejects(h.get('/health'), 'listener closed');
   await assert.rejects(dashboardData(7), /chưa sẵn sàng/);
   const { acquire } = await import('../lock.ts');
   const got = acquire(process.env.AGENT_LEDGER_HOME!, 'after');
@@ -1390,7 +1390,7 @@ test('plugin host: shutdown while the listener is still retrying a busy port lea
   squatter.close();
   await once(squatter, 'close');
   await sleep(700); // several retry intervals (200 ms): a leaked retry would bind the freed port now
-  await assert.rejects(h.get('/health'), undefined, 'no retry timer is still alive');
+  await assert.rejects(h.get('/health'), 'no retry timer is still alive');
 });
 
 test('plugin host: an API request in flight during shutdown does not hang the shutdown, and the port closes', async (t) => {
@@ -1410,7 +1410,7 @@ test('plugin host: an API request in flight during shutdown does not hang the sh
   assert.ok(Date.now() - started < 8000, 'shutdown completed promptly');
   const outcome = await Promise.race([inflight, sleep(5000).then(() => 'hung')]);
   assert.notEqual(outcome, 'hung', 'the in-flight request settled (a reset, or a 200/503 answer)');
-  await assert.rejects(h.get('/health'), undefined, 'the port is closed');
+  await assert.rejects(h.get('/health'), 'the port is closed');
 });
 
 test('plugin host: an API module that cannot be imported leaves ingest and /health running and says so', async (t) => {
@@ -1514,7 +1514,7 @@ test('plugin host: a deactivation during a slow optional API import starts nothi
       release();
       await Promise.all([activation, stopping]);
       assert.equal(existsSync(join(process.env.AGENT_LEDGER_HOME!, 'ingest.lock.db')), false, `${outcome}: ingest never started`);
-      await assert.rejects(h.get('/health'), undefined, `${outcome}: the port was never bound`);
+      await assert.rejects(h.get('/health'), `${outcome}: the port was never bound`);
       assert.deepEqual(h.bars, [], `${outcome}: nothing was announced`);
     } finally {
       setModuleLoader();

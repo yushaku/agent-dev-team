@@ -3,8 +3,10 @@ import * as main from './worker'
 import { setApiRoutes, setDataSource } from './ledger-host'
 
 // The ledger host (real ingest, port 4747) stays off in tests.
-;(globalThis as any).process.env.TEAM_DASHBOARD_NO_LEDGER = '1'
+process.env.TEAM_DASHBOARD_NO_LEDGER = '1'
 
+/** The fields of a snapshot these tests read. */
+type Snapshot = { sessions: unknown[]; rtk: unknown; skills_installed: unknown; features: Record<string, unknown>; orca: { runs: unknown[] } }
 const CAP = 1_048_576
 const size = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length
 /** The Tasks snapshot comes from the in-process API; tests stand in for it. */
@@ -19,7 +21,7 @@ async function read(worker: Awaited<ReturnType<typeof mountWorker>>, days = 7) {
     assert.ok(size(reply) < CAP, `chunk ${index} is ${size(reply)} bytes`)
     text += reply.chunk
   }
-  return { open, data: JSON.parse(text) as any }
+  return { open, data: JSON.parse(text) as Snapshot }
 }
 
 test('hands the trimmed dashboard snapshot over in chunks', async () => {

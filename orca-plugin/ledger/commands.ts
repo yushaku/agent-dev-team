@@ -41,7 +41,7 @@ export function install(path: string) {
   for (const root of ['/Applications', join(home, '.local/share')]) if (path.startsWith(root + '/')) return [root, '', ''];
   return [parent, '', ''];
 }
-function details(t) {
+function details(t: Pick<CliTools['tools'][number], 'path' | 'resolved_path' | 'name' | 'source' | 'package'>) {
   const path = t.resolved_path,
     parts = path.split('/');
   for (const root of new Set([dirname(dirname(path)), dirname(dirname(t.path))])) {
@@ -130,11 +130,11 @@ export function discover(pathEnv?: string, shell?: string | (() => string)): Cli
   const tools = new Map(),
     sources: Record<string, number> = Object.create(null);
   for (const directory of directories) {
-    let entries;
+    let entries: string[];
     try {
       entries = readdirSync(directory);
     } catch (e) {
-      if (e.code !== 'ENOENT') warnings.push('Không đọc được thư mục: ' + directory);
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') warnings.push('Không đọc được thư mục: ' + directory);
       continue;
     }
     for (const name of entries)
@@ -160,7 +160,7 @@ export function discover(pathEnv?: string, shell?: string | (() => string)): Cli
         cellar >= 0
           ? join(parts.slice(0, cellar + 3).join('/'), 'INSTALL_RECEIPT.json')
           : join(parts.slice(0, parts.indexOf('Caskroom') + 2).join('/'), '.metadata/INSTALL_RECEIPT.json');
-      let r;
+      let r: { installed_on_request?: unknown; installed_as_dependency?: unknown } | undefined;
       try {
         r = JSON.parse(metadata(receipt));
       } catch {}

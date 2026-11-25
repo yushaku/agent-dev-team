@@ -13,7 +13,8 @@ import { join, relative } from 'node:path';
 const fixtures = join(import.meta.dirname, 'fixtures');
 const tilde = (path: string) => (path.startsWith(homedir() + '/') ? '~' + path.slice(homedir().length) : path);
 
-export function golden(label: string, root: string): any {
+// The caller names the shape it expects; the frozen JSON is trusted test data, so it is not validated.
+export function golden<T = unknown>(label: string, root: string): T {
   const replacements: [string, string][] = [
     ['$FIXTURES', tilde(fixtures)],
     ['$HOME_TO_ROOT', relative(homedir(), '/')],
@@ -21,7 +22,7 @@ export function golden(label: string, root: string): any {
     ['$ROOT', root],
   ];
   const fill = (text: string) => replacements.reduce((out, [from, to]) => out.split(from).join(to), text);
-  const walk = (value: any): any =>
+  const walk = (value: unknown): unknown =>
     typeof value === 'string'
       ? fill(value)
       : Array.isArray(value)
@@ -29,5 +30,5 @@ export function golden(label: string, root: string): any {
         : value && typeof value === 'object'
           ? Object.fromEntries(Object.entries(value).map(([key, item]) => [fill(key), walk(item)]))
           : value;
-  return walk(JSON.parse(readFileSync(join(import.meta.dirname, 'golden', label + '.json'), 'utf8')));
+  return walk(JSON.parse(readFileSync(join(import.meta.dirname, 'golden', label + '.json'), 'utf8'))) as T;
 }

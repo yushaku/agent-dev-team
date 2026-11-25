@@ -34,17 +34,45 @@ export interface Session {
   aggregate?: boolean;
   snapshot?: Record<string, Time> | null;
 }
+/** A Hermes `sessions` row, as the ledger archives it. */
+export type HermesSession = {
+  id: string;
+  title?: string | null;
+  cwd?: string | null;
+  git_branch?: string | null;
+  started_at: number;
+  ended_at?: number | null;
+  source?: string | null;
+  model?: string | null;
+  input_tokens?: number | null;
+  cache_read_tokens?: number | null;
+  cache_write_tokens?: number | null;
+  output_tokens?: number | null;
+  reasoning_tokens?: number | null;
+};
+/** A Hermes `messages` row, as the ledger archives it. */
+export type HermesMessage = {
+  id?: unknown;
+  role?: string | null;
+  content?: string | null;
+  timestamp: number;
+  tool_calls?: string | null;
+  tool_name?: string | null;
+  active?: number | null;
+};
+type TextPart = { type?: string; text?: string };
 
-export const tsOf = (s?: string): Time => {
+export const tsOf = (s?: string | null): Time => {
   if (!s) return null;
   const stamp = s.replace(' ', 'T');
   const ms = Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(stamp) ? stamp : stamp + 'Z');
   if (!Number.isFinite(ms)) return null;
   return Math.floor(ms / 1000) + Number('0.' + (stamp.match(/\.(\d+)/)?.[1]?.slice(0, 6) || 0));
 };
-export function json(text: string) {
+export function json(text: string | null | undefined) {
   try {
-    return JSON.parse(text);
+    // JSON.parse converts its argument to a string first: null parses as null, undefined throws (and returns null here).
+    return JSON.parse(text as string);
   } catch {
     return null;
   }
@@ -91,7 +119,7 @@ export function newSession(agent: string, id: string): Session {
     discussion: null,
   };
 }
-function command(args) {
+function command(args: unknown) {
   let v = typeof args === 'string' ? json(args) : args;
   if (!v && typeof args === 'string')
     return Array.from(args.matchAll(/\bcmd\s*:\s*(["'`])((?:\\.|(?!\1).)*)\1/gs), (m) => m[2].replaceAll('\\n', '\n')).join('\n');
@@ -119,7 +147,7 @@ const valueFlags = new Set([
   '--max-depth',
   '--max-columns',
 ]);
-function symbolSearch(cmd: string, cwd: string) {
+function symbolSearch(cmd: string, cwd: string | null) {
   if (!cwd) return false;
   const cd = cmd.match(/^\s*cd\s+("[^"]+"|'[^']+'|\S+)\s*(?:&&|;)/);
   const rel = cd?.[1]?.replace(/^['"]|['"]$/g, '').replace(/^~(?=\/|$)/, homedir()) || '.';
@@ -185,7 +213,7 @@ function shellWords(cmd: string, splitCommands: boolean) {
   if (word) commands.at(-1)!.push(word);
   return commands;
 }
-function tool(s: Session, name: string, args, ts: Time) {
+function tool(s: Session, name: string, args: unknown, ts: Time) {
   const cmd = command(args),
     a = typeof args === 'string' ? json(args) : args;
   if ((s.tool_count || 0) < 5 && !s.discussion_read) {
@@ -272,7 +300,7 @@ function bounds(s: Session, ts: Time) {
     s.end = Math.max(s.end ?? ts, ts);
   }
 }
-function branch(s: Session, ts: Time, cwd, branch, source = 'message_context'): Context {
+function branch(s: Session, ts: Time, cwd: string | null | undefined, branch: string | null | undefined, source = 'message_context'): Context {
   const prev = s.branch_segments?.at(-1);
   const ctx = {
     cwd: cwd || prev?.cwd || null,
@@ -326,8 +354,8 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
       bounds(s, ts);
       if (m.role === 'user') {
         const txt = (m.content || [])
-          .filter((c) => c?.type === 'text')
-          .map((c) => c.text || '')
+          .filter((c: TextPart | null) => c?.type === 'text')
+          .map((c: TextPart) => c.text || '')
           .join(' ');
         tasks(s, txt, ts);
         if (!first && !txt.trimStart().startsWith('<')) first = txt;
@@ -382,8 +410,8 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
           typeof content === 'string'
             ? content
             : (content || [])
-                .filter((c) => c?.type === 'text')
-                .map((c) => c.text || '')
+                .filter((c: TextPart | null) => c?.type === 'text')
+                .map((c: TextPart) => c.text || '')
                 .join(' ');
         if (!first && !d.isMeta && !txt.trimStart().startsWith('<')) first = txt;
         tasks(s, txt, ts);
@@ -451,7 +479,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
       } else if (t === 'response_item') {
         if (p.type === 'message' && p.role === 'developer') for (const c of p.content || []) hook(s, c?.text, ts);
         if (p.type === 'message' && p.role === 'user') {
-          const txt = (p.content || []).map((c) => c?.text || '').join(' ');
+          const txt = (p.content || []).map((c: TextPart | null) => c?.text || '').join(' ');
           tasks(s, txt, ts);
           if (!first && !/^(<|# AGENTS.md)/.test(txt.trimStart())) first = txt;
         } else if (['custom_tool_call', 'function_call', 'local_shell_call'].includes(p.type) && p.name !== 'apply_patch')
@@ -516,7 +544,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
   } else s.calls = Array.from(records.values()).sort((a, b) => (a[0] || 0) - (b[0] || 0));
   return finish(s, first);
 }
-export function parseHermes(r, messages) {
+export function parseHermes(r: HermesSession, messages: HermesMessage[]) {
   const s = newSession('hermes', r.id);
   delete s.hooks;
   s.title = r.title || '';

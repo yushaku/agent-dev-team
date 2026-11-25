@@ -1,6 +1,6 @@
-import type { SQLOutputValue } from 'node:sqlite';
+import type { SQLInputValue, SQLOutputValue } from 'node:sqlite';
 import type { Store } from './store.ts';
-import { parseFile, parseHermes } from './session.ts';
+import { type HermesMessage, type HermesSession, parseFile, parseHermes } from './session.ts';
 import { dirname, join, basename } from 'node:path';
 
 export const PARSER_VERSION = 6;
@@ -45,7 +45,7 @@ function mergeFile(kind: string, old: string, fresh: string) {
   if (kind === 'jcode') {
     const a = JSON.parse(old),
       b = JSON.parse(fresh);
-    b.messages = union(a.messages || [], b.messages || [], (m: any) => (m.id != null ? 'id:' + m.id : JSON.stringify(m)));
+    b.messages = union(a.messages || [], b.messages || [], (m: { id?: unknown }) => (m.id != null ? 'id:' + m.id : JSON.stringify(m)));
     return JSON.stringify(b);
   }
   if (fresh.startsWith(old)) return fresh;
@@ -111,14 +111,14 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
     WHERE version=? AND source=? AND sid=? ORDER BY generation,item`);
   const priorSession = db.prepare('SELECT sid FROM dashboard_hermes WHERE version=? AND source=? AND generation=? AND item=?');
   const directory = db.prepare("SELECT 1 FROM versions WHERE source=? AND generation=? AND item='directory'");
-  function file(source, generation, endId?: number) {
+  function file(source: SQLInputValue, generation: SQLInputValue, endId?: number) {
     const chunks = endId === undefined ? parts.all(source, generation) : historicParts.all(source, generation, endId);
     return Buffer.concat(chunks.map((r) => Buffer.from(r.bytes as Uint8Array))).toString();
   }
   function sibling(path: string) {
     return db.prepare("SELECT id,generation FROM sources JOIN cursors ON sources.id=cursors.source WHERE kind='copilot' AND path=?").get(path);
   }
-  function parse(kind, path, source, generation) {
+  function parse(kind: string, path: string, source: SQLInputValue, generation: SQLInputValue) {
     const meta: Record<string, string> = Object.create(null);
     if (kind === 'copilot') {
       const side = sibling(join(dirname(path), 'workspace.yaml'));
@@ -164,7 +164,10 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
     }
   }
   function project(job: Record<string, SQLOutputValue>, last: number) {
-    const { kind, path, source, generation } = job;
+    const { source, generation } = job;
+    // sources.kind and sources.path are TEXT NOT NULL.
+    const kind = job.kind as string,
+      path = job.path as string;
     if (kind === 'copilot' && directory.get(source, generation)) return;
     if (kind === 'hermes' || kind === 'rtk') {
       const dirty = new Set<string>();
@@ -191,8 +194,8 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
         }
       }
       for (const sid of dirty) {
-        let session;
-        const messages = new Map();
+        let session: HermesSession | undefined;
+        const messages = new Map<unknown, HermesMessage>();
         for (const row of sessionRows.iterate(version, source, sid)) {
           const r = JSON.parse(Buffer.from(row.bytes as Uint8Array).toString());
           if (String(row.item).startsWith('sessions/')) session = r;

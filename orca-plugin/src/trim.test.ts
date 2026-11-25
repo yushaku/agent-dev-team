@@ -3,6 +3,8 @@ import { chunks, prepare, REPLY_LIMIT, trim } from './trim'
 
 const CAP = 1_048_576 // Orca's cap on one worker answer
 const size = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length
+/** The fields of a trimmed snapshot these tests read. */
+type Trimmed = { features: unknown; sessions: unknown[]; orca: { runs: { events: { body?: string }[] }[] } }
 
 const run = (n: number, events = 1, body = 5000) => ({
   id: 'r' + n,
@@ -54,7 +56,7 @@ test('keeps what the Tasks tab reads, drops the rest, keeps repo names of featur
       orca: { available: true, runs: [run(1)] },
     },
     100,
-  ) as any
+  ) as Trimmed
   assert.deepEqual(Object.keys(out).sort(), [
     'dates',
     'days',
@@ -69,8 +71,8 @@ test('keeps what the Tasks tab reads, drops the rest, keeps repo names of featur
   ])
   assert.deepEqual(out.features, { runs: [{ repo: 'a' }, { repo: 'b' }] })
   assert.deepEqual(out.sessions, [{ id: 's', run_id: 'r1' }])
-  assert.equal(out.orca.runs[0].events[0].body.length, 101)
-  assert.equal((trim({ sessions: [], orca: { runs: [run(1)] } }, 0) as any).orca.runs[0].events[0].body, undefined)
+  assert.equal(out.orca.runs[0].events[0].body?.length, 101)
+  assert.equal((trim({ sessions: [], orca: { runs: [run(1)] } }, 0) as Trimmed).orca.runs[0].events[0].body, undefined)
 })
 
 test('30 to 90 day volumes: every reply stays under the answer cap and the pieces rebuild the snapshot', () => {
@@ -85,7 +87,7 @@ test('30 to 90 day volumes: every reply stays under the answer cap and the piece
     for (const piece of pieces) assert.ok(size({ chunk: piece }) <= REPLY_LIMIT, `reply ${size({ chunk: piece })} bytes`)
     for (const piece of pieces) assert.ok(size({ chunk: piece }) < CAP)
     assert.equal(pieces.join(''), text)
-    const back = JSON.parse(pieces.join('')) as any
+    const back = JSON.parse(pieces.join('')) as Trimmed
     assert.equal(back.sessions.length, sessions)
     assert.equal(back.orca.runs.length, runs)
     assert.ok(bodyCap > 0, 'bodies survive at normal volume')

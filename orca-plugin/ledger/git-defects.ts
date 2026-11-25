@@ -3,6 +3,8 @@ import { basename } from 'node:path';
 import { parentPort, workerData, isMainThread } from 'node:worker_threads';
 import type { RepositoryMetrics } from './protocol.ts';
 
+type FixCommit = RepositoryMetrics['unattributed_fix_commits'][number];
+
 export const GIT_METRICS_VERSION = 2;
 export const unavailable = (error: string | null): RepositoryMetrics => ({
   features: {},
@@ -23,7 +25,7 @@ function git(repo: string, ...args: string[]) {
   if ((r.error as NodeJS.ErrnoException)?.code === 'ETIMEDOUT') throw new Error('git_timeout:' + args[0]);
   return r.status === 0 ? r.stdout.trim() : null;
 }
-function blamed(repo, sha, parent) {
+function blamed(repo: string, sha: string, parent: string) {
   const names = git(repo, 'diff', '-w', '-M', '-C', '--name-status', '-z', parent, sha);
   if (names === null) return null;
   const fields = names.split('\0'),
@@ -117,11 +119,11 @@ export function analyzeDefects(repo: string, head: string): RepositoryMetrics {
     const f = features[k];
     delete f.order;
     const fixes = f.fix_commits;
-    fixes.sort((a, b) => a.date.localeCompare(b.date) || a.sha.localeCompare(b.sha));
+    fixes.sort((a: FixCommit, b: FixCommit) => a.date.localeCompare(b.date) || a.sha.localeCompare(b.sha));
     Object.assign(f, {
       escaped_defects: fixes.length,
-      median_days_to_surface: median(fixes.map((f) => f.days_after_merge)),
-      source: fixes.length && fixes.every((f) => f.source === 'trailer') ? 'trailer' : 'szz',
+      median_days_to_surface: median(fixes.map((f: FixCommit) => f.days_after_merge)),
+      source: fixes.length && fixes.every((f: FixCommit) => f.source === 'trailer') ? 'trailer' : 'szz',
     });
   }
   const result = { features, unattributed_fix_commits, error: null };

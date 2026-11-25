@@ -6,13 +6,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { golden as frozen } from './golden.ts';
-import { test } from 'node:test';
+import { type TestContext, test } from 'node:test';
 import { Worker } from 'node:worker_threads';
 import { PARSER_VERSION, projectionStatus, projections } from '../derived.ts';
 import { ingestFile } from '../files.ts';
 import { Store } from '../store.ts';
 
-function scratch(t) {
+function scratch(t: TestContext) {
   const root = mkdtempSync(join(tmpdir(), 'projection-'));
   const store = new Store(root);
   t.after(() => {
@@ -131,7 +131,7 @@ test('projection errors roll back one source, advance its cursor and clear on co
     previous = projections(store, PARSER_VERSION - 1);
   const bad = store.source('rtk', 'bad.db'),
     good = store.source('codex', 'good.jsonl');
-  const record = (item, data) => store.record(bad, 1, item, Buffer.from(data));
+  const record = (item: string, data: string) => store.record(bad, 1, item, Buffer.from(data));
   record('commands/1', '{"timestamp":"2026-01-01","rtk_cmd":"rg"}');
   record('commands/2', 'broken');
   store.record(good, 1, '0', Buffer.from(meta('ok') + usage(1)));
@@ -141,7 +141,7 @@ test('projection errors roll back one source, advance its cursor and clear on co
   assert.deepEqual(projectionStatus(store), { errors: 0, lag: 3 });
   assert.deepEqual(refresh.step(), { revision: 2, pending: true });
   assert.deepEqual(projectionStatus(store), { errors: 1, lag: 1 });
-  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_commands WHERE version=?').get(PARSER_VERSION).n, 0);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_commands WHERE version=?').get(PARSER_VERSION)?.n, 0);
   assert.deepEqual(refresh.step(), { revision: 3, pending: false });
   assert.deepEqual(
     sessions().map((s) => s.id),
@@ -157,18 +157,18 @@ test('projection errors roll back one source, advance its cursor and clear on co
   );
   record('commands/2', '{"timestamp":"2026-01-02","rtk_cmd":"git"}');
   refresh();
-  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_commands WHERE version=?').get(PARSER_VERSION).n, 2);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_commands WHERE version=?').get(PARSER_VERSION)?.n, 2);
   assert.deepEqual(projectionStatus(store), { errors: 0, lag: 0 });
-  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION - 1).n, 1);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION - 1)?.n, 1);
 
   // A corrected parser replays failed rows even when the archive receives no new data.
   store.db.exec(`CREATE TEMP TRIGGER old_parser BEFORE INSERT ON dashboard_sessions
     WHEN NEW.version=${PARSER_VERSION + 1} BEGIN SELECT RAISE(ABORT,'old parser failed'); END`);
   projections(store, PARSER_VERSION + 1)();
-  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION + 1).n, 1);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION + 1)?.n, 1);
   projections(store, PARSER_VERSION + 2)();
-  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_sessions WHERE version=?').get(PARSER_VERSION + 2).n, 1);
-  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION + 2).n, 0);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_sessions WHERE version=?').get(PARSER_VERSION + 2)?.n, 1);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM dashboard_errors WHERE version=?').get(PARSER_VERSION + 2)?.n, 0);
 });
 
 test('a malformed Codex record keeps its last good session while other files advance', (t) => {
@@ -195,6 +195,7 @@ test('a malformed Codex record keeps its last good session while other files adv
     ],
   );
   const error = store.db.prepare('SELECT source,generation,error,at FROM dashboard_errors WHERE version=?').get(PARSER_VERSION);
+  assert.ok(error);
   assert.equal(error.source, a);
   assert.equal(error.generation, 1);
   assert.match(String(error.error), /TypeError/);
@@ -205,7 +206,7 @@ test('a malformed Codex record keeps its last good session while other files adv
   assert.deepEqual(
     sessions()
       .find((s) => s.id === 'a')
-      .calls.map((c) => c[3]),
+      .calls.map((c: unknown[]) => c[3]),
     [1, 3],
   );
 });
@@ -261,7 +262,7 @@ test('a reader sees committed rows while a writer waits to commit an archive tra
   assert.equal(projectionStatus(store).lag, 1);
   refresh();
   assert.deepEqual(
-    sessions()[0].calls.map((call) => call[3]),
+    sessions()[0].calls.map((call: unknown[]) => call[3]),
     [1, 2],
   );
 });
@@ -295,6 +296,6 @@ test('two workers racing a projection cursor each commit a source once', async (
     sessions().map((s) => s.id),
     ['a', 'b', 'c'],
   );
-  assert.equal(store.db.prepare('SELECT count(*) AS n FROM writes').get().n, 3);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM writes').get()?.n, 3);
   assert.deepEqual(projectionStatus(store), { errors: 0, lag: 0 });
 });

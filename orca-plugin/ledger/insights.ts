@@ -1,14 +1,17 @@
 import type { AgentSummary, AgentRun, DashboardData, DashboardRun } from './protocol.ts';
-import type { UsageRow } from './protocol.ts';
+import type { RunTask, UsageRow } from './protocol.ts';
 import { join } from 'node:path';
 import { teams, read, installed } from './metadata.ts';
 import { loaded, median } from './features.ts';
-const sum = (rows, key) => rows.reduce((n, r) => n + (r[key] || 0), 0);
-const by = <T>(rows: T[], key: (row: T) => string) => Map.groupBy(rows, key);
-const count = (rows, key) => Object.fromEntries([...by(rows, key)].map(([k, v]) => [k, v.length]));
-const sid = (s) => s.agent + ':' + (s.session_id || s.id);
-const share = (x, y) => (y ? Number((x / y).toFixed(4)) : 0);
-const fmt = (n) => {
+type RunSummary = AgentSummary['runs'][number];
+type Issue = AgentSummary['issues'][number];
+type Routed = UsageRow & { routing: NonNullable<UsageRow['routing']> };
+const sum = <K extends string>(rows: { [P in K]?: number | null }[], key: K) => rows.reduce((n, r) => n + (r[key] || 0), 0);
+const by = <T, K>(rows: T[], key: (row: T) => K) => Map.groupBy(rows, key);
+const count = <T>(rows: T[], key: (row: T) => string) => Object.fromEntries([...by(rows, key)].map(([k, v]) => [k, v.length]));
+const sid = (s: Pick<UsageRow, 'agent' | 'session_id' | 'id'>) => s.agent + ':' + (s.session_id || s.id);
+const share = (x: number, y: number) => (y ? Number((x / y).toFixed(4)) : 0);
+const fmt = (n: number | null | undefined) => {
   if (n == null) return '?';
   for (const [d, s] of [
     [1e9, 'B'],
@@ -18,14 +21,14 @@ const fmt = (n) => {
     if (Math.abs(n) >= d) return Number((n / d).toFixed(1)) + s;
   return String(Math.trunc(n));
 };
-const dur = (n) => {
+const dur = (n: number | null | undefined) => {
   if (n == null) return '?';
   const m = Math.round(n / 60);
   return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') + 'm';
 };
-const ids = (xs) => xs.slice(0, 3).join(', ') + (xs.length > 3 ? ' +' + (xs.length - 3) : '');
-const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-function featureScope(d: DashboardData, repo, run) {
+const ids = (xs: string[]) => xs.slice(0, 3).join(', ') + (xs.length > 3 ? ' +' + (xs.length - 3) : '');
+const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+function featureScope(d: DashboardData, repo: string | null, run: string | null) {
   const runs = d.features.runs.filter((f) => (!repo || f.repo === repo) && (!run || f.run_ids.includes(run)));
   return {
     orca_loading: d.features.orca_loading,
@@ -35,7 +38,7 @@ function featureScope(d: DashboardData, repo, run) {
     ),
   };
 }
-function runSummary(r: DashboardRun) {
+function runSummary(r: DashboardRun): RunSummary {
   const fixes = r.tasks.filter((t) => t.measurement.kind === 'fix'),
     unknown = fixes.filter((t) => !t.measurement.round).length;
   return {
@@ -51,28 +54,35 @@ function runSummary(r: DashboardRun) {
     fix_rounds_estimated: r.fix_rounds?.source === 'code-review' || ((r.fix_rounds?.source || 'measurement') === 'measurement' && !!unknown),
     gate_wait_seconds: r.gate_wait_seconds,
     lead_seconds: r.lead_seconds,
-    delivered: Object.hasOwn(r, 'delivered') ? r.delivered : !!r.delivered_at || r.stage === 'merged',
+    delivered: Object.hasOwn(r, 'delivered') ? (r.delivered ?? null) : !!r.delivered_at || r.stage === 'merged',
     worker_tokens: r.worker_tokens,
     orchestrator_tokens: r.orchestrator_tokens,
   };
 }
-function issues(data, sessions: UsageRow[], runs) {
-  const out = [],
-    severity = { high: 0, medium: 1, low: 2 };
-  const issue = (id, severity, title, evidence, suggestion, filter) =>
+function issues(data: DashboardData, sessions: UsageRow[], runs: DashboardRun[]): Issue[] {
+  const out: Issue[] = [],
+    severity: Record<string, number> = { high: 0, medium: 1, low: 2 };
+  const issue = (
+    id: string,
+    severity: 'high' | 'medium' | 'low',
+    title: string,
+    evidence: string,
+    suggestion: string,
+    filter: Record<string, string | null | undefined>,
+  ) =>
     out.push({
       id,
       severity,
       title,
       evidence,
       suggestion,
-      filter: Object.fromEntries(Object.entries(filter).filter(([, v]) => v)),
+      filter: Object.fromEntries(Object.entries(filter).filter((e): e is [string, string] => !!e[1])),
     });
-  const cards = new Map();
+  const cards = new Map<string, { required: string[]; name: string }>();
   for (const name of installed(join(teams, 'skills')).filter((n) => n.startsWith('team-') || ['researcher', 'solution-architect'].includes(n))) {
     const line = read(join(teams, 'skills', name, 'SKILL.md')).match(/^- \*\*Skills:\*\*\s*(.+)$/m)?.[1];
     if (!line) continue;
-    const required = [];
+    const required: string[] = [];
     for (const segment of line.replace(/\([^)]*\)/g, '').split(';')) {
       if (/^load /i.test(segment.trim())) continue;
       for (const clause of segment.split(','))
@@ -80,11 +90,14 @@ function issues(data, sessions: UsageRow[], runs) {
     }
     cards.set(name.replace(/^team-/, ''), { required, name });
   }
-  const tasks = new Map<string, { measurement: { kind: string; round: number } }>(data.orca.runs.flatMap((r) => r.tasks.map((t) => [t.id, t]))),
+  // Keyed by task id; `string | null` only so a session's nullable task_id can be looked up (it never matches).
+  const tasks = new Map<string | null, RunTask>(data.orca.runs.flatMap((r) => r.tasks.map((t) => [t.id, t]))),
     top = new Set(data.sessions.filter((s) => s.routing?.tier === 'top').map((s) => s.model));
   const reviewers = sessions.filter((s) => {
     const m = tasks.get(s.task_id)?.measurement;
-    return s.role === 'reviewer' && m && (m.kind === 're-review' || m.round > 1) && (s.routing?.tier === 'top' || (!s.routing?.tier && top.has(s.model)));
+    return (
+      s.role === 'reviewer' && m && (m.kind === 're-review' || (m.round ?? 0) > 1) && (s.routing?.tier === 'top' || (!s.routing?.tier && top.has(s.model)))
+    );
   });
   for (const [run, x] of by(reviewers, (s) => s.run_id)) {
     const tok = sum(x, 'total');
@@ -134,7 +147,8 @@ function issues(data, sessions: UsageRow[], runs) {
     (s) => s.role,
   )) {
     if (x.length < 5) continue;
-    const med = median(x.map((s) => s.total)),
+    // median() is null only for an empty list; x has at least 5 rows here.
+    const med = median(x.map((s) => s.total)) ?? 0,
       big = x.filter((s) => s.total > 3 * med).sort((a, b) => b.total - a.total),
       t = big[0];
     if (!t) continue;
@@ -163,12 +177,12 @@ function issues(data, sessions: UsageRow[], runs) {
       { role },
     );
   }
-  const efforts = ['minimal', 'low', 'medium', 'high', 'xhigh'];
+  const efforts: (string | null)[] = ['minimal', 'low', 'medium', 'high', 'xhigh'];
   for (const [run, x] of by(
-    sessions.filter((s) => s.routing),
+    sessions.filter((s): s is Routed => !!s.routing),
     (s) => s.run_id,
   )) {
-    const groups = [[], []];
+    const groups: [Routed[], Routed[]] = [[], []];
     for (const s of x) {
       const r = s.routing;
       if (r.agent !== s.agent || (r.model && !s.model.toLowerCase().includes(r.model.toLowerCase()))) groups[0].push(s);
@@ -223,8 +237,9 @@ function issues(data, sessions: UsageRow[], runs) {
         'Xem nguyên nhân chính (defect, requirements, scope, standards) và siết spec hoặc review sớm hơn.',
         { run, repo },
       );
-    const ratio = r.gate_wait_seconds / r.lead_seconds;
-    if (r.lead_seconds >= 600 && ratio > 0.5)
+    // A null lead_seconds coerces to 0 in arithmetic and comparison; `?? 0` keeps that behaviour explicit.
+    const ratio = r.gate_wait_seconds / (r.lead_seconds ?? 0);
+    if ((r.lead_seconds ?? 0) >= 600 && ratio > 0.5)
       issue(
         'gate-wait:' + run,
         ratio > 0.8 ? 'high' : 'medium',
@@ -254,13 +269,13 @@ export function summary(d: DashboardData, q: URLSearchParams): AgentSummary {
   const sessions: UsageRow[] = scope.filter((s) => (!role || s.role === role) && (!agent || s.agent === agent)),
     total = sum(sessions, 'total');
   const runs = d.orca.runs.filter((r) => (run ? r.id === run : (!repo || r.repo === repo) && scope.some((s) => s.run_id === r.id)));
-  const tokens_by_role = [],
-    search_by_role = [],
-    skills_by_role = Object.create(null);
+  const tokens_by_role: AgentSummary['tokens_by_role'] = [],
+    search_by_role: AgentSummary['search_by_role'] = [],
+    skills_by_role: AgentSummary['skills_by_role'] = Object.create(null);
   for (const [role, x] of by(sessions, (s) => s.role)) {
     const tokens = sum(x, 'total'),
-      mix = new Map(),
-      skills = new Map();
+      mix = new Map<string, number>(),
+      skills = new Map<string, { loads: number; ids: Set<string> }>();
     let cg = 0,
       rg = 0,
       symbol = 0;
@@ -271,7 +286,7 @@ export function summary(d: DashboardData, q: URLSearchParams): AgentSummary {
       }
       for (const [name, n] of Object.entries(loaded(s))) {
         if (!skills.has(name)) skills.set(name, { loads: 0, ids: new Set() });
-        const v = skills.get(name);
+        const v = skills.get(name)!;
         v.loads += n;
         v.ids.add(sid(s));
       }
@@ -333,7 +348,7 @@ export function runDetail(d: DashboardData, id: string | null): AgentRun | null 
     .slice()
     .sort((a, b) => (a.created || 0) - (b.created || 0))
     .map((t) => {
-      const skills = Object.create(null);
+      const skills: Record<string, number> = Object.create(null);
       for (const s of sessions.filter((s) => s.task_id === t.id)) for (const [k, v] of Object.entries(loaded(s))) skills[k] = (skills[k] || 0) + v;
       const start = t.started || t.created,
         end = t.ended || t.completed;
@@ -370,7 +385,7 @@ export function runDetail(d: DashboardData, id: string | null): AgentRun | null 
     skills_window_days: d.days,
   };
 }
-const table = (head, rows) =>
+const table = (head: string[], rows: unknown[][]) =>
   [
     '| ' + head.join(' | ') + ' |',
     '|' + '---|'.repeat(head.length),
@@ -388,7 +403,7 @@ const table = (head, rows) =>
         ' |',
     ),
   ].join('\n');
-const issueText = (items) =>
+const issueText = (items: Issue[]) =>
   items.length
     ? items
         .map(
@@ -407,8 +422,9 @@ const issueText = (items) =>
         )
         .join('\n')
     : 'No issues detected.';
-export function markdown(s) {
-  if (s.run) {
+export function markdown(s: AgentSummary | AgentRun) {
+  // Only an AgentRun has a top-level `run` (always an object), so this matches the old `if (s.run)`.
+  if ('run' in s) {
     const r = s.run;
     return [
       '# Run ' + r.id,
@@ -467,7 +483,7 @@ export function markdown(s) {
   const t = s.totals,
     sc = s.scope,
     filters =
-      ['repo', 'run', 'role', 'agent']
+      (['repo', 'run', 'role', 'agent'] as const)
         .filter((k) => sc[k])
         .map((k) => k + '=' + sc[k])
         .join(', ') || 'none';

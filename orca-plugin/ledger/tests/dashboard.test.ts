@@ -1,6 +1,6 @@
 import './team-env.ts'; // first, and bare: a named import that nothing uses is dropped by some TypeScript transforms
 import { golden } from './golden.ts';
-import { test } from 'node:test';
+import { type TestContext, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, appendFileSync, unlinkSync, mkdirSync } from 'node:fs';
@@ -21,7 +21,7 @@ import { skillDoc } from '../metadata.ts';
 
 const web = resolve(import.meta.dirname, '../../dashboard-web'),
   fixtures = join(import.meta.dirname, 'fixtures/branch-switch');
-function scratch(t) {
+function scratch(t: TestContext) {
   const root = mkdtempSync(join(tmpdir(), 'api-golden-'));
   const store = new Store(root);
   t.after(() => {
@@ -33,7 +33,7 @@ function scratch(t) {
 test('archived sessions and snapshots match Python across branch changes, appends, deletion and parser rebuild', (t) => {
   const { root, store } = scratch(t),
     refresh = projections(store),
-    files = [];
+    files: string[] = [];
   for (const agent of ['claude', 'codex']) {
     const path = join(root, agent + '.jsonl'),
       bytes = readFileSync(join(fixtures, agent + '_branch_switch.jsonl'));
@@ -43,12 +43,14 @@ test('archived sessions and snapshots match Python across branch changes, append
     refresh();
     const expected = golden('session-' + agent, root);
     const row = store.db.prepare("select data from dashboard_sessions where json_extract(data,'$.agent')=?").get(agent);
+    assert.ok(row);
     assert.deepEqual(JSON.parse(String(row.data)), expected);
   }
   const now = Date.parse('2026-11-13T23:59:59Z') / 1000;
-  const expected = golden('build-branch-switch', root);
+  const expected = golden<unknown[]>('build-branch-switch', root);
   const actual = build(store, 7, now);
-  delete actual.build_ms;
+  // build_ms is wall-clock time, so it is dropped before comparing; the typed field itself is not optional.
+  Reflect.deleteProperty(actual, 'build_ms');
   assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected[0]);
   const result = summary(actual, new URLSearchParams());
   assert.deepEqual(JSON.parse(JSON.stringify(result)), expected[1]);
@@ -92,7 +94,7 @@ test('Copilot sidecar, JCode and Hermes use the Python parser contract', (t) => 
     writeFileSync(join(root, 'workspace.yaml'), 'id: test\nclient_name: golden\n');
     assert.deepEqual(parseFile(agent, path, doc, { id: 'test', client_name: 'golden' }), golden('parse-' + agent, root));
   }
-  const expected = golden('hermes-contract', root);
+  const expected = golden<[...Parameters<typeof parseHermes>, unknown]>('hermes-contract', root);
   assert.deepEqual(parseHermes(expected[0], expected[1]), expected[2]);
 });
 test('HTTP handler serves the web bundle and local endpoints', async (t) => {
@@ -127,7 +129,7 @@ test('HTTP handler serves the web bundle and local endpoints', async (t) => {
   mkdirSync(p);
   writeFileSync(join(p, 'hello'), 'test', { mode: 0o755 });
   const cli = discover(p),
-    old = golden('cli-discover', root);
+    old = golden<ReturnType<typeof discover>>('cli-discover', root);
   // Host metadata describes the machine that runs the test, not the one that recorded the golden file: the contract
   // is that it names this machine, so assert that and then compare the rest.
   assert.equal(cli.machine, hostname());
@@ -189,12 +191,13 @@ test('archived Orca requests and agent run match Python JSON and Markdown', (t) 
   }
   const fixture = join(root, 'orca.json');
   writeFileSync(fixture, JSON.stringify(calls));
-  const expected = golden('orca-runs-run-detail', root);
+  const expected = golden<unknown[]>('orca-runs-run-detail', root);
   projections(store)();
   const data = build(store, 7, now);
   assert.deepEqual(JSON.parse(JSON.stringify(data.orca.runs)), expected[0]);
   const r = runDetail(data, 'run_a');
   assert.deepEqual(JSON.parse(JSON.stringify(r)), expected[1]);
+  assert.ok(r);
   assert.equal(markdown(r), expected[2]);
 });
 
@@ -203,10 +206,10 @@ test('SQLite row corrections update only the affected session and RTK commands m
     refresh = projections(store);
   const source = store.source('hermes', 'removed.db'),
     rtk = store.source('rtk', 'removed-rtk.db');
-  const put = (id, item, row) => store.record(id, 1, item, Buffer.from(JSON.stringify(row)));
+  const put = (id: number, item: string, row: unknown) => store.record(id, 1, item, Buffer.from(JSON.stringify(row)));
   for (const id of ['a', 'b']) put(source, 'sessions/' + id, { id, started_at: 100, input_tokens: 5 });
   put(source, 'messages/1', { session_id: 'a', role: 'user', content: 'before', timestamp: 101, active: 1 });
-  const expected = golden('rtk-commands', root);
+  const expected = golden<[unknown[], unknown]>('rtk-commands', root);
   expected[0].forEach((r, i) => put(rtk, 'commands/' + i, r));
   refresh();
   assert.deepEqual(JSON.parse(JSON.stringify(build(store, 14, 120).rtk)), expected[1]);
@@ -215,7 +218,9 @@ test('SQLite row corrections update only the affected session and RTK commands m
   );
   put(source, 'messages/1', { session_id: 'a', role: 'user', content: 'after', timestamp: 101, active: 1 });
   refresh();
-  assert.equal(JSON.parse(String(store.db.prepare("SELECT data FROM dashboard_sessions WHERE sid='a'").get().data)).preview, 'after');
+  const corrected = store.db.prepare("SELECT data FROM dashboard_sessions WHERE sid='a'").get();
+  assert.ok(corrected);
+  assert.equal(JSON.parse(String(corrected.data)).preview, 'after');
 });
 
 test('feature defect history matches Python across merge, fix, and a cached rebuild', async (t) => {
@@ -276,7 +281,7 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
     gitMetrics.close();
   }
   for (let i = 0; i < 2; i++) assert.deepEqual(JSON.parse(JSON.stringify(build(store, 7).features.repositories.repo)), expected);
-  assert.equal(store.db.prepare('SELECT count(*) n FROM dashboard_git').get().n, 1);
+  assert.equal(store.db.prepare('SELECT count(*) n FROM dashboard_git').get()?.n, 1);
 });
 
 test('Copilot counts visible directories and restores sidecar metadata after deletion', (t) => {

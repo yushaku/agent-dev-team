@@ -62,7 +62,8 @@ exec "${binary}" "$@"
   rmSync(hold);
   await wait(() => assert.equal(check().loading, false));
   assert.equal(check().error, null);
-  assert.ok(check().analysis_ms >= 0);
+  const analysisMs = check().analysis_ms;
+  assert.ok(analysisMs !== undefined && analysisMs >= 0);
   const revision = service.revision;
   check();
   assert.equal(service.revision, revision);

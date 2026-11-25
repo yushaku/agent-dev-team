@@ -2,12 +2,17 @@ import { cachedRepository, type GitMetrics } from './git-metrics.ts';
 import { median } from './git-defects.ts';
 export { median };
 import { basename, join } from 'node:path';
+import type { DatabaseSync } from 'node:sqlite';
 import { home, checkout, dir, read, ls } from './metadata.ts';
-export function featureDir(repo, branch) {
+import type { DashboardData, DashboardRun, FeatureRun, UsageRow } from './protocol.ts';
+type Segment = UsageRow['feature_segments'][number];
+/** featureData always knows both activity bounds of a feature. */
+type Feature = FeatureRun & { first_activity: number; last_activity: number };
+export function featureDir(repo: string | null | undefined, branch: string | null | undefined) {
   const name = basename(branch || '');
   return repo && !['', '.', '..'].includes(name) ? join(repo, '.team', name) : null;
 }
-export function rounds(folder) {
+export function rounds(folder: string | null) {
   if (!folder || !dir(join(folder, 'reports'))) return null;
   return new Set(
     ls(join(folder, 'reports'))
@@ -17,39 +22,45 @@ export function rounds(folder) {
       .map(Number),
   ).size;
 }
-export function loaded(s) {
-  return Object.fromEntries([...Object.keys(s.hooks || {}).map((k) => [k, 1]), ...Object.entries(s.skills || {}).map(([k, v]) => [k, v[0]])]);
+export function loaded(s: Pick<UsageRow, 'hooks' | 'skills'>): Record<string, number> {
+  return Object.fromEntries([
+    ...Object.keys(s.hooks || {}).map((k): [string, number] => [k, 1]),
+    ...Object.entries(s.skills || {}).map(([k, v]): [string, number] => [k, v[0]]),
+  ]);
 }
-export function featureData(parts, runs, available, db, service?: GitMetrics) {
-  const groups = new Map(),
-    repos = new Map(),
-    repositories = Object.create(null),
-    assigned = new Set(),
-    features = [];
+export function featureData(parts: Segment[], runs: DashboardRun[], available: boolean, db: DatabaseSync, service?: GitMetrics): DashboardData['features'] {
+  const groups = new Map<string, Segment[]>(),
+    repos = new Map<string, ReturnType<typeof cachedRepository>>(),
+    repositories: DashboardData['features']['repositories'] = Object.create(null),
+    assigned = new Set<Segment>(),
+    features: Feature[] = [];
   for (const s of parts) {
     const branch = (s.branch || '').trim();
     if (['', 'main', 'master', 'HEAD'].includes(branch) || s.repo === '?') continue;
     const key = JSON.stringify([s.repo, branch]);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(s);
+    let group = groups.get(key);
+    if (!group) groups.set(key, (group = []));
+    group.push(s);
   }
   for (const [key, rows] of groups) {
-    const [repo, branch] = JSON.parse(key);
-    let root = rows.map((s) => checkout(s.cwd)).find(Boolean),
+    const [repo, branch]: [string, string] = JSON.parse(key);
+    // checkout treats '' like a missing cwd; `?? null` only turns "no row had a checkout" into null, which both lookups read the same way.
+    let root = rows.map((s) => checkout(s.cwd ?? '')).find(Boolean) ?? null,
       checkoutSource = root ? 'git' : 'unavailable';
     if (!root && dir(join(home, 'orca/projects', repo))) {
       root = join(home, 'orca/projects', repo);
       checkoutSource = 'orca_project';
     }
-    if (!repos.has(repo)) {
-      const state = service ? service.lookup(root) : cachedRepository(db, root);
+    let state = repos.get(repo);
+    if (!state) {
+      state = service ? service.lookup(root) : cachedRepository(db, root);
       repos.set(repo, state);
       repositories[repo] = state.metrics;
     }
-    const { refs, mergedBranches } = repos.get(repo);
-    const ids = [...new Set(rows.map((s) => s.run_id).filter(Boolean))].sort(),
+    const { refs, mergedBranches } = state;
+    const ids = [...new Set(rows.map((s) => s.run_id).filter((id): id is string => Boolean(id)))].sort(),
       linked = runs.filter((r) => ids.includes(r.id));
-    const skills = Object.create(null);
+    const skills: Record<string, number> = Object.create(null);
     for (const s of rows) for (const [k, v] of Object.entries(loaded(s))) skills[k] = (skills[k] || 0) + v;
     const folder = featureDir(root, branch),
       count = rounds(folder),
@@ -70,7 +81,7 @@ export function featureData(parts, runs, available, db, service?: GitMetrics) {
     const first = Math.min(...rows.map((s) => s.start).filter(Boolean)),
       last = Math.max(...rows.map((s) => s.end || s.start).filter(Boolean));
     const members = new Set(rows),
-      tokenRows = parts.filter((s) => members.has(s) || ids.includes(s.run_id));
+      tokenRows = parts.filter((s) => members.has(s) || (s.run_id !== null && ids.includes(s.run_id)));
     let total = 0,
       orch = 0;
     for (const s of tokenRows) {
@@ -145,7 +156,7 @@ export function featureData(parts, runs, available, db, service?: GitMetrics) {
       gate2_known: findings.length,
     };
   });
-  const sum = (xs) => xs.reduce((n, s) => n + s.total, 0),
+  const sum = (xs: Segment[]) => xs.reduce((n, s) => n + s.total, 0),
     total = sum(parts),
     included = sum([...assigned]);
   return {
