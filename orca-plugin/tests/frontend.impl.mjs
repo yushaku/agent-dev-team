@@ -356,6 +356,9 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
             renderSessionCharts() {
               rendered.push("sessions");
             },
+            renderMethodology() {
+              rendered.push("methodology");
+            },
             showSession() {},
             showCliTools() {
               rendered.push("cli-tools");
@@ -428,7 +431,8 @@ test("load distinguishes fetch failures from render failures and recovers", asyn
     assert.deepEqual(rendered, ["skills", "search", "rtk-commands"]);
     rendered.length = 0;
     dash.namespace.showView("tk-cach-tinh", { hash: false });
-    assert.deepEqual(rendered, []);
+    assert.deepEqual(rendered, ["methodology"]);
+    rendered.length = 0;
     dash.namespace.showView("tk-cli-tools", { hash: false });
     assert.deepEqual(rendered, ["cli-tools"]);
     assert.equal(element(".dash-head").hidden, true);
@@ -1125,6 +1129,31 @@ test("every tab renders an agent outside the legacy four with a label and a stab
   assert.deepEqual(C.agentsF(), ["jcode"]);
   C.state.agent = "";
 });
+
+test("the methodology lists the sources from the snapshot, with the agent's label, and escapes them", async () => {
+  const { renderMethodology } = await import("../dashboard-web/js/tabs/methodology.js");
+  C.setAgents({ sessions: [{ agent: "jcode" }], agents: [{ id: "jcode", name: "JCode" }] });
+  renderMethodology([
+    { kind: "jcode", path: "~/.jcode/sessions", files: 3, present: true, note: "Mỗi phiên là một file JSON" },
+    { kind: "hermes", path: "~/<h>/state.db", files: null, present: false, note: "Chỉ có tổng phiên" },
+    { kind: "rtk", path: "~/rtk.db", files: null, present: true, note: "Lệnh RTK" },
+  ]);
+  const html = element("#src-list").innerHTML;
+  assert.match(html, /<dt>JCode<\/dt>.*~\/\.jcode\/sessions.*3 file/s);
+  assert.match(html, /<dt>hermes<\/dt>.*&lt;h&gt;.*chưa có dữ liệu/s, "an agent Orca does not list shows its raw id");
+  assert.match(html, /<dt>RTK<\/dt><dd><code>~\/rtk\.db<\/code><br>/, "a database source claims no file count");
+  assert.doesNotMatch(html, /<h>|undefined|NaN/);
+  renderMethodology(undefined);
+  assert.match(element("#src-list").innerHTML, /Chưa có danh sách/);
+});
+
+test("the methodology page names no agent and keeps no stale prose", async () => {
+  const html = await readFile(new URL("../dashboard-web/index.html", import.meta.url), "utf8");
+  const page = html.slice(html.indexOf('id="tk-cach-tinh"'));
+  assert.match(page, /id="src-list"/);
+  assert.doesNotMatch(page, /Claude|Codex|Copilot|Hermes|cache\.json|premium|Nhịp hạn mức/i);
+});
+
 test("Feature Runs and the Run timeline show Orca's agent names, and the Tasks view falls back to raw ids", () => {
   const feature = {
     repo: "sample",

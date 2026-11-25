@@ -1,23 +1,18 @@
-import { homedir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
+import { sep } from 'node:path';
 import type { Store } from './store.ts';
 import { files, ingestFile, missing } from './files.ts';
 import { snapshot } from './orca.ts';
 import { inventoryOf } from './agents.ts';
+import { SOURCE_PATHS, recordRoots, rootOf } from './sources.ts';
 
 export async function cycle(store: Store, env = process.env, timings?: Record<string, number>) {
   const errors: string[] = [];
-  const paths = {
-    claude: '.claude/projects',
-    codex: '.codex/sessions',
-    copilot: '.copilot/session-state',
-    jcode: '.jcode/sessions',
-    hermes: '.hermes/state.db',
-    rtk: 'Library/Application Support/rtk/history.db',
-  };
-  for (const [kind, fallback] of Object.entries(paths)) {
+  try {
+    recordRoots(store, env);
+  } catch {}
+  for (const kind of Object.keys(SOURCE_PATHS) as (keyof typeof SOURCE_PATHS)[]) {
     const started = performance.now();
-    const root = resolve(env['AGENT_LEDGER_' + kind.toUpperCase()] || join(homedir(), fallback));
+    const root = rootOf(kind, env);
     const seen = new Set<string>();
     const unreadable: string[] = [];
     try {

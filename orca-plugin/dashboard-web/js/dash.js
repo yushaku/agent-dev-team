@@ -11,6 +11,7 @@ import { renderSearch, renderTaskRoleSearch, toggleSearchKind, setSearchView } f
 import { renderFeatures } from "./tabs/runs.js";
 import { renderOverall } from "./tabs/overall.js";
 import { showCliTools } from "./tabs/cli-tools.js";
+import { renderMethodology } from "./tabs/methodology.js";
 
 async function load() {
   C.state.loading = true;
@@ -76,7 +77,7 @@ function render() {
     renderSkills(S);
     renderSearch(S);
     renderRtkCommands();
-  }
+  } else if (view === "tk-cach-tinh") renderMethodology(d.sources);
 }
 
 /* ---------- cross filter ---------- */

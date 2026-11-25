@@ -53,6 +53,7 @@ export class Store {
         PRIMARY KEY(source,generation,session));
       CREATE TABLE IF NOT EXISTS orca_revision (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER);
       INSERT OR IGNORE INTO orca_revision VALUES(1,0);
+      CREATE TABLE IF NOT EXISTS source_roots (kind TEXT PRIMARY KEY, path TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS agent_inventory (id INTEGER PRIMARY KEY CHECK(id=1), fetched_at INTEGER, data TEXT);
       CREATE TABLE IF NOT EXISTS ingest_log (
         id INTEGER PRIMARY KEY, source INTEGER, generation INTEGER, item TEXT, hash TEXT,

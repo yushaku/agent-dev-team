@@ -118,3 +118,8 @@ test('the trim allowlist has no Copilot-only field', () => {
   const out = trim({ ...busy(1, 1), copilot_dirs: 3 }, 600)
   assert.equal('copilot_dirs' in out, false)
 })
+
+test('the panel snapshot keeps the source list the methodology renders', () => {
+  const sources = [{ kind: 'jcode', path: '~/.jcode/sessions', files: 2, note: 'n' }]
+  assert.deepEqual((trim({ ...busy(1, 1), sources }, 600) as { sources: unknown }).sources, sources)
+})

@@ -233,8 +233,7 @@ test('the web bundle has no agent-name check or premium-request field outside th
         if (/\b(claude|codex|copilot|hermes|jcode)\b|\bprem\b|premium|accountingSnapshot/i.test(line) && !allowed.test(line)) hits.push(`${f}:${i + 1}`)
       })
   }
-  // sheet.js names Hermes in static prose about where a skill's source lives (methodology text, ticket 04).
-  assert.deepEqual(hits, ['sheet.js:92'])
+  assert.deepEqual(hits, [])
 })
 
 test('where light-dark() is unsupported an agent colour is the plain dark half; where supported it is the pair', async () => {

@@ -86,6 +86,8 @@ export interface DashboardData {
   };
   /** Orca's installed agents (id, name), cached; empty when Orca has not answered. Labels only: charts show agents with usage. */
   agents: { id: string; name: string }[];
+  /** The sources the ledger reads: kind, resolved path (home shown as ~), archived file count (null when the source is not files) and the parser's token-accounting note. */
+  sources: { kind: string; path: string; files: number | null; present: boolean; note: string }[];
   orca: { available: boolean; error: string | null; fetched_at: number | null; runs: DashboardRun[] };
   roles_cfg: {
     tiers: Record<string, string>;

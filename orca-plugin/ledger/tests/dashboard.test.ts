@@ -54,6 +54,8 @@ test('archived sessions and snapshots match Python across branch changes, append
   // `agents` (Orca's installed-agent labels) is new since the Python golden files and empty here.
   assert.deepEqual(actual.agents, []);
   Reflect.deleteProperty(actual, 'agents');
+  assert.ok(actual.sources.length >= 6, 'the source list is new since the Python golden files');
+  Reflect.deleteProperty(actual, 'sources');
   assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected[0]);
   const result = summary(actual, new URLSearchParams());
   assert.deepEqual(JSON.parse(JSON.stringify(result)), expected[1]);
