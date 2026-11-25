@@ -170,7 +170,6 @@ export function showSession(id) {
     <dt>Phân bổ</dt><dd>${esc({ task_id: "ID Task", run_id: "ID Run trong lệnh Orca", dispatch_window: "Suy từ một dispatch phù hợp", unassigned: "Chưa phân bổ vào Run" }[s.attribution] || "Chưa rõ")}</dd>
     <dt>Lượt gọi</dt><dd>${s.aggregate ? "Chỉ có tổng phiên; chưa có số lượt và context mỗi lượt" : `${s.calls}, context trung vị ${fmt(s.ctx_med)}, lớn nhất ${fmt(s.ctx_max)}`}</dd>
     <dt>Token</dt><dd>input mới ${fmt(s.fin)}, cache đọc ${fmt(s.cr)}, cache ghi ${fmt(s.cw)}, output ${fmt(s.out)} (reasoning ${fmt(s.reason)}), tổng ${fmt(s.total)}</dd>
-    ${s.agent === "copilot" ? `<dt>Premium request</dt><dd>${fmt(s.prem)} trong khoảng${s.snapshot ? `, cả phiên ${fmt(s.snapshot.premium)} theo accountingSnapshot (${fmt(s.snapshot.requests)} lượt gọi)` : ""}</dd>` : ""}
     ${mix ? `<dt>Model / effort</dt><dd>${mix}</dd>` : ""}
     ${sk ? `<dt>Skills nạp</dt><dd>${sk}</dd>` : ""}
     ${hk ? `<dt>Skill qua hook</dt><dd>${hk}</dd>` : ""}

@@ -113,3 +113,8 @@ test('the panel snapshot keeps the agent labels the HTTP snapshot carries', () =
   assert.deepEqual((trim(full, 600) as { agents: unknown }).agents, agents)
   assert.deepEqual((JSON.parse(prepare(full).text) as { agents: unknown }).agents, agents)
 })
+
+test('the trim allowlist has no Copilot-only field', () => {
+  const out = trim({ ...busy(1, 1), copilot_dirs: 3 }, 600)
+  assert.equal('copilot_dirs' in out, false)
+})

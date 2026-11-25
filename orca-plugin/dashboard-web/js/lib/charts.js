@@ -1,4 +1,4 @@
-/* Token dashboard tab: Claude, Codex, GitHub Copilot CLI and Orca usage from GET /api/data (ported from the old dashboard page). */
+/* Token dashboard tab: usage of every agent in the ledger, and Orca runs, from GET /api/data (ported from the old dashboard page). */
 export const $ = (s) => document.querySelector(s);
 export const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 /* Agents come from the loaded snapshot (setAgents), never from a fixed list. */
@@ -266,7 +266,7 @@ export function sessionsF(featureBranches = false) {
   );
 }
 export const agentsF = () => AGENTS.filter((a) => !state.agent || a === state.agent);
-/* Buckets: hours for a 1 day range, days otherwise. Each value is [fin, cr, cw, out, premium requests]. */
+/* Buckets: hours for a 1 day range, days otherwise. Each value is [fin, cr, cw, out]. */
 export function buckets() {
   const d = state.data;
   if (d.days === 1)

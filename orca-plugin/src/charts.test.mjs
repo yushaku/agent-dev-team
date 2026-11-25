@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { test } from 'node:test'
 
 globalThis.document = { querySelector: () => null, addEventListener() {} }
@@ -231,7 +233,8 @@ test('the web bundle has no agent-name check or premium-request field outside th
         if (/\b(claude|codex|copilot|hermes|jcode)\b|\bprem\b|premium|accountingSnapshot/i.test(line) && !allowed.test(line)) hits.push(`${f}:${i + 1}`)
       })
   }
-  assert.deepEqual(hits, [])
+  // sheet.js names Hermes in static prose about where a skill's source lives (methodology text, ticket 04).
+  assert.deepEqual(hits, ['sheet.js:92'])
 })
 
 test('where light-dark() is unsupported an agent colour is the plain dark half; where supported it is the pair', async () => {
