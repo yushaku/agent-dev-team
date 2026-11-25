@@ -26,12 +26,12 @@ test('the snapshot lists every source the ledger reads, with path, file count an
   assert.deepEqual(
     sources.map((s) => s.kind),
     [...Object.keys(SOURCE_PATHS), 'orca'],
-    'claude, codex, copilot, jcode, hermes, rtk and orca',
+    'claude, codex, copilot, jcode, pi, hermes, rtk and orca',
   );
   for (const s of sources) {
     assert.ok(s.note.length > 20 && s.note === SOURCE_NOTES[s.kind], s.kind + ' has its note');
     assert.equal(s.present, false);
-    assert.equal(s.files, ['claude', 'codex', 'copilot', 'jcode'].includes(s.kind) ? 0 : null, 'only file sources have a file count');
+    assert.equal(s.files, ['claude', 'codex', 'copilot', 'jcode', 'pi'].includes(s.kind) ? 0 : null, 'only file sources have a file count');
   }
   assert.ok(sources.find((s) => s.kind === 'claude')?.path.startsWith('~/'), 'the home directory is shown as ~');
 });

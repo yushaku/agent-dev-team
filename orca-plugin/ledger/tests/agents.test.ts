@@ -146,7 +146,7 @@ test('a hung inventory command is killed at the timeout, even when it ignores SI
 test('the ingest pass does not wait for the inventory, and does not report its failure', async (t) => {
   const { store, root } = scratch(t);
   const env: NodeJS.ProcessEnv = {};
-  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'hermes', 'rtk']) env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, kind);
+  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'pi', 'hermes', 'rtk']) env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, kind);
   env.AGENT_LEDGER_ORCA = hung(root);
   const started = Date.now();
   const errors = await cycle(store, env);
@@ -179,7 +179,7 @@ test('a writer holding the ledger lock neither delays the pass nor loses the ans
 test('a one-shot pass keeps a fast inventory answer, and leaves no cooldown to suppress the next one', async (t) => {
   const { root, home } = scratch(t);
   const env: NodeJS.ProcessEnv = { AGENT_LEDGER_HOME: home };
-  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'hermes', 'rtk']) env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, kind);
+  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'pi', 'hermes', 'rtk']) env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, kind);
   // Answers the orchestration calls and the inventory at once.
   const path = join(root, 'fast-orca');
   writeFileSync(
@@ -206,7 +206,7 @@ echo "{\\"id\\":$$,\\"result\\":$result}"
 test('stop() leaves no inventory command running', async (t) => {
   const { root, home } = scratch(t);
   const env: NodeJS.ProcessEnv = { ...process.env, AGENT_LEDGER_HOME: home };
-  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'hermes', 'rtk']) env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, kind);
+  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'pi', 'hermes', 'rtk']) env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, kind);
   env.AGENT_LEDGER_ORCA = hung(root, 30);
   mkdirSync(join(root, 'claude'), { recursive: true });
   start({ home: join(root, 'host'), env: { ...env, AGENT_LEDGER_HOME: join(root, 'host') }, intervalMs: 60_000, host: 'test' });
@@ -221,7 +221,7 @@ test('stop() leaves no inventory command running', async (t) => {
 function oneShot(root: string, orca: string): Promise<{ ms: number; code: number | null; stderr: string }> {
   const home = join(root, 'oneshot-home');
   const env: NodeJS.ProcessEnv = { ...process.env, AGENT_LEDGER_HOME: home, AGENT_LEDGER_ORCA: orca };
-  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'hermes', 'rtk']) env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, 'none-' + kind);
+  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'pi', 'hermes', 'rtk']) env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, 'none-' + kind);
   return new Promise((resolve) => {
     const started = Date.now();
     let stderr = '';

@@ -134,7 +134,11 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
     try {
       let s = parseFile(kind, path, bytes, meta);
       let sid = s.id;
-      if ((kind === 'codex' && sid === basename(path, '.jsonl') && !/"session_meta"/.test(bytes)) || (kind === 'claude' && !s.sid)) {
+      if (
+        (kind === 'codex' && sid === basename(path, '.jsonl') && !/"session_meta"/.test(bytes)) ||
+        (kind === 'pi' && sid === basename(path, '.jsonl') && !/"type"\s*:\s*"session"/.test(bytes)) ||
+        (kind === 'claude' && !s.sid)
+      ) {
         sid = String(
           db
             .prepare('SELECT sid FROM dashboard_files WHERE version=? AND source=? AND generation<? ORDER BY generation DESC LIMIT 1')

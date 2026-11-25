@@ -320,6 +320,12 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
   const turns = new Map(),
     records = new Map<string, Call>(),
     counts: Call[] = [];
+  const piRunCreates = new Set<string>();
+  const createsRun = (args: unknown) =>
+    shellWords(command(args), true).some(
+      (argv) =>
+        argv.some((word, i) => basename(word) === 'orca' && argv[i + 1] === 'orchestration' && argv[i + 2] === 'run-create') && !argv.includes('--help'),
+    );
   if (agent === 'claude') {
     s.sid = null;
     s.subagent = path.includes('/subagents/');
@@ -391,7 +397,72 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
     if (!d) continue;
     const ts = tsOf(d.timestamp),
       t = d.type;
-    if (agent === 'claude') {
+    if (agent === 'pi') {
+      bounds(s, ts);
+      if (t === 'session') {
+        s.id = d.id || s.id;
+        s.cwd = d.cwd ?? null;
+        ctx = branch(s, ts, s.cwd, null, 'session');
+      } else if (t === 'session_info') s.title = d.name || '';
+      else if (t === 'model_change') turn[0] = d.provider ? d.provider + '/' + d.modelId : d.modelId;
+      else if (t === 'thinking_level_change') turn[1] = d.thinkingLevel ?? null;
+      const m = d.message || {},
+        content = Array.isArray(m.content) ? m.content : [],
+        txt =
+          typeof m.content === 'string'
+            ? m.content
+            : content
+                .filter((c: TextPart) => c?.type === 'text')
+                .map((c: TextPart) => c.text || '')
+                .join('\n');
+      if (t === 'message' && m.role === 'user') {
+        if (!first) first = txt;
+        tasks(s, txt, ts);
+      }
+      if (t === 'message' && m.role === 'assistant')
+        for (const c of content)
+          if (c?.type === 'toolCall') {
+            tool(s, c.name, c.arguments || {}, ts);
+            if (createsRun(c.arguments)) piRunCreates.add(c.id);
+          }
+      if (t === 'message' && m.role === 'toolResult') {
+        let created = piRunCreates.delete(m.toolCallId);
+        const nested = m.nestedCalls?.calls || m.details?.calls || [];
+        for (const c of nested) {
+          const args = c.arguments || json(c.args) || {};
+          tool(s, c.name, args, ts);
+          if (c.status === 'ok' && createsRun(args)) created = true;
+        }
+        if (created && !m.isError)
+          for (const line of txt.split('\n')) {
+            const receipt = json(line),
+              run = receipt?.ok === true ? receipt.result?.runId || receipt.result?.run?.id : null;
+            if (typeof run === 'string' && /^run_[0-9a-z]+$/.test(run)) {
+              s.dispatcher = true;
+              if (s.runs?.at(-1)?.[0] !== run) (s.runs ??= []).push([run, ts]);
+            }
+          }
+      }
+      const usage = t === 'message' && m.role === 'assistant' ? m.usage : ['usage', 'compaction', 'branch_summary'].includes(t) ? d.usage : null;
+      if (usage) {
+        const provider = m.provider || d.provider,
+          model = m.model || d.model,
+          key = 'pi:' + (d.id ? d.id + ':' + d.timestamp : s.id + ':' + d.timestamp);
+        records.set(key, [
+          ts,
+          model ? (provider ? provider + '/' + model : model) : turn[0] || '?',
+          m.thinkingLevel ?? turn[1],
+          usage.input || 0,
+          usage.cacheRead || 0,
+          usage.cacheWrite || 0,
+          usage.output || 0,
+          usage.reasoning || 0,
+          key,
+          0,
+          ctx,
+        ]);
+      }
+    } else if (agent === 'claude') {
       if (d.attachment?.type === 'hook_success') {
         hook(s, d.attachment.content, ts);
         continue;

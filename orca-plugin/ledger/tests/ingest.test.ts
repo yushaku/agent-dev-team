@@ -29,7 +29,7 @@ import { Store } from '../store.ts';
 function fixture(t: import('node:test').TestContext) {
   const root = mkdtempSync(join(tmpdir(), 'ingest-'));
   const env: NodeJS.ProcessEnv = {};
-  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'hermes', 'rtk', 'orca']) {
+  for (const kind of ['claude', 'codex', 'copilot', 'jcode', 'pi', 'hermes', 'rtk', 'orca']) {
     env['AGENT_LEDGER_' + kind.toUpperCase()] = join(root, kind);
   }
   const orca = join(root, 'orca');

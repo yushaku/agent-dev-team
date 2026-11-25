@@ -14,6 +14,7 @@ Run the tests as the plugin README says ("Verify").
 | AGENT_LEDGER_CODEX | ~/.codex/sessions | Recursive *.jsonl |
 | AGENT_LEDGER_COPILOT | ~/.copilot/session-state | */events.jsonl and */workspace.yaml |
 | AGENT_LEDGER_JCODE | ~/.jcode/sessions | *.json |
+| AGENT_LEDGER_PI | ~/.pi/agent/sessions | Recursive *.jsonl |
 | AGENT_LEDGER_HERMES | ~/.hermes/state.db | sessions, messages, system_prompts and session_model_usage |
 | AGENT_LEDGER_RTK | ~/Library/Application Support/rtk/history.db | commands |
 | AGENT_LEDGER_ORCA | orca on PATH | CLI executable |
@@ -118,6 +119,15 @@ JOIN archive.blobs USING(hash)
 WHERE kind='claude'
 ORDER BY path,generation,CAST(item AS INTEGER);
 ```
+
+Pi uses its session header ID and cwd. Assistant usage, standalone usage
+(including cache warming), compaction and branch-summary usage all count,
+including abandoned conversation branches. Entry ID plus timestamp prevents
+copied fork history from counting twice. Provider/model and thinking level
+remain attached to each call; reasoning is part of output, not added again.
+Successful Orca Run creation receipts and explicit Run commands establish
+attribution boundaries; worker prompts supply Task IDs. Format reference:
+[Pi session format](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/session-format.md).
 
 An unfinished JSONL line stays at the cursor until a newline arrives.
 A new file identity, observed shrinkage or a changed checksum in the 64 bytes

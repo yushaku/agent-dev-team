@@ -39,7 +39,7 @@ export function renderRoles(S) {
   const keys = [...new Set([].concat(...R.map((r) => Object.keys(r.mix))))].sort((a, b) => (C.MIXCOL[a] ? 0 : 1) - (C.MIXCOL[b] ? 0 : 1) || a.localeCompare(b));
   fig("#c-roles", {
     title: "Token theo vai",
-    subtitle: "Mỗi vai tốn bao nhiêu token, chạy model nào và có đúng tier mặc định không",
+    subtitle: "Mỗi vai tốn bao nhiêu token, chạy model nào và có đúng tier mặc định không. Màu đậm hơn biểu thị cấp model và effort cao hơn.",
     body: R.length
       ? hBars({
           W,

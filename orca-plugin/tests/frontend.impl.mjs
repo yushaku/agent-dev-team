@@ -273,6 +273,30 @@ test("role charts resolve model colours after rebuilding the palette", () => {
   assert.match(element("#c-roles").innerHTML, /builder/);
 });
 
+test("model colour intensity follows model class and effort rather than token volume", () => {
+  const session = (model, effort, total) => ({ agent: "claude", model, mix: { [model + "|" + effort]: total } });
+  const sessions = [
+    session("claude-haiku-5-5", "medium", 10000),
+    session("claude-sonnet-5-5", "medium", 100),
+    session("claude-opus-5-5", "medium", 1),
+    session("claude-sonnet-5-5", "high", 1),
+  ];
+  C.state.data = { sessions };
+  C.buildMixColours();
+  const intensity = (key) => Number(C.mixCol(key).match(/ (\d+)%/)[1]);
+  assert.ok(intensity("claude|claude-haiku-5-5|medium") < intensity("claude|claude-sonnet-5-5|medium"));
+  assert.ok(intensity("claude|claude-sonnet-5-5|medium") < intensity("claude|claude-opus-5-5|medium"));
+  assert.ok(intensity("claude|claude-sonnet-5-5|medium") < intensity("claude|claude-sonnet-5-5|high"));
+  const before = C.mixCol("claude|claude-opus-5-5|medium");
+  C.state.data = { sessions: [session("claude-opus-5-5", "medium", 999999)] };
+  C.buildMixColours();
+  assert.equal(C.mixCol("claude|claude-opus-5-5|medium"), before);
+  C.state.data = { sessions: [{ ...session("anthropic/claude-opus-5-5", "medium", 1), agent: "pi" }, session("unknown", "high", 1)] };
+  C.buildMixColours();
+  assert.equal(C.mixCol("pi|anthropic/claude-opus-5-5|medium"), C.mixc(C.COL.pi, 96));
+  assert.equal(C.mixCol("claude|unknown|high"), C.mixc(C.COL.claude, 70));
+});
+
 test("role skill matrix counts agent loads and hook injections per role", () => {
   C.state.data = { sessions: [], roles_cfg: { tiers: {}, order: [], roles: {} } };
   const sessions = [

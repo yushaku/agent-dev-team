@@ -176,23 +176,25 @@ export const GATE = {
 export const mixc = (c, p) => (p >= 100 ? c : `color-mix(in srgb, ${c} ${p}%, var(--mantle))`);
 export let MIXCOL = {};
 export function buildMixColours() {
-  // stable across filters: rank model+effort keys per agent on the full data
-  const tot = {};
-  state.data.sessions.forEach((s) =>
-    Object.entries(s.mix).forEach(([k, v]) => {
-      const key = s.agent + "|" + k;
-      tot[key] = (tot[key] || 0) + v;
-    }),
-  );
   MIXCOL = {};
-  AGENTS.forEach((a) =>
-    Object.keys(tot)
-      .filter((k) => k.startsWith(a + "|"))
-      .sort((x, y) => tot[y] - tot[x])
-      .forEach((k, i) => {
-        MIXCOL[k] = mixc(COL[a], [100, 70, 48, 32][Math.min(i, 3)]);
-      }),
-  );
+  state.data.sessions.forEach((s) => {
+    Object.keys(s.mix).forEach((k) => {
+      const [model, effort] = k.split("|"),
+        family = model.toLowerCase().split(/[-/._]/),
+        tier = family.some((x) => ["opus", "astra"].includes(x))
+          ? "top"
+          : family.some((x) => ["sonnet", "sol", "terra"].includes(x))
+            ? "work"
+            : family.some((x) => ["haiku", "luna", "mini", "nano"].includes(x))
+              ? "fast"
+              : s.routing?.model && model.toLowerCase().includes(s.routing.model.toLowerCase())
+                ? s.routing.tier
+                : null,
+        strength = { fast: 56, work: 76, top: 96 }[tier],
+        adjustment = { minimal: -8, low: -4, medium: 0, high: 4, xhigh: 4, max: 4 }[effort] || 0;
+      MIXCOL[s.agent + "|" + k] = mixc(COL[s.agent], strength ? strength + adjustment : 70);
+    });
+  });
 }
 export const mixCol = (k) => MIXCOL[k] || "var(--overlay0)";
 export const mixName = (k) => {
