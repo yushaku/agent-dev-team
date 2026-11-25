@@ -5,34 +5,29 @@ description: "Use only when an Orchestrator Task assigns the Builder role or the
 
 # Builder (UI and core/backend)
 
-- **Runs on:** tier work in the feature worktree; `simple` Tasks may use tier fast (`skills/orchestrator/references/routing.md` "Model routing").
-- **Skills:** `tdd`; `diagnosing-bugs` when fixing a bug or when a check fails for a non-obvious reason; `prototype` for a prototype Task; `ponytail`; `{build.ui}` for UI, `{build.core}` for logic, data, API.
-- **Conditional skills:** `ci-cd-and-automation` for CI, `observability-and-instrumentation` for instrumentation, `deprecation-and-migration` for migrations, `frappe-docs` for system docs and diagrams.
+- Use tier work, or fast for `simple` Tasks, per Orchestrator routing; keep the assigned workspace/branch.
+- Load `tdd`, `ponytail`, `{build.ui}` for UI and `{build.core}` for logic/data/API.
+- Conditional skills: `diagnosing-bugs` for bugs/unexplained check failures; `prototype` for prototypes; `ci-cd-and-automation` for CI; `observability-and-instrumentation` for instrumentation; `deprecation-and-migration` for migrations; `frappe-docs` for system docs/diagrams.
 
 ## Steps
-1. Read the ticket and spec named in the Task, the glossary and ADRs from Constraints, then only the code the ticket needs; say in the report why you read outside it.
-2. Build the ticket with `tdd` at the spec's seams, one `feat` commit per ticket; run the fast check (typecheck plus touched tests) before it. `/compact` only when context is close to full.
-3. Update related docs (`docs-policy.md`, relevant sections only).
-4. After the last ticket, commit, then run full `commands.verify` once on a clean tree, each command through `rtk err` (`rtk test` for test runners).
-5. Write the Task report with `## Evidence`; when the Task delivers, put the delivery text in `## Commit body` (`references/delivery.md`).
+1. Read Task ticket/spec, glossary/ADRs and necessary code; justify reads beyond ticket scope in the report.
+2. Build with `tdd` at spec seams, or the highest existing seam proving behavior; record fallback seams. Typecheck and run touched tests before each ticket's `feat` commit.
+3. Update related docs per relevant `docs-policy.md` sections. After the final commit, run full `commands.verify` on a clean tree through `rtk err` (`rtk test` for test runners).
+4. Report evidence per `skills/orchestrator/references/specs.md` "Report". Delivery Tasks include `## Commit body` per `references/delivery.md`.
 
 ## Rules
-- **Scope:** no ticket named in the Task: work the Task's tickets in dependency order in one session. A ticket named: `references/parallel.md`.
-- **Prototype Task:** build on `prototype/<name>` (never merged), serve it in the `DEV` pane, report the verdict; the main branch keeps only the validated decision.
-- **Ask first:** an unresolved product or design decision, a change to a shared contract, schema or dependency, or a file outside the ticket goes to the Orchestrator with `ask` before the change.
-- **Code search:** `codegraph_explore` (MCP) or `codegraph explore|callers|callees|impact <symbol>` for structure; `rg` for literal strings, config keys, unindexed files; `codegraph sync` after large edits.
-- **Test seam:** the spec's; none: the highest existing seam that proves the behavior, recorded in the report.
-- **Evidence:** raw output in `.team/<feature>/logs/`; the failing test before the fix and the passing test after, both in `## Evidence`; before/after measurements for performance or size. `commands.verify` evidence names the sha it ran on (`git rev-parse HEAD`) and the per-command result; a later commit makes it stale, so rerun.
-- **Never:** `git add -A` (stage explicit paths from `git status --short`); merge, release, deploy, force-push a shared branch.
+- **Scope:** work assigned tickets in dependency order in one session; a named ticket uses `references/parallel.md`. Compact only near context capacity.
+- **Prototype:** unmerged `prototype/<name>`, served in `DEV`; report verdict and retain only the validated decision on main.
+- **Ask first:** use Orchestrator `ask` before unresolved product/design decisions, shared-contract/schema/dependency changes or edits outside the ticket.
+- **Code search:** follow repo indexing rules; CodeGraph for structure, `rg` for literals/config/unindexed files; sync the index after large edits.
+- **Evidence:** `## Evidence` includes failing-before/passing-after output, performance/size measurements and per-command verify results with `git rev-parse HEAD`. Later commits require fresh verify; raw output stays in `.team/<feature>/logs/`.
+- Stage explicit paths from `git status --short`, never `git add -A`. No merge, release, deploy or shared-branch force-push.
 
 ## Done when
-- Every ticket's acceptance criteria have evidence, the tickets are committed and `commands.verify` passes.
-
-## Report
-`skills/orchestrator/references/specs.md` "Report".
+- Every ticket is committed, all acceptance criteria have evidence and final-revision verify passes.
 
 ## References
-Read the ones the Task spec lists in `Refs:`; read one on its own when its trigger applies.
+Read Task `Refs:` and any reference whose trigger applies.
 - `references/parallel.md`: the Task names one ticket (parallel Builders).
 - `references/fix-round.md`: the Task answers review findings.
 - `references/ui.md`: Task touches UI or the spec says `visual loop: on`.

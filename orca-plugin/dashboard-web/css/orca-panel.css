@@ -45,6 +45,79 @@ html.orca main.wrap {
   padding-bottom: var(--s-5);
 }
 
+/* Panel navigation shares the web dashboard's selection mark. */
+#plugin-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  border-bottom: var(--hairline);
+  min-width: 0;
+}
+#plugin-tabs .seg {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: var(--s-4);
+  overflow-x: auto;
+}
+#plugin-tabs button {
+  font: inherit;
+  font-size: var(--fs-2);
+  line-height: 1.4;
+  min-height: 44px;
+  padding: var(--s-2) 0;
+  background: transparent;
+  color: var(--subtext0);
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#plugin-tabs .seg button:hover {
+  color: var(--text);
+}
+#plugin-tabs .seg button[aria-pressed="true"] {
+  color: var(--text);
+  background: none;
+  box-shadow: inset 0 -1px var(--lavender);
+  font-weight: 600;
+}
+#plugin-tabs #plugin-open {
+  flex: none;
+  padding: var(--s-2);
+  color: var(--subtext1);
+  font-size: var(--fs-1);
+  background: none;
+  border: 0;
+  border-radius: var(--r-1);
+}
+#plugin-tabs #plugin-open:hover {
+  color: var(--text);
+  background: var(--surface0);
+}
+#plugin-tabs button:focus-visible {
+  outline: 2px solid var(--lavender);
+  outline-offset: 1px;
+}
+html.orca #token {
+  padding-top: 0;
+}
+html.orca .dash {
+  gap: var(--s-4);
+}
+html.orca .dash-view > .panel-head .lead {
+  font-size: var(--fs-1);
+}
+@media (max-width: 360px) {
+  #plugin-tabs {
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  #plugin-tabs #plugin-open {
+    margin-left: auto;
+  }
+}
+
 #plugin-bar {
   display: flex;
   flex-wrap: wrap;

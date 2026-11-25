@@ -1,9 +1,9 @@
-// Cuts the dashboard's /api/data payload to what the Tasks and Agents tools views (#tk-theo-repo, #tk-agents-tools) render, so the
+// Cuts the dashboard's /api/data payload to what the Overview, Tasks and Agents tools views render, so the
 // pieces fit the 1 MiB limit on a worker's reply (the full 7-day payload is 1.6 MB, 30 days 3.0 MB).
 
 type Json = Record<string, unknown>
 
-/** Top-level keys the Tasks and Agents tools views read (dash.js, charts.js, tabs/{overall,roles,role-skills,repos,search,sessions,skills,tokens}.js). */
+/** Top-level keys the panel views read (dash.js, charts.js, tabs/{overview,overall,roles,role-skills,repos,search,sessions,skills,tokens}.js). */
 const KEEP = [
   'generated_at',
   'days',

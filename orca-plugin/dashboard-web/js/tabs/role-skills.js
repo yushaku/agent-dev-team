@@ -24,15 +24,13 @@ export function renderRoleSkills(S) {
   const roles = Object.keys(by).sort((a, b) => tot(by[b]) - tot(by[a]) || a.localeCompare(b));
   let body = "";
   if (roles.length) {
-    const max = Math.max(...roles.flatMap((r) => Object.values(by[r]).map((v) => v.n)));
     body = `<ul class="role-skills" aria-label="Skill đã nạp theo vai">${roles
       .map((r) => {
         const X = by[r],
           chips = Object.entries(X)
             .sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]))
             .map(([k, v]) => {
-              const p = Math.round(15 + (70 * v.n) / max);
-              return `<span class="rs-chip" style="background:color-mix(in srgb, var(--blue) ${p}%, var(--surface0));color:${p > 50 ? "var(--crust)" : "var(--text)"}"${A({ skill: k, tip: [`Vai: ${r}`, `Skill: ${k}`, v.n + " lần nạp", v.sess.size + " phiên" + (v.tasks.size ? ", " + v.tasks.size + " task" : ""), "Dùng lần cuối: " + dt(v.last), "Bấm để đọc skill"] })}>${esc(k)} <b>${v.n}</b></span>`;
+              return `<span class="rs-chip"${A({ skill: k, tip: [`Vai: ${r}`, `Skill: ${k}`, v.n + " lần nạp", v.sess.size + " phiên" + (v.tasks.size ? ", " + v.tasks.size + " task" : ""), "Dùng lần cuối: " + dt(v.last), "Bấm để đọc skill"] })}>${esc(k)} <b>${v.n}</b></span>`;
             })
             .join("");
         return `<li><span class="rs-role"${A({ f: "role:" + r, tip: [`${r} (${GROUPS[groupOf(r)][0]})`, tot(X) + " lần nạp, " + Object.keys(X).length + " skill", "Bấm để lọc"] })}><i style="background:${roleCol(r)}"></i>${esc(r)}</span><span class="rs-chips">${chips}</span></li>`;
@@ -45,6 +43,6 @@ export function renderRoleSkills(S) {
     body,
     empty: "Chưa có skill nào được nạp trong các phiên đang lọc.",
     caption:
-      "Số cạnh tên skill là số lần vai đó nạp: mỗi lần agent đọc SKILL.md hoặc gọi công cụ Skill, cộng một lần mỗi phiên khi hook nạp sẵn. Màu đậm hơn là nhiều lần hơn. Skill nạp trước khi một task bắt đầu trong phiên dùng lại được gán theo quy tắc phân phiên của backend. Bấm tên vai để lọc, bấm skill để đọc.",
+      "Số cạnh tên skill là số lần vai đó nạp: mỗi lần agent đọc SKILL.md hoặc gọi công cụ Skill, cộng một lần mỗi phiên khi hook nạp sẵn. Skill nạp trước khi một task bắt đầu trong phiên dùng lại được gán theo quy tắc phân phiên của backend. Bấm tên vai để lọc, bấm skill để đọc.",
   });
 }

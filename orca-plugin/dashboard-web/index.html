@@ -25,52 +25,25 @@
 <div class="dash">
   <div class="dash-head">
     <div class="dash-filters" role="group" aria-label="Bộ lọc">
-      <select id="range" aria-label="Khoảng thời gian"><option value="1">Hôm nay</option><option value="3">3 ngày</option><option value="7">7 ngày</option><option value="30">30 ngày</option></select>
-      <select id="f-repo" aria-label="Repo"><option value="">Mọi repo</option></select>
-      <select id="f-agent" aria-label="Agent"><option value="">Mọi agent</option><option value="claude">Claude</option><option value="codex">Codex</option><option value="copilot">Copilot</option><option value="hermes">Hermes</option></select>
-      <select id="f-run" aria-label="Run"><option value="">Mọi run</option></select>
-      <select id="f-task" aria-label="Task" disabled><option value="">Mọi task</option></select>
+      <label class="filter-field">Thời gian<select id="range"><option value="1">Hôm nay</option><option value="3">3 ngày</option><option value="7">7 ngày</option><option value="30">30 ngày</option></select></label>
+      <label class="filter-field">Repo<select id="f-repo"><option value="">Mọi repo</option></select></label>
       <span class="tk-sync"><button type="button" id="auto" aria-pressed="true"><span class="dot" aria-hidden="true"></span><span id="updated">Đang tải</span></button><button type="button" id="refresh" aria-label="Làm mới" title="Làm mới"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></button></span>
     </div>
     <div class="fbar" id="fbar" aria-live="polite" hidden></div>
   </div>
   <section class="dash-view" id="tk-tong-quan" aria-labelledby="tk-tong-quan-h">
     <div class="panel-head">
-      <h3 id="tk-tong-quan-h">Tổng quan</h3>
-      <p class="lead" id="ov-lead">Token Claude, Codex, Copilot và Hermes trong khoảng đã chọn, và các phiên tốn nhất.</p>
-      <p class="muted small" id="measurement-note" role="status"></p>
+      <h1 id="tk-tong-quan-h">Tổng quan</h1>
     </div>
-    <section aria-labelledby="h-issues">
-      <h4 id="h-issues">Vấn đề</h4>
-      <div id="issues" aria-live="polite"></div>
-    </section>
-    <section aria-labelledby="h-kpi">
-      <h4 id="h-kpi">Chỉ số chính</h4>
-      <div class="grid" id="kpi"></div>
-    </section>
-    <section aria-labelledby="h-daily">
-      <h4 id="h-daily">Theo thời gian</h4>
-      <div class="charts">
-        <figure class="chart" id="c-daily"></figure>
-      </div>
-    </section>
-    <section aria-labelledby="h-mix">
-      <h4 id="h-mix">Thành phần token và model</h4>
-      <div class="charts">
-        <figure class="chart" id="c-parts"></figure>
-        <figure class="chart" id="c-mix"></figure>
-      </div>
-      <details class="tbl"><summary>Xem bảng chi tiết</summary><div class="table-wrap" id="t-mix"></div></details>
-    </section>
-    <section aria-labelledby="h-top">
-      <h4 id="h-top">10 phiên tốn nhất</h4>
-      <figure class="chart" id="c-top"></figure>
-      <details class="tbl"><summary>Xem bảng chi tiết</summary><div class="table-wrap" id="t-top"></div></details>
-    </section>
+    <div class="grid" id="kpi" role="group" aria-label="Chỉ số chính"></div>
+    <figure class="chart" id="c-daily"></figure>
+    <figure class="chart" id="c-parts"></figure>
+    <figure class="chart" id="c-mix"></figure>
+    <figure class="chart" id="c-top"></figure>
   </section>
 
   <section class="dash-view" id="tk-features" aria-labelledby="tk-features-h" hidden>
-    <h3 id="tk-features-h">Run theo repo và nhánh</h3>
+    <h1 id="tk-features-h">Run theo repo và nhánh</h1>
     <p class="muted">Token và skill trong khoảng đã chọn; bộ lọc chọn toàn Run. Vòng sửa, Gate 2 và merge theo dữ liệu hiện có của nhánh.</p>
     <div class="feature-comparison" role="group" aria-label="So sánh cách chạy">
       <figure class="chart" id="feature-tokens"></figure>
@@ -92,7 +65,7 @@
   </section>
   <section class="dash-view" id="tk-theo-repo" aria-labelledby="tk-theo-repo-h" hidden>
     <div class="panel-head">
-      <h3 id="tk-theo-repo-h">Tasks</h3>
+      <h1 id="tk-theo-repo-h">Tasks</h1>
       <p class="lead">Token theo công việc: orchestrator trên main và worker ở các worktree được gộp theo Run ID.</p>
     </div>
     <figure class="chart" id="c-tree"></figure>
@@ -114,25 +87,11 @@
 
   <section class="dash-view" id="tk-agents-tools" aria-labelledby="tk-agents-tools-h" hidden>
     <div class="panel-head">
-      <h3 id="tk-agents-tools-h">Agents tools</h3>
+      <h1 id="tk-agents-tools-h">Agents tools</h1>
     </div>
-    <section aria-labelledby="agent-skills-h">
-      <h3 id="agent-skills-h">Skill đã dùng</h3>
-      <figure class="chart" id="c-skills"></figure>
-    </section>
-    <section aria-labelledby="agent-codegraph-h">
-      <div class="panel-head">
-        <h3 id="agent-codegraph-h">Codegraph</h3>
-        <p class="lead">Số lần agent gọi codegraph (MCP hoặc CLI) so với rg, grep, find và đọc file. Tỉ lệ codegraph (% cg) tính trên codegraph, rg, grep và find, không tính đọc file. Tỉ lệ thấp ở một vai hay worktree là dấu hiệu agent chưa dùng index.</p>
-      </div>
-      <section aria-label="Theo agent"><figure class="chart" id="c-search-agent"></figure></section>
-      <section aria-label="Theo vai"><figure class="chart" id="c-search-role"></figure></section>
-      <section aria-label="Theo repo / worktree"><figure class="chart" id="c-search-wt"></figure></section>
-    </section>
-    <section aria-labelledby="agent-rtk-h">
-      <h3 id="agent-rtk-h">RTK</h3>
-      <section aria-label="RTK theo lệnh"><figure class="chart" id="c-rtk-cmd"></figure></section>
-    </section>
+    <figure class="chart" id="c-skills"></figure>
+    <figure class="chart" id="c-search-agent"></figure>
+    <figure class="chart" id="c-rtk-cmd"></figure>
   </section>
 
   <section class="dash-view" id="tk-cli-tools" aria-labelledby="tk-cli-tools-h" hidden>
@@ -151,7 +110,7 @@
 
   <section class="dash-view" id="tk-cach-tinh" aria-labelledby="tk-cach-tinh-h" hidden>
     <div class="panel-head">
-      <h3 id="tk-cach-tinh-h">Cách tính</h3>
+      <h1 id="tk-cach-tinh-h">Cách tính</h1>
       <p class="lead">Định nghĩa từng số, nguồn dữ liệu và giới hạn. Dữ liệu làm mới ở nền khoảng mỗi 30 giây, chỉ đọc log, không gửi prompt hay output ra ngoài.</p>
     </div>
     <section aria-labelledby="h-src">

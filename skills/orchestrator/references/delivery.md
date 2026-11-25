@@ -1,32 +1,39 @@
 # Finish
 
-- Remove shipped items from `todo.md` and rewrite deferred items for the later capability.
-- With `docs.site: pages` and no `.github/workflows/pages.yml`, copy `templates/pages.yml` there and commit it before review. Assign the Builder if it needs more than the template copy. Ask the PO to enable Pages per `docs-policy.md` "Published site".
-- Use Git, PR administration and Orca commands without reading code or diffs. For `delivery.mode: branch`, leave commits on the feature branch and push only if `delivery.push`. For `delivery.mode: pr`, push the feature branch, open a draft PR with title per `delivery.pr_title` and the Builder report’s `## Commit body` contents verbatim (format: Matt `pr`, `skills/team-builder/references/delivery.md` "Body"), confirm CI is green, then run `orca worktree set --worktree <selector> --pr <n>`. Move the card per `start.md` "Board mapping".
-- Record delivery in the Run as a completed Orchestrator Task with `Measurement.kind: delivery`.
-- Report link/branch, summary, risks, pending `human_only` steps and ticket fix draft for G-Reply.
-- Features land through a feature branch and a merge commit. Keep feature commits off the default branch and preserve merge commits instead of squashing. On a fix commit, an optional `Fixes-feature: <branch>` trailer overrides the dashboard's blame attribution.
-- **Local test before Gate 2:** the existing Builder runs the final revision in the Run-owned `DEV` pane, applies local migrations and seeds test data covering the changed flow. Reuse project scripts; preserve existing data. Verify readiness via Orca browser, confirm the Run-owned server is still reachable when handing off, and keep it running for PO testing. Report URL, test account/access, seeded scenarios, the PO’s manual test steps and terminal/log details per `specs.md`. List manual and on-device checks assigned to the PO as `human_only`; leave execution to the PO. Delivery blockers must be resolved or explicitly waived by the PO before approval is requested. For changes with no runnable app/data, state what is inapplicable.
-- After an interrupted delivery, reconcile Orca state with the actual branch, remote and Run-owned server state before continuing. Report what completed and what remains; continue within existing authorization and ask only for unresolved decisions (`gates.md`).
-- **Close check:** at close, read `curl -s localhost:4747/api/agent/run?id=<run>` (served by the `local.team-dashboard` Orca plugin) and act on every high-severity issue (fix, or record why not in the delivery report).
-- Record each Gate 2 problem that sends work back as `- Gate 2 finding: <what>` in `.team/<feature>/decisions.md`, written by whoever ran Gate 2. Record `- Gate 2: no findings` when Gate 2 sends no work back. The dashboard computes the remaining metrics.
-- **Retro:** when the dashboard shows more than 1 fix round, any Gate 2 finding, or the close check showed a high-severity issue, dispatch the Run's Reviewer read-only (tier work, `Measurement.kind: other`) with the `retro` skill by absolute path. Input: `.team/<feature>/` (specs, reports, logs, `decisions.md`, `routing.jsonl`), the dashboard feature Run metrics (repo + branch), the close check output and the Run's worker sessions. Output: `reports/NN-reviewer-retro.md`. Send its list to the PO; process, skill and project changes come only from items the PO picks. Clean Runs skip it.
-- After Gate 2, complete the close Task and retain `.team/<feature>/` reports, decisions and logs for process evaluation. Hand off only when context or ownership requires it; delete artifacts only on an explicit cleanup request.
-- A request arriving while another Run waits at Gate 2 follows `start.md` "Run selection". Keep the older gate pending and preserve its testing resources; ask only if branch dependencies or ownership block the new work.
-- Before any push, inspect `git show --stat` for every commit since the last review. Commits added after the last review get a scoped review plus Anti-AI; docs-only commits get a scoped review too.
-- **Merge on request:** the PO's explicit "merge X" overrides `human_only` for that one branch. Merge on approval; report the pushed range and migrations, then move the card to `completed`.
-- Merge a parallel Run or a parallel Builder's child branch (`start.md` "Parallel Builders") into the feature or named branch only when no Reviewer is reading that branch; resolve conflicts in a fast Builder Task, rerun verify, add its leftover Should fix to the feature's fix round. The PO tests and merges once.
-- Resolve conflicts in a child worktree, never in a checkout the PO uses: dry-run `git merge-tree --write-tree --name-only`, then fast-forward.
-- **Carry-over:** at merge, write open Should fix items to `.team/carry-over.md`, one numbered line each (`file:line`, fix). The next Run reads them; act only on blockers or PO requests. After its merge, retain only open items.
-- **Run cleanup:** before removing worktrees or closing the coordinator, reconcile the named Run's Tasks and gates with delivery evidence and PO decisions; complete approved, finished Tasks, including the close Task. A cleanup request alone does not approve a gate or cancel unfinished work; retain worktrees and DEV resources needed by pending gates or unfinished Tasks. Follow the version-matched `orchestration` recovery/cleanup reference and worker receipts; preserve PO-owned, kept-open and unproven live sessions. Read back Task and worker state and report any unresolved Task or retained resource with its reason before calling cleanup complete; close only the Run-owned DEV pane and coordinator terminal when no longer needed.
-- **Cleanup** ("dọn", "clean", "clean up", "merge everything into main"): include Run cleanup above, check each branch is merged, list the cleanup and get one OK (irreversible), then act; keep `.team/config.yaml`, `.team/carry-over.md`. Stop only the dev servers of this project's worktrees.
+## Prepare delivery
+
+- Remove shipped `todo.md` items; rewrite deferred items for their later capability.
+- `docs.site: pages` without `.github/workflows/pages.yml`: copy/commit `templates/pages.yml` before review; delegate changes beyond the copy. PO enables Pages (`docs-policy.md` "Published site").
+- Before any push, inspect `git show --stat` for commits since review; new commits, including docs-only, require scoped review and Anti-AI. Branch mode: leave feature commits, push only if `delivery.push`. PR mode: push, open a draft with `delivery.pr_title` and the Builder's `## Commit body` verbatim, confirm green CI and attach PR via Orca.
+- Keep feature commits off the default branch; preserve merge commits instead of squashing. Optional fix trailer `Fixes-feature: <branch>` overrides dashboard blame attribution.
+- Record delivery as a completed Orchestrator Task with `Measurement.kind: delivery`; update the board (`start.md` "Board mapping"). Report link/branch, outcome, risks, pending human checks and ticket G-Reply draft.
+- Interrupted delivery: reconcile branch, remote, Orca and Run-owned server state; continue authorized work and report completed/pending actions.
+
+## Local test before Gate 2
+
+- Existing Builder runs the final revision in Run-owned `DEV`, applies migrations and seeds the changed flow using project scripts, preserving data. Verify readiness through Orca browser and reachability at handoff; keep the app running for PO testing.
+- Report URL, account/access, seeded scenarios, manual test steps and terminal/log details (`specs.md`). List on-device/manual `human_only` checks without performing them; state inapplicable app/data checks.
+- Resolve delivery blockers or obtain explicit PO waiver before requesting approval.
+
+## Close and retro
+
+- Read `curl -s localhost:4747/api/agent/run?id=<run>` from `local.team-dashboard`; fix every high-severity issue or record why not in the delivery report.
+- Gate 2 operator records each return to work as `- Gate 2 finding: <what>` in `decisions.md`, or `- Gate 2: no findings`. Dashboard computes other metrics.
+- Trigger retro on more than one fix round, any Gate 2 finding or high-severity close issue. Assign the Run's Reviewer read-only, tier work, `Measurement.kind: other`, absolute `retro` skill. Input: feature artifacts, dashboard Run metrics (repo/branch), close output and worker sessions. Output: `reports/NN-reviewer-retro.md`. Send candidates to PO; change process/skills/project only for selected items. Skip retro for clean Runs.
+- After Gate 2, complete the close Task; retain feature reports/decisions/logs until explicit cleanup. A new request during another Run's Gate 2 uses `start.md` "Run selection"; preserve the older gate/testing resources and ask only for blocking dependency/ownership decisions.
+
+## Merge and cleanup
+
+- **Merge on request:** explicit PO "merge X" overrides `human_only` for that branch. Merge on approval; report pushed range/migrations and mark completed.
+- Integrate parallel child/Run branches only while no Reviewer reads the target. Delegate conflicts to a fast Builder in a child worktree; dry-run `git merge-tree --write-tree --name-only`, resolve there, then fast-forward. Rerun verify; include leftover Should fix items in the feature fix round. PO tests/merges the feature once.
+- **Carry-over:** at merge, keep open Should fix items in `.team/carry-over.md` as numbered `file:line`, fix entries. Future Runs act on blockers/PO requests; remove resolved items after merge.
+- **Run cleanup:** reconcile named Run Tasks/gates with evidence and PO decisions; complete approved finished Tasks, including close. Cleanup alone approves no gate and cancels no work. Retain resources for pending work/gates and protect PO-owned, kept-open and unproven live sessions. Follow Orca recovery/cleanup and receipts; read back Task/worker state and report retained resources with reasons. Close Run-owned DEV/coordinator only when no longer needed.
+- **Cleanup** ("dọn", "clean", "clean up", "merge everything into main"): verify branches are merged, list removals and obtain one OK before irreversible cleanup, reusing explicit authorization. Keep `.team/config.yaml` and `.team/carry-over.md`; stop only this project's worktree servers.
 
 ## Definition of Done (feature)
 
-- Evidence for every acceptance criterion of every ticket: passing test, measurement, rendered check or recorded manual result. Mark pending `human_only` checks for PO review; required automation and project thresholds must pass.
-- Zero Must fix findings; triggered audits: zero high-severity findings.
-- Anti-AI pass clean.
-- `commands.verify` green.
-- A feature calling an external service (push, mail, payments): one real end-to-end call with its evidence in the delivery; mocked tests do not count.
-- UI changes: screenshots in the delivery only when the visual loop ran; otherwise "UI check: PO" under Human steps.
-- Delivered per `delivery.mode` with the Builder report’s `## Commit body` (`skills/team-builder/references/delivery.md` "Body").
+- Every ticket criterion has a passing test, measurement, rendered check or recorded manual result. List pending `human_only` checks; required automation/project thresholds pass.
+- Zero Must fix and triggered-audit high-severity findings; clean Anti-AI; green `commands.verify` for the final revision.
+- External services (push/mail/payments): evidence of one real end-to-end call; mocks are insufficient.
+- UI: delivery screenshots when the visual loop ran, otherwise `UI check: PO` under Human steps.
+- Deliver per configured mode with the Builder's `## Commit body` (`skills/team-builder/references/delivery.md` "Body").

@@ -3,11 +3,11 @@ import { fmt, widthOf, fig, hBars } from "../lib/charts.js";
 
 export function renderRtkCommands() {
   const d = C.state.data.rtk;
-  if (!d?.available) return fig("#c-rtk-cmd", { title: "RTK tool save token", body: "", empty: "Không có dữ liệu RTK." });
+  if (!d?.available) return fig("#c-rtk-cmd", { title: "RTK · Token tiết kiệm", body: "", empty: "Không có dữ liệu RTK." });
   const byCmd = d.by_cmd || [];
   const W = widthOf("#c-rtk-cmd");
   fig("#c-rtk-cmd", {
-    title: "RTK tool save token",
+    title: "RTK · Token tiết kiệm",
     body: byCmd.length
       ? hBars({
           W,
@@ -24,6 +24,5 @@ export function renderRtkCommands() {
           aria: "Thanh ngang token tiết kiệm theo lệnh",
         })
       : "",
-    caption: "15 lệnh RTK tiết kiệm nhiều token nhất.",
   });
 }

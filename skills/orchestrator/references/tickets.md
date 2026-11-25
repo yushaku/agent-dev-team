@@ -1,37 +1,32 @@
 # Ticket mode
 
-Production tickets from a client tracker. Slice tickets written by `to-tickets` are planned in `start.md` "Plan". Use `start.md` for team selection; add a Support Engineer only for a named gap existing workers cannot cover.
+Use for production/client tickets; planned slices follow `start.md` "Plan".
 
 ## Intake
 
-- Read only the title, description and the last few comments: enough to classify the type below and pick the team. A long or contradictory thread goes to a Support Engineer (`skills/team-support-engineer/SKILL.md` step 1); use its requirement summary, never the full thread, in the Orchestrator context. Manual access: the PO supplies the thread.
-- A raw incoming issue or external PR: run `triage` (absolute path in the Task or by the Orchestrator); `tracker.write: false` stands, so its comments and labels are drafts for the PO. A hard bug (no clear cause, or a failed fix round): the Builder or Support Engineer loads `diagnosing-bugs`.
-- Link related tickets and deduplicate before investigating. The ticket remains the external record; keep internal evidence in the Run reports.
-- Poll only on an authorized schedule using the configured query. Waiting for the client is a waiting status; resume when an answer arrives.
-- Prioritize incidents, overdue tickets, client-blocked work, then tracker priority and due date.
+- Read title, description and recent comments to classify. Delegate long/contradictory threads to a Support Engineer; consume its requirement summary. For manual tracker access, the PO supplies the thread.
+- Raw issue/external PR: load `triage` by absolute path; comments/labels stay PO drafts under `tracker.write: false`. Hard bugs or failed fixes: Builder/Support Engineer loads `diagnosing-bugs`.
+- Link/deduplicate related tickets before investigation. Keep the external ticket as the client record and internal evidence in Run reports.
+- Poll only on an authorized schedule/query. Resume client-waiting work on an answer. Priority: incidents, overdue, client-blocked, then tracker priority/due date.
 
 ## Ticket-specific gates and completion
 
 | Type | Required outcome |
 |---|---|
-| Question | Evidence-backed answer and draft; G-Reply, then the PO posts it |
-| Bug | Confirm expected vs actual behavior; failing reproduction then fix and regression evidence; G-PR; draft fix report for G-Reply |
-| Change request | G-Scope approves scope and estimate before work; new tickets and a spec update when rules change (`start.md` "Plan"); normal feature checks and G-PR; report through G-Reply |
-| Incident | Notify PO immediately; reviewed mitigation through fast-track G-PR; record follow-up root-cause/regression work |
+| Question | Evidence-backed answer/draft; G-Reply, then PO posts |
+| Bug | Expected/actual behavior, failing reproduction, fix/regression evidence; G-PR and G-Reply draft |
+| Change | G-Scope before commitment; spec/tickets for changed rules; normal feature checks, G-PR and G-Reply |
+| Incident | Notify PO immediately; reviewed mitigation through fast-track G-PR; root-cause/regression follow-up |
 
-- Unclear expected behavior: draft a question for G-Reply before changing it. Never promise dates or effort before G-Scope.
-- Gate 1 covers changed business rules; G-Scope covers the ticket scope/estimate. One PO decision may satisfy both when it explicitly covers both.
-- Fast-track: the PO may approve G-PR and G-Reply together. Deployment remains human-owned.
-- A question revealing a bug continues as bug work on the same ticket. A mitigation does not close unresolved root-cause work.
+- Unclear expectations: draft a G-Reply question before edits. Commit no date/effort before G-Scope. A scope decision may cover Gate 1 and G-Scope when explicit about both.
+- PO may combine G-PR/G-Reply approval; deployment stays human-owned. Questions revealing bugs continue on the same ticket; mitigation alone does not close root-cause work.
 
 ## Client communication
 
-- Agents prepare drafts; the PO edits and posts them, regardless of tracker write capability. Include `languages.client` plus a `languages.po` translation.
-- Include Anti-AI and factual checks in the existing review. Preserve client register; cite internal claims with `path:line` (optional in external drafts).
-- State what changed, how to verify, environment, and who is waiting for whom. A fix report is ready after review; do not claim the fix is live before deployment evidence.
+- PO edits/posts drafts regardless of tracker capability. Include `languages.client` plus `languages.po` translation; preserve register. Existing review includes Anti-AI/factual checks; cite internal claims with `path:line`.
+- State change, verification, environment and who awaits whom. Claim live fixes only with deployment evidence.
 
 ## Escalation
 
-In addition to `gates.md`, notify the PO for overdue/next-working-day tickets without a draft, a root cause in another party's system, or a fix affecting other clients' expected behavior.
-
-A suspected personal-data breach follows incident handling: preserve evidence and report affected data/users and timing. Notifications to users or authorities are the PO/legal team's decision under `compliance`.
+- In addition to `gates.md`, notify PO for overdue/next-working-day tickets without drafts, external root causes or fixes affecting other clients.
+- Suspected personal-data breach: preserve evidence and report affected data/users/timing; PO/legal owns notifications.

@@ -1,18 +1,15 @@
 # Model routing and skill slots
 
-Read by the Orchestrator before dispatch. Config schema: `skills/init-team/references/config-schema.md`.
-
 ## Model routing
 
-1. Read the main checkout's `.team/config.yaml` before planning a Run, on resume and before dispatch/follow-up; refresh it when changed. Workers receive resolved settings, not the full catalog. Keep existing workers only while their settings remain eligible; a newly disabled entry is not eligible for further work.
-2. Choose the Task tier from its role and risk. `fast`: a bounded mechanical/simple edit; `work`: implementation, investigation and multi-behaviour fixes; `top`: architecture decisions, difficult reasoning or security-sensitive work. Each role skill's "Runs on" supplies defaults, including the Builder's simple-Task fast option; an explicit project role tier overrides that default. Task risk may require a higher tier at initial planning; failed fix rounds still follow the PO escalation gate. Preserve required checks and keep the Reviewer's tier at least the Builder's. A config override cannot remove a risk-triggered check.
-3. Honor an explicit PO model override for the stated Task and record the exception; ask only for missing routing values, not repeat approval. Otherwise use the configured eligibility rules. Use the role's `prefer` order, then remaining enabled aliases in the tier. Agent availability and supported flags come from the installed Orca/agent guides and observed launch results. Check authentication only through a supported read-only command; no quota probes, account switching or sign-in automation.
-4. Pass only the entry's resolved flags that the selected agent supports. Verify the launch receipt. Missing CLI, authentication failure, unsupported flags/model or rate limit: record the evidence, then try the next eligible entry in the same tier and notify the PO. A repeated ambiguous launch uses the receipt's recovery path, not a fresh launch. An actual code/verify failure follows fix-round policy, not automatic provider retries. If no entry works, ask the PO; never silently lower the tier or start an unapproved higher-tier fix round.
-5. Builder and Reviewer use independent sessions/Dispatches, and the Reviewer runs on a different Orca agent than the Builder; when no other agent is eligible, ask the PO once and record the exception. Orchestrator and the PO-started `/researcher` and `/solution-architect` sessions retain their session model; dispatched workers follow the catalog. Record the chosen alias, tier, agent, model, effort and selection reason in each Task (`skills/orchestrator/references/specs.md`).
-6. Role ids are the `team-*` skill names without the prefix: `builder`, `reviewer`, `support-engineer`. Validate types, alias references, role ids and required tier coverage before dispatch. Require a matching model when an effort flag needs one; use the selected agent's supported effort values rather than a universal effort ladder. Reject placeholder model ids. A missing/disabled eligible entry blocks the affected Task; ask for a config decision rather than inventing a model.
+1. Resolve the current project `models` catalog; workers receive resolved values. Validate types, aliases, role IDs (`builder`, `reviewer`, `support-engineer`), tier coverage, actual model IDs and agent-supported effort/model combinations. Missing/disabled eligibility blocks the Task; ask for config rather than inventing values.
+2. Choose tier from role defaults, project role override and Task risk: `fast` for bounded mechanical work, `work` for implementation/investigation, `top` for architecture, hard reasoning or security. Keep risk-triggered checks and Reviewer tier at least the Builder's. Failed fix rounds follow `review.md`.
+3. Honor and record explicit PO overrides. Otherwise use role `prefer`, then remaining enabled aliases in the tier. Existing workers must remain eligible before follow-up. Orchestrator and PO-started researcher/architect retain their session models.
+4. Use independent Builder/Reviewer sessions and different Orca agents; if no other agent is eligible, ask once and record the exception.
+5. Pass only supported resolved flags; inspect launch receipts. CLI/auth/model/effort/rate-limit failures: record evidence, notify the PO and try the next eligible same-tier entry. Unknown launches follow receipt recovery, not a fresh start. Code/verify failures follow fix-round policy. Exhausted entries: ask; no silent tier change.
+6. Discover agent availability/flags through installed guides and observed results. Check authentication read-only; no quota probes, account switching or sign-in automation. Record selection and Dispatch history through `specs.md` "Routing history".
 
 ## Skill slots
 
-- Slots: `design` (UI prototype and build Tasks), `architecture` (Solution Architect), `build.ui`, `build.core`, `review`, `security`, `perf`.
-- Resolution: project `skills.<slot>` > empty (role core skills only). A slot skill not installed: tell the PO once, never skip silently.
-- A config with a `profile:` key: ignore the key.
+- Resolve project `skills.<slot>`, otherwise role core skills only. Missing installed skill: report once; never silently skip. Ignore legacy `profile:`.
+- Slots: `design` (UI prototype/build), `architecture` (Solution Architect), `build.ui`, `build.core`, `review`, `security`, `perf`.

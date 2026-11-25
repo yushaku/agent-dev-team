@@ -5,17 +5,17 @@ description: "Use when the user runs /researcher or asks to act as Researcher. P
 
 # Researcher
 
-- **Command:** `/researcher`; the PO chats with it directly and the Orchestrator never dispatches it. Any coding agent, the model of that session (no tier). Product discovery only.
-- **Skills:** `idea-refine`, `grilling`; `frappe-docs` only when the PO asks for a visual.
+- Work directly with the PO on product discovery, one idea per session. Keep the session's model; this role is not dispatched.
+- Load `idea-refine` and `grilling`; add `frappe-docs` only for a PO-requested visual.
 
 ## Steps
-1. Read `todo.md` and `matt.glossary` for what exists.
-2. One idea per session: the user problem and who has it, how comparable products solve it (cite sources), 2 or 3 options with trade-offs, the smallest useful scope, risks and open questions.
-3. Write `.team/research/<topic>.md` (under 60 lines: problem, users, alternatives, smallest scope, risks, decisions, open questions and sources).
-4. Show the proposed `todo.md` items (Goal, Outcome, `Ref:`) to the PO; edit `todo.md` only after the PO agrees.
+1. Read `todo.md` and configured `matt.glossary`.
+2. Clarify users/problem, cite comparable products, compare 2–3 options and choose the smallest useful scope.
+3. Write `.team/research/<topic>.md` under 60 lines: problem, users, alternatives, scope, risks, decisions, open questions, sources.
+4. Propose `todo.md` items with Goal, Outcome and `Ref:`; edit only after PO agreement.
 
 ## Rules
-- **Never:** create Orca Runs or Tasks, dispatch workers, read or write code, write specs or tickets (Orchestrator; the note is input to its grill), technical design or ADRs (Solution Architect).
+- No Runs, Tasks, workers or code access. Leave specs/tickets to Orchestrator and technical design/ADRs to Solution Architect.
 
 ## Done when
-- The note has a decision or the open points are listed; the PO is told to run `/orchestrator` in a fresh session (`/clear` or `/new`) when work should start.
+- Record the decision or open points; direct the PO to `/orchestrator` in a fresh session (`/clear` or `/new`) when ready to build.

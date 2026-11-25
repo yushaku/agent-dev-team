@@ -1,13 +1,13 @@
 import * as C from "./lib/charts.js";
-import { $, esc, AG, buildMixColours, sessionsF, splitWhy, hm, persist, hideTip } from "./lib/charts.js";
+import { $, esc, AG, AGENTS, buildMixColours, sessionsF, splitWhy, persist, hideTip } from "./lib/charts.js";
 import { renderOverview } from "./tabs/overview.js";
 import { renderRoles } from "./tabs/roles.js";
 import { renderRoleSkills } from "./tabs/role-skills.js";
 import { renderRepos } from "./tabs/repos.js";
 import { renderSessionCharts, showSession } from "./tabs/sessions.js";
-import { renderSkills } from "./tabs/skills.js";
+import { renderSkills, toggleSkills } from "./tabs/skills.js";
 import { renderRtkCommands } from "./tabs/tokens.js";
-import { renderSearch, renderTaskRoleSearch, toggleSearchKind } from "./tabs/search.js";
+import { renderSearch, renderTaskRoleSearch, toggleSearchKind, setSearchView } from "./tabs/search.js";
 import { renderFeatures } from "./tabs/runs.js";
 import { renderOverall } from "./tabs/overall.js";
 import { showCliTools } from "./tabs/cli-tools.js";
@@ -19,6 +19,7 @@ async function load() {
     const r = await fetch("/api/data?days=" + C.state.days, { cache: "no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
     C.state.data = await r.json();
+    C.state.data.sessions = C.state.data.sessions.filter((s) => AGENTS.includes(s.agent));
     C.state.err = "";
   } catch (e) {
     C.state.err = e.message;
@@ -57,7 +58,6 @@ function render() {
     .sort();
   const sel = $("#f-repo");
   sel.innerHTML = '<option value="">Mọi repo</option>' + repos.map((r) => `<option${r === C.state.repo ? " selected" : ""}>${esc(r)}</option>`).join("");
-  $("#f-agent").value = C.state.agent;
   $("#range").value = String(C.state.days);
   renderRunFilter(d);
   renderFilterBar();
@@ -81,7 +81,7 @@ function render() {
 
 /* ---------- cross filter ---------- */
 const FLABEL = { agent: "Agent", repo: "Repo", wt: "Worktree", role: "Vai", runF: "Run", taskF: "Task" };
-/* Run and Task selects list runs that have sessions under the repo and agent filters. */
+/* Clear Run and Task selections that no longer belong to the current scope. */
 function renderRunFilter(d) {
   const ids = new Set(
     d.sessions
@@ -94,11 +94,6 @@ function renderRunFilter(d) {
   if (!run) C.state.runF = "";
   const tasks = run ? run.tasks.filter((t) => t.id) : [];
   if (!tasks.some((t) => t.id === C.state.taskF)) C.state.taskF = "";
-  $("#f-run").innerHTML = '<option value="">Mọi run</option>' + runs.map((r) => `<option value="${esc(r.id)}">${esc(r.objective || r.id)}</option>`).join("");
-  $("#f-run").value = C.state.runF;
-  $("#f-task").disabled = !run;
-  $("#f-task").innerHTML = '<option value="">Mọi task</option>' + tasks.map((t) => `<option value="${esc(t.id)}">${esc(t.title || t.id)}</option>`).join("");
-  $("#f-task").value = C.state.taskF;
 }
 function filterText(k) {
   const v = C.state[k],
@@ -136,18 +131,6 @@ function applyFilter(spec) {
   persist();
   render();
 }
-/* An issue sets (not toggles) its filter hint; Run or role hints open the Tasks view. */
-function applyIssue(f) {
-  C.state.repo = f.repo || "";
-  C.state.runF = f.run || "";
-  C.state.role = f.role || "";
-  C.state.agent = "";
-  C.state.wt = "";
-  C.state.taskF = "";
-  persist();
-  if (f.run || f.role) showView("tk-theo-repo");
-  else render();
-}
 function clearFilter(k) {
   if (k === "all") {
     C.state.repo = C.state.agent = C.state.role = C.state.wt = C.state.runF = C.state.taskF = "";
@@ -164,7 +147,7 @@ function renderFilterBar() {
   const fb = $("#fbar");
   fb.hidden = !on.length;
   fb.innerHTML = on.length
-    ? `<span>Đang lọc:</span>${on.map((k) => `<button class="chip info" data-clear="${k}" aria-label="Bỏ lọc ${FLABEL[k]} ${esc(filterText(k))}">${FLABEL[k]}: ${esc(filterText(k))}, bỏ lọc</button>`).join("")}${on.length > 1 ? '<button class="chip neutral" data-clear="all">Bỏ lọc tất cả</button>' : ""}`
+    ? `<span>Đang lọc:</span>${on.map((k) => `<button class="chip info" data-clear="${k}" aria-label="Bỏ lọc ${FLABEL[k]} ${esc(filterText(k))}">${FLABEL[k]}: ${esc(filterText(k))}<span aria-hidden="true">×</span></button>`).join("")}${on.length > 1 ? '<button class="chip neutral" data-clear="all">Bỏ lọc tất cả</button>' : ""}`
     : "";
 }
 
@@ -181,40 +164,28 @@ $("#f-repo").addEventListener("change", (e) => {
   persist();
   render();
 });
-$("#f-agent").addEventListener("change", (e) => {
-  C.state.agent = e.target.value;
-  persist();
-  render();
-});
-$("#f-run").addEventListener("change", (e) => {
-  C.state.runF = e.target.value;
-  C.state.taskF = "";
-  persist();
-  render();
-});
-$("#f-task").addEventListener("change", (e) => {
-  C.state.taskF = e.target.value;
-  persist();
-  render();
-});
 $("#refresh").addEventListener("click", load);
-/* Status text doubles as the auto-refresh toggle: "Cập nhật 09:52" or "Tự động · 09:52" with a green dot. */
+/* The sync button toggles auto-refresh; its tooltip carries the last update time. */
 function setAuto() {
   const btn = $("#auto"),
     dot = $("#auto .dot"),
-    at = C.state.data ? hm(C.state.data.generated_at) : "";
+    at = C.state.data ? new Date(C.state.data.generated_at * 1000).toLocaleString("vi-VN") : "";
   btn.setAttribute("aria-pressed", String(C.state.auto));
-  dot.style.display = C.state.auto ? "inline-block" : "none";
-  dot.style.background = C.state.err ? "var(--red)" : "var(--green)";
+  dot.style.display = "inline-block";
+  dot.style.background = C.state.err ? "var(--red)" : C.state.auto ? "var(--green)" : "var(--overlay2)";
   $("#updated").textContent = C.state.loading
     ? "Đang tải"
     : C.state.err
       ? C.state.errKind === "render"
         ? "Lỗi hiển thị"
         : "Lỗi tải dữ liệu"
-      : (C.state.auto ? "Tự động · " : "Cập nhật ") + at;
-  $("#updated").title = C.state.err || "";
-  btn.title = (C.state.err ? "Lỗi: " + C.state.err + ". " : "") + (C.state.auto ? "Đang tự làm mới mỗi 60 giây. Bấm để tắt" : "Bấm để tự làm mới mỗi 60 giây");
+      : C.state.auto
+        ? "Tự động"
+        : "Tạm dừng";
+  btn.title =
+    (at ? "Cập nhật lúc " + at + ". " : "") +
+    (C.state.err ? "Lỗi: " + C.state.err + ". " : "") +
+    (C.state.auto ? "Đang tự làm mới mỗi 60 giây. Bấm để tắt" : "Bấm để tự làm mới mỗi 60 giây");
   $("#refresh").disabled = !!C.state.loading;
 }
 function setTimer() {
@@ -231,9 +202,13 @@ $("#auto").addEventListener("click", () => {
   setTimer();
 });
 function activate(el) {
+  if (el.dataset.toggle?.startsWith("search-view:") && setSearchView(el.dataset.toggle.slice(12))) return render();
+  if (el.dataset.toggle === "skills:all") {
+    toggleSkills();
+    return render();
+  }
   if (el.dataset.clear) return clearFilter(el.dataset.clear);
   if (el.dataset.f) return applyFilter(el.dataset.f);
-  if (el.dataset.issue) return applyIssue(JSON.parse(el.dataset.issue));
   if (el.dataset.toggle?.startsWith("search:") && toggleSearchKind(el.dataset.toggle.slice(7))) {
     persist();
     return render();
@@ -241,14 +216,14 @@ function activate(el) {
   if (el.dataset.sid) return showSession(el.dataset.sid);
 }
 document.addEventListener("click", (e) => {
-  const el = e.target.closest("[data-clear], [data-f], [data-toggle], [data-sid], [data-issue]");
+  const el = e.target.closest("[data-clear], [data-f], [data-toggle], [data-sid]");
   if (el) {
     hideTip();
     activate(el);
   }
 });
 document.addEventListener("keydown", (e) => {
-  const el = e.target.closest?.("[data-f], [data-toggle], [data-sid], [data-issue]");
+  const el = e.target.closest?.("[data-f], [data-toggle], [data-sid]");
   if (el && (e.key === "Enter" || (e.key === " " && el.tagName !== "BUTTON"))) {
     e.preventDefault();
     activate(el);
@@ -280,6 +255,16 @@ export function showView(id, { hash = true } = {}) {
   if (!views.some((v) => v.id === id)) id = views[0].id;
   views.forEach((v) => {
     v.hidden = v.id !== id;
+  });
+  views.forEach((v) => {
+    const heading = document.getElementById(v.getAttribute("aria-labelledby"));
+    const tag = v.id === id ? "H1" : "H2";
+    if (heading && heading.tagName !== tag) {
+      const next = document.createElement(tag);
+      next.id = heading.id;
+      next.textContent = heading.textContent;
+      heading.replaceWith(next);
+    }
   });
   $(".dash-head").hidden = id === "tk-cli-tools";
   if (id === "tk-cli-tools") showCliTools();

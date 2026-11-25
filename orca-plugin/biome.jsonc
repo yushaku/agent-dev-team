@@ -5,7 +5,7 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": ["**", "!dashboard-web/vendor", "!ledger/tests/golden", "!ledger/tests/fixtures", "!.orca", "!package-lock.json"]
+    "includes": ["**", "!dashboard-web/vendor", "!ledger/tests/golden", "!ledger/tests/fixtures", "!.orca", "!package-lock.json", "!**/*.md"]
   },
   "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 160 },
   "javascript": { "formatter": { "quoteStyle": "single", "semicolons": "always" } },

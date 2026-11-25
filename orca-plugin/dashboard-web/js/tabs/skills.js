@@ -1,6 +1,11 @@
 import * as C from "../lib/charts.js";
 import { AG, AGENTS, zeroAg, COL, dt, sum, agentsF, widthOf, fig, agentLegend, hBars } from "../lib/charts.js";
 
+let showAllSkills = false;
+export function toggleSkills() {
+  showAllSkills = !showAllSkills;
+}
+
 export function renderSkills(S) {
   const by = {};
   S.forEach((s) => {
@@ -25,14 +30,20 @@ export function renderSkills(S) {
   const rows = Object.entries(by).sort((a, b) => sum(AGENTS, (x) => b[1][x]) - sum(AGENTS, (x) => a[1][x])),
     ags = agentsF();
   const W = widthOf("#c-skills");
+  const shown = showAllSkills ? rows : rows.slice(0, 10);
+  const action =
+    rows.length > 10
+      ? `<button type="button" data-toggle="skills:all" aria-pressed="${showAllSkills}">${showAllSkills ? "Thu gọn" : "Xem tất cả (" + rows.length + ")"}</button>`
+      : "";
   fig("#c-skills", {
-    title: "Số lần nạp mỗi skill",
-    body: rows.length
+    title: showAllSkills ? "Skills" : "Top 10 skills",
+    action,
+    body: shown.length
       ? hBars({
           W,
           LW: 240,
           rowH: 24,
-          rows: rows.map(([k, r]) => ({
+          rows: shown.map(([k, r]) => ({
             label: k,
             skill: k,
             segs: ags.map((a) => ({ v: r[a], color: COL[a], name: AG[a], f: "agent:" + a })),
@@ -46,7 +57,5 @@ export function renderSkills(S) {
       : "",
     empty: "Không có skill nào được cài.",
     legend: agentLegend(),
-    caption:
-      "Đếm mỗi lần agent đọc SKILL.md, gọi công cụ Skill, sự kiện skill.invoked của Copilot, hoặc một lần mỗi phiên khi hook nạp sẵn (ponytail). Skill chưa dùng hiển thị 0 lần. Bấm một màu để lọc agent.",
   });
 }

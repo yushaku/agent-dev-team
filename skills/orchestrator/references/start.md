@@ -2,66 +2,75 @@
 
 ## Preflight
 
-1. Identify the repo and read `.team/config.yaml` (`skills/init-team/references/config-schema.md` only for a missing or unknown key; missing config/catalog: `skills/init-team/SKILL.md`). Identify the requested objective and any named Task or handoff; select its Run below. Ask only when the repo, scope or source branch remains ambiguous. Preserve uncommitted user work.
-2. Read the relevant request/ticket, `todo.md`, carry-over and research notes it names. Plan below, then choose the team; resolve only its role skills (`team-<role>`) and project slots, and each Task's `Refs:` (`specs.md`). Report missing required skills once.
-3. Select agents/models from project `models` via `skills/orchestrator/references/routing.md` "Model routing"; complete Run selection below before creating Tasks or dispatching workers.
-4. For code changes, use a feature worktree from the configured base or PO-named branch. Link `.team` and each `worktree_links` path to its main-checkout counterpart (one shared `.team/` per repo); follow install/verify commands and `serial`. Keep baseline failures distinct from regressions.
-5. With `codegraph: on` (`skills/init-team/references/config-schema.md` "Code search setup"), check the worktree has `.codegraph/`; if missing, run `codegraph init .` in it before dispatch. Read-only Support Engineers without a worktree use the main checkout's index.
+1. Identify repo, objective, source branch and any named Task/handoff. Read the project config, request, `todo.md` and named carry-over/research notes. Ask only for unresolved identity or scope; preserve user work.
+2. Establish "Shared feature workspace" before Plan. Link `.team` and `worktree_links` to the main checkout; follow install/verify commands and `serial`. Separate baseline failures from regressions.
+3. With `codegraph: on`, initialize a missing worktree index before dispatch (`skills/init-team/references/config-schema.md` "Code search setup"). Read-only Support Engineers without a worktree use the main index.
+4. Verify "Coordinator delivery", select the Run, then Plan and choose the team. Resolve models/slots through `routing.md`, and Task inputs through `specs.md`.
+
+## Shared feature workspace
+
+- Orchestrator, default Builder and independent Reviewer use separate sessions in the same Orca worktree and feature branch through planning, build, review and delivery. Reuse the matching branch, or create the configured feature branch from the configured/PO-named base before grill writes repo docs.
+- If another objective or pending gate occupies the checkout, create a feature worktree through `orca-cli` and relocate coordination using its guide. A new coordinator session requires a handoff; changing shell cwd alone does not relocate an Orca session.
+- Verify workspace, checkout and branch before Run creation or dispatch and on resume. Record them in the handoff; use them for placement and check receipts against them. Use `--worktree current` only from that verified workspace.
+- Alternate build/fix and review. Commit writes before review and hold the reviewed revision stable until the verdict. Child-worktree exceptions are under "Team decisions"; the coordinator and integration Reviewer remain in the feature workspace.
 
 ## Run selection
 
-- New independent objective: automatically create a new Run before its first Task, even in a reused terminal or after `/clear` and `/orchestrator`. Name the Run for the PO's objective, not the first worker's assignment. Build, review and fix Tasks for that objective share the Run.
-- Continuing an existing objective: find its Run in the matching handoff and verify the repo, objective and Task ownership against live Orca state. Reuse that Run and existing Task identities; address follow-ups to their Dispatches and follow the recovery guide for retries. If the handoff is absent, discover the matching Run through Orca; ask only when ownership is ambiguous. The terminal's current Run alone is not a match.
-- On Run creation or selection, save its ID in `.team/<feature>/handoff.md` before dispatch (`../SKILL.md`); give independent objectives separate feature directories and preserve older handoffs. Refresh Task/Dispatch references after dispatch so another session can resume.
-- Pass the selected Run ID explicitly on Run-scoped commands using the version-matched guide. Before dispatch or follow-up, verify the Task/Dispatch belongs to that Run; check the receipt against it. Handle wakes from older Runs under their owning IDs, without changing the new objective's Run.
+- New independent objective: create a Run before its first Task, even after `/clear` or in a reused session. Name it for the objective; build, review and fixes share it.
+- Continuing work: match handoff and live Orca state by repo, objective and Task ownership; reuse Run/Task identities. Without a handoff, discover through Orca; ask only when ownership is ambiguous. The session's current Run alone is insufficient.
+- Save the Run ID before dispatch; refresh Task/Dispatch references afterward. Pass the Run ID on Run-scoped commands and verify ownership before dispatch/follow-up. Process older-Run wakes under their owning IDs.
+
+## Coordinator delivery
+
+- Identify this conversation's live chat or agent terminal through runtime metadata and Orca `agent show`/`agent list`. Workspace, title or mailbox existence alone does not prove identity or wake support.
+- Bind from the coordinator's own runtime environment; a chat ID passed as `--from` from another session is refused. Record receiver identity/surface in the handoff and inspect delivery warnings. Revalidate after replacement, relocation or a missing-sender error.
+- Never proxy a chat through a shell pane or another pane's `ORCA_TERMINAL_HANDLE`. Without a supported identity/wake route, hold dispatch, report the missing capability and transfer coordination through the Orca guide. PO pings, polling and background mailbox consumers are not delivery mechanisms.
+- Use supervised `worker-start` when a result must return. Completion follows the Dispatch's `worker_done` route after the report is written; shell-addressed `status` mail is insufficient. Accepted launch/stored mail does not prove wake or processing.
+- On resume or missed completion, reconcile Task/worker state and coordinator inbox history with non-consuming reads. Match Task/Dispatch IDs, read reports not yet processed and record them in the handoff; `handled: true` alone does not prove report processing. Repair binding before new dispatch; preserve settled work.
 
 ## Plan
 
-New or changed behavior is planned in this session with the PO, in one unbroken window: `grill-with-docs`, then `to-spec`, then `to-tickets`. A mechanical edit the PO fully specified skips grill and gets one ticket.
-
-- Load each by absolute path (`$AGENT_SKILLS_DIR/<name>/SKILL.md`); they have `disable-model-invocation`. `grill-with-docs` loads `grilling` and `domain-modeling`.
-- No `setup-matt-pocock-skills`. Give the skills `matt.glossary`, `matt.adr` and `matt.tracker` from config; real trackers are never written. `domain-modeling` writes `GLOSSARY.md` and ADRs in the feature worktree; commit them as one `docs` commit.
-- Repo facts: a read-only fresh-context subagent (a Support Engineer Task without a worktree, or the agent's own sub-agent) answers them; use its summary. Never read code yourself.
-- Grill asks per `gates.md` "Asking in rounds"; each PO decision goes to `.team/<feature>/decisions.md`. A capability touching personal data also asks `skills/team-builder/references/data.md` "Personal data".
-- A ticket that changes user-visible UI also asks, each with a recommended answer: pattern or reference app; where actions live (visible, long-press, menu); empty, error and loading states; mobile placement (pinned bottom, inline, sheet). The answers go into the ticket.
-- `to-spec` writes `.team/<feature>/spec.md` and proposes the test seams. `to-tickets` writes `matt.tracker` as `NN-<slug>.md`, blockers first, each with a `Blocked by:` line and no `Status:` line.
-- Gate 1 has two steps (`gates.md`): spec and seams, then slices and blocking edges.
-- After `to-tickets`, compact or write `handoff.md` before dispatching build.
-- Create one Orca Task per ticket; each blocking edge becomes a Task dependency. Orca holds all status. Prototype Tasks: "Team decisions".
+- Plan new/changed behavior with the PO in this session: `grill-with-docs` → `to-spec` → `to-tickets`. A fully specified mechanical edit skips grill and gets one ticket.
+- Load each planning skill by absolute `$AGENT_SKILLS_DIR/<name>/SKILL.md` path (`disable-model-invocation`). `grill-with-docs` loads `grilling` and `domain-modeling`; pass config `matt.glossary`, `matt.adr`, `matt.tracker`. Skip `setup-matt-pocock-skills`; real trackers remain unwritten.
+- Obtain repo facts from a read-only fresh-context subagent or Support Engineer Task without a worktree. Use its summary. Commit grill's glossary/ADRs as one `docs` commit in the feature worktree.
+- Ask per `gates.md` "Asking in rounds"; record numbered PO decisions in `decisions.md`. Personal-data capabilities also use `skills/team-builder/references/data.md` "Personal data".
+- UI tickets record recommended choices for reference/pattern, action placement, empty/error/loading states and mobile placement (pinned bottom, inline or sheet).
+- `to-spec` writes `.team/<feature>/spec.md` with test seams. `to-tickets` writes `NN-<slug>.md` in `matt.tracker`, blockers first, with `Blocked by:` and no `Status:`. Gate 1 follows `gates.md`.
+- After tickets, compact or write the handoff before build dispatch. Create one Task per ticket and a dependency per blocking edge; Orca owns status.
 
 ## Team decisions
 
-- Default: one Builder works the tickets (tests, implementation, measurements, docs, delivery evidence). One independent Reviewer, on a different Orca agent than the Builder, checks the result.
-- Add a worker only for a named question/evidence gap the existing team cannot cover. Keep risk-triggered checks; separate workers are optional. Roster selection needs no PO gate.
-- New or changed behavior needs Plan and Gate 1. Delivery and production tickets keep their gates (`gates.md`).
-- Architecture impact without an accepted ADR (external vendor/system, data store, deployment topology, load target or personal-data boundary): ask the PO for a Solution Architect session before planning.
-- **UI prototype:** only when the PO says they must see it to choose, or the ticket is a wholly new screen (`ui_rules.gate: on`): a Builder Task using `prototype` on branch `prototype/<name>` (never merged), shown in the `DEV` pane, then G-UI (`gates.md`). Put `ui_rules` and the `design` slot skills in the Task Constraints. Otherwise the ticket's grill answers are the design.
-- **Parallel Builders:** the frontier is the tickets whose blockers are done. When it has two or more tickets and `flow.max_concurrent_agents` allows, dispatch one Builder per ready ticket, each in a child worktree of the feature branch (preflight steps 4 and 5 apply), naming its ticket in the Task. A ticket starts once its blockers are merged. The first-dispatched Builder is the integration owner: it integrates finished child branches in ticket order (`delivery.md`), reruns `commands.verify` on the feature branch and prepares delivery evidence. One Reviewer reviews the integrated feature branch. Keep one Builder when every ticket depends on another, there are fewer than three tickets, or `serial: true`.
-- **Architecture scan:** `improve-codebase-architecture` (absolute path) runs periodically, or when the PO asks, as one read-only Reviewer-tier Task; its HTML report goes to the PO, who picks any follow-up.
-- Read-only questions may use one Support Engineer without a worktree. Respect `flow.max_concurrent_agents`; parallel work needs disjoint ownership or isolated workspaces and an integration owner.
-- PO roster overrides apply. Ignore legacy `flow.default_size` and `flow.max_size`.
+- Default: one Builder owns implementation, tests, measurements, docs and delivery evidence; one independent Reviewer checks it. Agent separation and tiers follow `routing.md`.
+- Add specialists only for a named decision/evidence gap. Preserve risk-triggered checks; roster selection needs no gate. Respect `flow.max_concurrent_agents` and PO overrides; ignore legacy `flow.default_size`/`max_size`.
+- Architecture impact without an accepted ADR (vendor/system, store, deployment, load target or personal-data boundary): ask for a Solution Architect session before planning.
+- **UI prototype:** use a Builder with `prototype` on unmerged `prototype/<name>` only when the PO needs a visual choice, or for a wholly new screen with `ui_rules.gate: on`. Pass `ui_rules` and `design` skills; show in `DEV`, then G-UI. Otherwise use the ticket's grill answers.
+- **Parallel Builders:** require at least three tickets, two ready independent tickets, available agent capacity and `serial: false`. Give each a child worktree of the feature branch with Preflight setup and a named ticket. Start dependents after blockers merge. The first Builder integrates child branches in ticket order, reruns feature verify and prepares delivery (`delivery.md`); one Reviewer checks the integrated branch.
+- **Architecture scan:** periodically or on PO request, assign `improve-codebase-architecture` by absolute path to a read-only Reviewer-tier Task. Send its HTML report to the PO to select follow-up.
+- Read-only questions may use one Support Engineer without a worktree. Parallel work requires disjoint ownership or isolation and an integration owner.
 
 ## Dispatch and follow-ups
 
-- Use `specs.md` for Task input/metadata and "Worker communication"; supply current peer addresses so Workers can exchange technical details directly. Use `orchestration` for dispatch/wake handling. With `serial: true`, only one worker runs verify at a time.
-- Before a follow-up, reread project `models` and confirm the reused worker remains eligible; otherwise hand off through the recovery guide. Send follow-ups to the existing Dispatch; preserve round metadata and use the receipt's Task identity. Keep worker sessions open until the Run ends for reuse.
-- At handoff, or when HEAD changes unexpectedly, compare the reviewed revision with the current branch. Preserve PO edits; redirect affected workers to the new revision and review only what changed.
-- Missing report: ask the same worker first. If it cannot report, inspect the exact session from its receipt with the version-matched Orca guide; discover transcript location/format rather than guessing from the agent name. A commit hash alone is insufficient.
-- Before retry, stop, release or reassignment, load the version-matched recovery/cleanup guide; preserve Task identity and retry limits.
-- Permission failures: "Worker permissions" below.
-- Use the worker's Dispatch identity for steering and stopping, following the version-matched guide. After `worker_done`, check `git status --short` in its worktree and reconcile changed paths with its report; report uncommitted delivery work and have an authorized committer finish it before calling delivery complete.
-- On pause, stop workers still under Orchestrator control through the guide, preserve uncommitted work and write the handoff (`../SKILL.md`). Resume from the existing Task and Dispatch state using the recovery guide; carry forward completed work and retry history.
-- When the PO takes over a worker, give its Task id, Dispatch id, terminal, spec path and dev URL when applicable; record the transfer in the handoff. Leave that worker under PO control until the PO returns it.
+- Use `specs.md` for inputs and peer communication. Keep the same workers/Reviewer through fixes and delivery; send follow-ups to their Dispatches. Keep sessions open until Run end. Replace only for Orca refusal or changed capability/tier, with handoff first; recheck eligibility through `routing.md`.
+- Preserve Task/round metadata and verify receipt identity. With `serial: true`, run one worker's verify at a time.
+- Unexpected HEAD change or handoff: compare reviewed and current revisions, preserve PO edits, redirect workers and review the delta.
+- Missing report: ask the same worker; if unavailable, inspect its exact receipt session through the Orca guide, discovering transcript location/format. A commit hash alone is insufficient.
+- Before retry, stop, release or reassignment, load Orca's recovery/cleanup reference. Silence, timeout or uncertain liveness does not prove failure. Steer/stop by Dispatch identity; preserve retry limits.
+- On PO pause, stop workers still under coordinator control through the guide, preserve changes and write the handoff. Resume with existing identities/history.
+- On PO takeover, provide Task/Dispatch IDs, session/terminal, spec and dev URL; record transfer and leave that worker under PO control until returned.
+
+## Handoff
+
+- Keep `.team/<feature>/handoff.md` under 40 lines: repo/workspace/branch, objective, coordinator receiver/surface, Run/Task/Dispatch IDs, routing log, stage, decisions, processed reports, open questions, next action and skills to load. Link specs, tickets and commits; Orca owns live state.
+- Use separate feature directories and preserve older handoffs. Refresh on context/ownership change or PO request; give the receiving session the path. Gate approval alone needs no new session.
 
 ## Board mapping
 
-- One feature worktree; Run selection follows the rules above. Link the ticket/PR to the workspace.
-- Started = `in-progress`; delivered with Gate 2 pending = `in-review`; merged = `completed`.
-- No-code production investigations read the configured `branches.client_visible` remote ref, not an unrelated working tree.
+- Place Run card, status and ticket/PR links in the shared feature workspace: started `in-progress`, delivered/Gate 2 pending `in-review`, merged `completed`.
+- No-code production investigations use the configured `branches.client_visible` remote ref.
 
 ## Worker permissions
 
-- Capabilities and permissions are session-specific. Attempt authorized work and recover from observed failures; give workers absolute skill paths and explicit action boundaries.
-- Report the exact command, error and worker. Simplify a compound command only within the authorized action; use environment approval or an authorized worker rather than bypassing a denial or changing global permissions.
-- Git write denied: preserve changed paths, verify evidence and commit text for an authorized committer. Keep user changes; a committer change alone does not require rerunning checks.
-- `.team` link/write denied: report the resolved destination and requested access, then request narrow permission through the environment. Missing CLI/auth/model follows `skills/orchestrator/references/routing.md` "Model routing" and the Orca recovery guide.
+- Give absolute skill paths and explicit action boundaries. Attempt authorized work; handle observed session-specific failures rather than forbidding commits preemptively.
+- Report the exact worker, command and error. Simplify commands within authorization; use environment approval or an authorized worker, preserving denials and global permissions.
+- Git write denied: retain changed paths, verify evidence and commit text for an authorized committer. A committer change alone needs no rerun.
+- `.team` link/write denied: report the resolved destination and request narrow environment permission. CLI/auth/model failures follow `routing.md` and Orca recovery.

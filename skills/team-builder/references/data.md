@@ -6,6 +6,6 @@
 
 ## Personal data
 
-- **Grill (Orchestrator):** when a capability collects it, ask the PO and record in the ticket: what is collected, the purpose, retention, users' rights (see, correct, delete, export).
-- **Design** (`compliance` set and the work touches personal data): decide before building, using the `{security}` slot skills as reference: data classification, retention per field or table, encrypted fields, non-guessable identifiers, what is never logged, whether a DPIA is needed. System-level choices (where personal data lives, encryption, access model) come from the Solution Architect ADR when one exists.
-- **Build:** the Orchestrator puts these constraints in the Task spec; Builders do not load compliance skills.
+- **Grill (Orchestrator):** record PO decisions on collected data, purpose, retention and rights (see/correct/delete/export) in the ticket.
+- **Design** (`compliance` set, personal data touched): use `{security}` before building to decide classification, field/table retention, encrypted fields, non-guessable IDs, logging exclusions and DPIA need. Follow existing architect ADRs for data location/encryption/access.
+- **Build:** follow Task constraints supplied by Orchestrator; load no compliance skills.
