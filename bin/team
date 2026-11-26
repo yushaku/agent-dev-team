@@ -35,6 +35,10 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
       routing.jsonl; record the Dispatch in run.json.
   start [feature] <spec|role> [spec flags] [task flags] [dispatch flags]
       With a role: spec + task + dispatch in one step (spec removed if the Task is refused).
+  review [feature] --catalog A [--tier T] [--read-as V] [--selection T] [--constraint|--ref|--skill X]...
+      After an "implemented" build: the review of base..HEAD on a new Reviewer (catalog is the
+      Orchestrator's routing choice), the Builder's ticket and report as Ref; records the build
+      as processed in handoff.md.
   fix [feature] [--cause C] [--round N] [--read-as V] [--selection T] [--constraint|--ref|--skill X]...
       After a "changes requested" review: fix round N (review round + 1) on the same Builder,
       same ticket, the review report as Ref; records the review as processed in handoff.md.
@@ -43,14 +47,20 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
   rereview [feature] [--read-as V] [--selection T] [--constraint|--ref|--skill X]...
       After a fix round: scoped re-review of round N on the same Reviewer, with the prior review
       and the fix report as Refs; records the fix as processed in handoff.md.
+  accept [feature] [--read-as V]
+      After a "pass" review: run commands.verify in the workspace (log in logs/), record the
+      review as processed, set handoff Stage to Gate 2 pending and the board to in-review.
   status [feature] [--json]
       Orca Task status joined with Dispatch, report path and report verdict.
   board [feature] <todo|in-progress|in-review|completed>
   read [feature] <task-id|role> [--last N]
       Last N transcript messages (default 5) of that Task's or role's latest Dispatch.
-  close [feature] [--remove-worktree [--delete-branch]]
-      After the PO accepts delivery: release every recorded worker, board completed and,
-      when asked, remove the feature worktree (refused with uncommitted changes or from inside it).
+  close [feature] [--merge] [--remove-worktree [--delete-branch]]
+      After the PO accepts delivery: --merge makes a merge commit (--no-ff) of the feature branch
+      on the base branch in the main checkout and runs commands.verify there; then release every
+      recorded worker, board completed and, when asked, remove the feature worktree. Refused with
+      uncommitted changes, from inside the worktree, on a merge conflict (merge aborted) or a
+      failed verify (merge kept, nothing closed).
   whoami
       This session's Orca identity (terminal handle, Orca session, agent), as init records it.
 
@@ -316,8 +326,8 @@ cmd_init() {
 
   save_state "$feature" "$(jq -n --arg f "$feature" --arg o "$objective" --arg r "$run_id" \
     --arg p "$wpath" --arg b "$wbranch" --arg s "$wsel" --arg m "$main" --arg log "$fdir/routing.jsonl" \
-    '{feature:$f, objective:$o, run:$r, main:$m, routingLog:$log,
-      workspace:{path:$p, branch:$b, selector:$s}, tasks:{}}')"
+    --arg base "$base" '{feature:$f, objective:$o, run:$r, main:$m, routingLog:$log,
+      workspace:{path:$p, branch:$b, base:$base, selector:$s}, tasks:{}}')"
 
   mark init "$run_id"
   [ "$(cfg '[.models.catalog // {} | .[] | select(type=="object" and .agent=="claude" and .enabled != false)] | length')" = 0 ] \
@@ -645,6 +655,61 @@ read_verdict() {
   else die "--read-as must be \"$2\""; fi
 }
 
+# run_verify dir log: commands.verify in dir, all output to log; prints one line per command.
+run_verify() {
+  local dir=$1 log=$2 c ok=0 n=0
+  : >"$log"
+  while IFS= read -r c; do
+    [ -n "$c" ] || continue; n=$((n+1))
+    echo "\$ $c" >>"$log"
+    if (cd "$dir" && sh -c "$c") >>"$log" 2>&1; then echo "verify ok: $c"
+    else echo "verify FAILED: $c (log $log)"; ok=1; fi
+  done < <(cfg '.commands.verify // [] | if type=="array" then .[] else . end')
+  [ $n -gt 0 ] || echo "verify: commands.verify is empty; nothing run"
+  return $ok
+}
+base_of() { jq -r '.workspace.base // empty' <<<"$1" | grep . || cfg '.branches.base // "main"'; }
+
+cmd_review() {
+  local feature=$1; shift
+  local read_as="" sel="" sargs=()
+  while [ $# -gt 0 ]; do case $1 in
+    --read-as) read_as=$2; shift 2;; --selection) sel=$2; shift 2;;
+    --catalog|--tier|--constraint|--ref|--skill) sargs+=("$1" "$2"); shift 2;;
+    *) die "review: unknown $1";; esac; done
+  [[ " ${sargs[*]-} " == *" --catalog "* ]] || die "review: --catalog required (routing.md: Reviewer tier and an agent other than the Builder's)"
+  local st b spec kind report verdict head base
+  st=$(load_state "$feature"); b=$(last_of_role "$st" builder)
+  [ -n "$b" ] || die "review: no dispatched builder Task in run.json"
+  spec=$(jq -r --arg t "$b" '.tasks[$t].spec' <<<"$st")
+  kind=$(spec_line "$spec" Measurement | jq -r .kind)
+  [ "$kind" != fix ] || die "review: Builder Task $b is a fix; use team rereview"
+  b=$(round_source "$feature" builder reviewer)
+  report=$(round_report "$spec" builder); verdict=$(read_verdict "$report" implemented "$read_as" "review: build $b")
+  head=$(git -C "$(jq -r .workspace.path <<<"$st")" rev-parse --short HEAD); base=$(base_of "$st")
+  local work=(); while IFS= read -r l; do work+=("$l"); done < <(work_args "$spec")
+  local alias; alias=$(printf '%s\n' "${sargs[@]}" | grep -A1 -x -- --catalog | tail -1)
+  cmd_start "$feature" reviewer "${work[@]}" --selection "${sel:-Reviewer per routing.md: $alias}" --ref "$report" \
+    --constraint "Review $base...$head (git diff $base...HEAD). Builder report: $report. Read-only: no edits, no commits." \
+    "${sargs[@]}"
+  processed "$feature" "$b" "$report" "$verdict" "review"
+}
+
+cmd_accept() {
+  local feature=$1; shift
+  local read_as=""
+  while [ $# -gt 0 ]; do case $1 in --read-as) read_as=$2; shift 2;; *) die "accept: unknown $1";; esac; done
+  local st rv spec report verdict fdir
+  rv=$(round_source "$feature" reviewer builder); st=$(load_state "$feature"); fdir=$(feature_dir "$feature")
+  spec=$(jq -r --arg t "$rv" '.tasks[$t].spec' <<<"$st")
+  report=$(round_report "$spec" reviewer); verdict=$(read_verdict "$report" pass "$read_as" "accept: review $rv")
+  run_verify "$(jq -r .workspace.path <<<"$st")" "$fdir/logs/accept-verify.log" \
+    || die "accept: verify failed at $(git -C "$(jq -r .workspace.path <<<"$st")" rev-parse --short HEAD); not at Gate 2"
+  processed "$feature" "$rv" "$report" "$verdict" "Gate 2 (PO)"
+  perl -i -pe 's/^- Stage: .*/- Stage: Gate 2 pending (board in-review)./' "$fdir/handoff.md"
+  cmd_board "$feature" in-review
+}
+
 cmd_fix() {
   local feature=$1; shift
   local cause=defect round="" sel="" read_as="" extra=()
@@ -754,9 +819,10 @@ cmd_read() {
 cmd_close() {
   set -e
   local feature=$1; shift
-  local remove=0 delbranch=0
+  local remove=0 delbranch=0 merge=0
   while [ $# -gt 0 ]; do case $1 in
-    --remove-worktree) remove=1; shift;; --delete-branch) delbranch=1; shift;; *) die "close: unknown $1";; esac; done
+    --merge) merge=1; shift;; --remove-worktree) remove=1; shift;; --delete-branch) delbranch=1; shift;;
+    *) die "close: unknown $1";; esac; done
   [ $delbranch = 0 ] || [ $remove = 1 ] || die "close: --delete-branch needs --remove-worktree"
   local st wpath main; st=$(load_state "$feature")
   wpath=$(jq -r .workspace.path <<<"$st"); main=$(jq -r .main <<<"$st")
@@ -766,6 +832,22 @@ cmd_close() {
     exclude_links "$wpath"
     local dirty; dirty=$(git -C "$wpath" status --porcelain 2>/dev/null | head -5 | paste -sd, -)
     [ -z "$dirty" ] || die "close: $wpath has uncommitted changes ($dirty); commit or ask the PO first"
+  fi
+  if [ $merge = 1 ]; then
+    local base wbranch cur; base=$(base_of "$st"); wbranch=$(jq -r .workspace.branch <<<"$st")
+    [ "$(real "$wpath")" != "$(real "$main")" ] || die "close --merge: the workspace is the main checkout (init --here); merge it yourself"
+    cur=$(git -C "$main" symbolic-ref --short HEAD 2>/dev/null || echo detached)
+    [ "$cur" = "$base" ] || die "close --merge: $main is on $cur, not $base"
+    [ -z "$(git -C "$main" status --porcelain --untracked-files=no)" ] || die "close --merge: $main has uncommitted changes"
+    [ -z "$(git -C "$wpath" status --porcelain 2>/dev/null)" ] || die "close --merge: $wpath has uncommitted changes"
+    if git -C "$main" merge-base --is-ancestor "$wbranch" "$base"; then echo "merge: $wbranch already in $base"
+    else
+      git -C "$main" merge --no-ff --no-edit -q "$wbranch" >&2 \
+        || { git -C "$main" merge --abort 2>/dev/null || true; die "close --merge: conflict merging $wbranch into $base; merge aborted, nothing closed"; }
+      echo "merge: $(git -C "$main" log -1 --format='%h %s')"
+    fi
+    run_verify "$main" "$(feature_dir "$feature")/logs/close-verify.log" \
+      || die "close --merge: verify failed on $base after the merge commit; nothing closed. Fix forward, or undo with git -C $main reset --hard ORIG_HEAD (PO call)."
   fi
   local d res
   for d in $(jq -r '[.tasks[].dispatches[].id] | unique | .[]' <<<"$st"); do
@@ -780,7 +862,8 @@ cmd_close() {
     orca_call "${args[@]}" >/dev/null
     echo "removed $wpath$([ $delbranch = 1 ] && echo " and its branch")"
   fi
-  save_state "$feature" "$(jq --arg c "$(date -u +%FT%TZ)" --argjson r $remove '.closed = {at:$c, worktreeRemoved:($r == 1)}' <<<"$st")"
+  save_state "$feature" "$(jq --arg c "$(date -u +%FT%TZ)" --argjson r $remove --argjson m $merge \
+    '.closed = {at:$c, merged:($m == 1), worktreeRemoved:($r == 1)}' <<<"$st")"
 }
 
 need jq; need git
@@ -790,7 +873,7 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
 need node; load_cfg
 case $cmd in
   init) cmd_init "$@";;
-  spec|task|dispatch|start|fix|rereview|status|board|read|close)
+  spec|task|dispatch|start|review|fix|rereview|accept|status|board|read|close)
     if [ -n "${1:-}" ] && [ -f "$(state_file "$1")" ]; then feature=$1; shift; else feature=$(infer_feature); fi
     "cmd_$cmd" "$feature" "$@";;
   *) usage >&2; exit 2;;

@@ -248,7 +248,53 @@ check "a third fix round waits for the PO" '[ $? -ne 0 ] && grep -q "two failed 
 "$team" fix other --round 3 >/dev/null 2>&1
 check "fix --round 3 after PO approval" '[ -f "$O/specs/07-builder-r3.md" ]'
 
+# review, accept, close --merge (verify commands that run here)
+cp .team/config.yaml "$tmp/cfg2"
+setverify() { perl -0pi -e "s/  verify:\n(    - .*\n)+/  verify:\n    - \"$1\"\n/" .team/config.yaml; }
+"$team" init rv --objective "Review flow" >/dev/null 2>&1
+V="$repo/.team/rv"; W="$tmp/wt/rv"; printf '# 01 rv\n' >"$V/issues/01-rv.md"
+"$team" start rv builder --catalog claude-work --ticket "$V/issues/01-rv.md" --selection x >/dev/null 2>&1
+echo one >"$W/a.txt"; git -C "$W" add a.txt; git -C "$W" commit -qm "add a"
+printf '## Result\nimplemented. a.txt added\n' >"$V/reports/01-builder.md"
+"$team" review rv >/dev/null 2>"$tmp/err"
+check "review needs the Orchestrator's catalog choice" '[ $? -ne 0 ] && grep -q "catalog required" "$tmp/err"'
+"$team" review rv --catalog codex-work >/dev/null 2>&1
+s=$V/specs/02-reviewer.md
+check "review writes the spec with base...HEAD, ticket and Builder report" '[ -f "$s" ] && grep -q "^Ticket: $V/issues/01-rv.md" "$s" && grep -q "^Refs: $V/reports/01-builder.md" "$s" && grep -q "Review main...$(git -C "$W" rev-parse --short HEAD)" "$s" && grep -q "^Selection: Reviewer per routing.md: codex-work" "$s"'
+check "review starts a new worker on another agent" 'grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- "--agent codex"'
+check "review records the build as processed" 'grep -q "| reports/01-builder.md | implemented. a.txt added | .* | review$" "$V/handoff.md"'
+"$team" review rv --catalog codex-work >/dev/null 2>"$tmp/err"
+check "a second review of the same build is refused" '[ $? -ne 0 ] && grep -q "already follows" "$tmp/err"'
+printf '## Result\nchanges requested\n' >"$V/reports/02-reviewer.md"
+"$team" accept rv >/dev/null 2>"$tmp/err"
+check "accept refuses a review that is not pass" '[ $? -ne 0 ] && grep -q "not pass" "$tmp/err"'
+printf '## Result\npass. clean\n' >"$V/reports/02-reviewer.md"
+setverify false
+"$team" accept rv >/dev/null 2>"$tmp/err"
+check "accept refuses when verify fails" '[ $? -ne 0 ] && grep -q "verify failed" "$tmp/err" && ! grep -q "Gate 2" "$V/handoff.md"'
+setverify "test -f a.txt"
+out=$("$team" accept rv 2>&1)
+check "accept runs verify, records Gate 2 and sets the board" 'grep -q "verify ok: test -f a.txt" <<<"$out" && grep -q "| pass. clean | .* | Gate 2 (PO)$" "$V/handoff.md" && grep -q "^- Stage: Gate 2 pending" "$V/handoff.md" && grep "worktree set" "$FAKE_LOG" | tail -1 | grep -q in-review'
+setverify true
+echo main >"$repo/b.txt"; git -C "$repo" add b.txt; git -C "$repo" commit -qm "main moves"
+setverify "test -f a.txt && test -f b.txt"
+out=$("$team" close rv --merge --remove-worktree --delete-branch 2>&1)
+check "close --merge makes a merge commit and verifies on base" '[ "$(git -C "$repo" log -1 --format=%P | wc -w | tr -d " ")" = 2 ] && grep -q "verify ok" <<<"$out" && [ "$(jq -r .closed.merged "$V/run.json")" = true ]'
+# conflict and failed verify
+"$team" init cf --objective "Conflict" >/dev/null 2>&1
+echo feature >"$tmp/wt/cf/b.txt"; git -C "$tmp/wt/cf" commit -qam "feature b"
+echo main2 >"$repo/b.txt"; git -C "$repo" commit -qam "main b"
+"$team" close cf --merge >/dev/null 2>"$tmp/err"
+check "a merge conflict aborts the merge and closes nothing" '[ $? -ne 0 ] && grep -q "conflict" "$tmp/err" && [ -z "$(git -C "$repo" status --porcelain --untracked-files=no)" ] && [ "$(jq -r .closed "$repo/.team/cf/run.json")" = null ]'
+"$team" init vf --objective "Verify fails" >/dev/null 2>&1
+echo c >"$tmp/wt/vf/c.txt"; git -C "$tmp/wt/vf" add c.txt; git -C "$tmp/wt/vf" commit -qm "add c"
+setverify false
+"$team" close vf --merge >/dev/null 2>"$tmp/err"
+check "a failed verify after the merge keeps the commit and closes nothing" '[ $? -ne 0 ] && grep -q "ORIG_HEAD" "$tmp/err" && [ -f "$repo/c.txt" ] && [ "$(jq -r .closed "$repo/.team/vf/run.json")" = null ]'
+cp "$tmp/cfg2" .team/config.yaml
+
 # read, close
+: >"$FAKE_LOG"  # the close checks below count this feature's calls only
 out=$("$team" read csv builder --last 2)
 check "read follows the cursor to the tail, skips textless messages" 'grep -q "tail message" <<<"$out" && grep -q "^--- user" <<<"$out" && ! grep -q "tool_use" <<<"$out"'
 check "init links do not dirty the worktree" '[ -z "$(git -C "$tmp/wt/csv" status --porcelain)" ]'
