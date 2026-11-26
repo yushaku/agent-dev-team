@@ -279,6 +279,7 @@ function tool(s: Session, name: string, args: unknown, ts: Time) {
     const raw = typeof args === 'string' ? args : JSON.stringify(args);
     for (const re of [/\/skills\/([\w.-]+)\/SKILL\.md/g, /orca skills get ([\w.-]+)/g]) for (const m of raw.matchAll(re)) s.skills.push([m[1], ts]);
   }
+  if (teamCall.test(cmd) || (typeof args === 'string' && teamCall.test(args))) teamCallers.add(s);
   for (const m of cmd.matchAll(
     /(?:^|[;&|(\n]|\bsh\s+-l?c\s+['"])\s*(?:rtk\s+(?:proxy\s+)?)?orca\s+orchestration\s+(worker-start|task-create|dispatch|run-use)\b(?![^;&|\n]*--help)/g,
   )) {
@@ -290,6 +291,19 @@ function tool(s: Session, name: string, args: unknown, ts: Time) {
       const run = arg === flag ? argv[i + 1] : arg.startsWith(flag + '=') ? arg.slice(flag.length + 1) : '';
       if (run && /^run_[0-9a-z]+$/.test(run) && s.runs?.at(-1)?.[0] !== run) (s.runs ??= []).push([run, ts]);
     }
+  }
+}
+// bin/team runs the orca commands itself, so the coordinator's own command lines carry no `--run`.
+// It prints a marker line per Run-scoped step, `{"team":"start","run":"run_…",…}`, which counts only in a
+// tool result of a session that called `team init|task|dispatch|start`, on its own line (escaped inside JSONL).
+const teamCallers = new WeakSet<Session>();
+const teamCall = /(?:^|[\s;&|('"`/])team\s+(?:init|task|dispatch|start)\b/;
+const teamMarker = /(?:\\n|\\r|^|")\{(\\*)"team\1":\1"(?:init|task|dispatch|start)\1",\1"run\1":\1"(run_[0-9a-z]+)\1"/g;
+function teamRuns(s: Session, raw: string, ts: Time) {
+  if (!teamCallers.has(s) || !raw.includes('team')) return;
+  for (const m of raw.matchAll(teamMarker)) {
+    s.dispatcher = true;
+    if (s.runs?.at(-1)?.[0] !== m[2]) (s.runs ??= []).push([m[2], ts]);
   }
 }
 function tasks(s: Session, txt: string, ts: Time) {
@@ -417,7 +431,10 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
     return s;
   }
   for (const line of text.split('\n')) {
-    if (agent === 'codex' && /"(custom_tool_call_output|function_call_output|reasoning|item_completed|world_state)"/.test(line.slice(0, 220))) continue;
+    if (agent === 'codex' && /"(custom_tool_call_output|function_call_output|reasoning|item_completed|world_state)"/.test(line.slice(0, 220))) {
+      if (/"(?:custom_tool_call_output|function_call_output)"/.test(line.slice(0, 220))) teamRuns(s, line, tsOf(line.match(/"timestamp":"([^"]+)"/)?.[1]));
+      continue;
+    }
     const d = json(line);
     if (!d) continue;
     const ts = tsOf(d.timestamp),
@@ -458,6 +475,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
           tool(s, c.name, args, ts);
           if (c.status === 'ok' && createsRun(args)) created = true;
         }
+        if (!m.isError) teamRuns(s, line, ts);
         if (created && !m.isError)
           for (const line of txt.split('\n')) {
             const receipt = json(line),
@@ -511,6 +529,7 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
                 .join(' ');
         if (!first && !d.isMeta && !txt.trimStart().startsWith('<')) first = txt;
         tasks(s, txt, ts);
+        if (Array.isArray(content) && content.some((c: { type?: string }) => c?.type === 'tool_result')) teamRuns(s, line, ts);
         for (const [, raw] of txt.matchAll(/<command-name>\/([^<\s]+)<\/command-name>/g)) {
           const name = raw.split(':').at(-1);
           if (
