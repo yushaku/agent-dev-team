@@ -47,6 +47,11 @@ commands:
     - "npm run lint"   # comment
   serial: false
 worktree_links: [.env]
+codegraph: on
+human_only: ["on-device testing"]
+matt:
+  glossary: GLOSSARY.md
+  adr: docs/adr/
 models:
   catalog:
     claude-work: {agent: claude, model: sonnet, effort: medium}
@@ -67,7 +72,7 @@ cd "$repo"
 F="$repo/.team/csv"
 
 # init
-out=$("$team" init csv --objective "CSV export" 2>"$tmp/err")
+out=$(ORCA_PANE_KEY=pane-1 ORCA_TERMINAL_HANDLE=term_me "$team" init csv --objective "CSV export" 2>"$tmp/err")
 check "init exits 0" '[ $? -eq 0 ]'
 check "init writes run.json with Run ID" '[ "$(jq -r .run "$F/run.json")" = run_test1 ]'
 check "init records worktree path" '[ "$(jq -r .workspace.path "$F/run.json")" = "$tmp/wt/csv" ]'
@@ -116,7 +121,7 @@ check "task passes --run" 'grep task-create "$FAKE_LOG" | grep -q -- "--run run_
 
 # dispatch
 d=$("$team" dispatch csv "$t1" 2>"$tmp/err")
-check "dispatch marks Run, Task and Dispatch" 'grep -qx "{\"team\":\"dispatch\",\"run\":\"run_test1\",\"task\":\"task_1\",\"dispatch\":\"ctx_1\"}" "$tmp/err"' 
+check "dispatch marks Run, Task and Dispatch" 'grep -qx "{\"team\":\"dispatch\",\"run\":\"run_test1\",\"task\":\"task_1\",\"dispatch\":\"ctx_1\"}" "$tmp/err"'
 check "dispatch returns dispatch" '[ "$(jq -r .dispatch <<<"$d")" = ctx_1 ]'
 check "dispatch keeps open on workspace with routing" 'grep worker-start "$FAKE_LOG" | grep -q -- "--keep-open --worktree path:$tmp/wt/csv --agent claude --model sonnet --effort medium"'
 check "routing.jsonl appended" '[ "$(jq -r .dispatch "$F/routing.jsonl")" = ctx_1 ]'
@@ -144,9 +149,11 @@ check "terminal reuse omits agent flags" 'grep worker-start "$FAKE_LOG" | tail -
 cd "$tmp/wt/csv"
 out=$("$team" spec reviewer --catalog claude-fast --goal "Review one" --scope "src/" --selection "cheap" 2>"$tmp/err")
 check "Reviewer clash refused before the spec is written" '[ -z "$out" ] && grep -q "routing.md rule 4" "$tmp/err" && [ ! -f "$F/specs/04-reviewer.md" ]'
-s5=$("$team" spec support-engineer --catalog claude-fast --goal "Find why X" --scope "src/" --selection "bounded read")
+s5=$("$team" spec support-engineer --catalog claude-fast --goal "Find why X" --scope "src/" --selection "bounded read" --constraint "UI: ui_rules apply." --skill /s/prototype/SKILL.md --ref docs/a.md --ref docs/b.md)
+check "--constraint, --skill and --ref are appended" 'grep -q "^Constraints: .*codegraph.* UI: ui_rules apply.$" "$s5" && grep -q "^Skills: .*first; /s/prototype/SKILL.md$" "$s5" && grep -qx "Refs: docs/a.md; docs/b.md" "$s5"'
 check "feature inferred from the worktree" '[ "$s5" = "$F/specs/04-support-engineer.md" ]'
 check "spec --goal/--scope/--selection fill the lines" '! grep -q FILL: "$s5" && grep -qx "Selection: bounded read" "$s5" && grep -qx "Goal: Find why X" "$s5"'
+check "Constraints carry matt, human_only and codegraph from config" 'grep -q "^Constraints: .*Glossary: GLOSSARY.md. ADRs: docs/adr/. Human only (list for the PO, do not perform): on-device testing. Code search: codegraph first" "$s5"'
 check "block-form catalog entry with tier fast" 'grep -q "\"tier\":\"fast\",\"catalog\":\"claude-fast\",\"agent\":\"claude\",\"model\":\"haiku\"" "$s5"'
 rm "$s5"
 "$team" start builder --catalog claude-work --goal "Fix X" >/dev/null 2>"$tmp/err"

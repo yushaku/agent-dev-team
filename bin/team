@@ -48,6 +48,9 @@ Spec flags:
   --kind K --round N --cause C   Measurement (fix/re-review need --round)
   --reuse ROLE      continue on that role's last worker: copy its Routing, dispatch to its terminal
   --name SUFFIX     file name suffix
+  --constraint TEXT, --skill PATH, --ref TEXT   (repeatable) added to Constraints, Skills, Refs.
+                    Constraints already carry worker communication, browser, matt.*, human_only
+                    and the codegraph rule from config.
   --same-agent-ok   allow a Reviewer on a Builder's agent (PO exception, routing.md rule 4)
 
 Call it as `team ...` or by path, never through a shell variable: the dashboard links the
@@ -303,7 +306,9 @@ cmd_spec() {
   local feature=$1 role=${2:-}; shift 2 || true
   case $role in builder|reviewer|support-engineer) ;; *) die "spec: unknown feature or role '${role}' (roles: $ROLES; features: $(features | paste -sd, -))";; esac
   local kind="" round="" cause="" catalog="" tier="" ticket="" name="" goal="" scope="" selection="" reuse="" same_ok=0
+  local extra_c=() extra_s=() extra_r=()
   while [ $# -gt 0 ]; do case $1 in
+    --constraint) extra_c+=("$2"); shift 2;; --skill) extra_s+=("$2"); shift 2;; --ref) extra_r+=("$2"); shift 2;;
     --kind) kind=$2; shift 2;; --round) round=$2; shift 2;; --cause) cause=$2; shift 2;;
     --catalog) catalog=$2; shift 2;; --tier) tier=$2; shift 2;; --ticket) ticket=$2; shift 2;;
     --name) name=$2; shift 2;; --goal) goal=$2; shift 2;; --scope) scope=$2; shift 2;;
@@ -348,6 +353,16 @@ cmd_spec() {
   serial=$(cfg '.commands.serial // empty')
   skills="$SKILLS_DIR/team-$role/SKILL.md first"
   case $role in reviewer) skills="$skills; $SKILLS_DIR/code-review/SKILL.md; $SKILLS_DIR/anti-ai/SKILL.md";; esac
+  local x; for x in ${extra_s[@]+"${extra_s[@]}"}; do skills="$skills; $x"; done
+  local constraints="Worker communication: $SKILLS_DIR/orchestrator/references/specs.md \"Worker communication\". Browser: Orca via orca-cli only."
+  constraints="$constraints$(cfg '[
+      (if .matt.glossary then "Glossary: \(.matt.glossary)." else empty end),
+      (if .matt.adr then "ADRs: \(.matt.adr)." else empty end),
+      (if (.human_only // []) | length > 0 then "Human only (list for the PO, do not perform): \(.human_only | join(", "))." else empty end),
+      (if .codegraph == "on" or .codegraph == true then "Code search: codegraph first (`codegraph_explore` MCP or `codegraph explore|callers|impact` CLI) for symbols, callers and impact; `rg` only for literal text. Do not `cat` whole files to find a symbol." else empty end)
+    ] | map(" " + .) | join("")')"
+  for x in ${extra_c[@]+"${extra_c[@]}"}; do constraints="$constraints $x"; done
+  local refs="none"; [ ${#extra_r[@]} = 0 ] || refs=$(printf '%s; ' "${extra_r[@]}" | sed 's/; $//')
 
   {
     echo "Role: $role"
@@ -364,9 +379,9 @@ cmd_spec() {
     echo "Spec: $fdir/spec.md"
     echo "Workspace: path:$wpath, branch $wbranch. Do not change checkout/branch without coordinator approval."
     echo "Peers: ${peers:-none yet}"
-    echo "Constraints: Worker communication: $SKILLS_DIR/orchestrator/references/specs.md \"Worker communication\". Browser: Orca via orca-cli only."
+    echo "Constraints: $constraints"
     echo "Skills: $skills"
-    echo "Refs: none"
+    echo "Refs: $refs"
     echo "Evidence: ${verify:-$FILL acceptance checks}${serial:+ (serial: $serial)}"
     echo "Output: $fdir/reports/$base.md (format: $SKILLS_DIR/orchestrator/references/specs.md \"Report\", Result and Evidence required); raw logs $fdir/logs/$n-<command>.log"
   } >"$spec"
@@ -486,7 +501,7 @@ cmd_start() {
   local feature=$1 target=${2:-}; [ -n "$target" ] || die "start: <spec|role> required"; shift 2
   local sargs=() targs=() dargs=() same_ok=0 terminal=""
   while [ $# -gt 0 ]; do case $1 in
-    --kind|--round|--cause|--catalog|--tier|--ticket|--name|--goal|--scope|--selection) sargs+=("$1" "$2"); shift 2;;
+    --kind|--round|--cause|--catalog|--tier|--ticket|--name|--goal|--scope|--selection|--constraint|--skill|--ref) sargs+=("$1" "$2"); shift 2;;
     --reuse) sargs+=("$1" "$2"); dargs+=("$1" "$2"); terminal=reuse; shift 2;;
     --same-agent-ok) sargs+=("$1"); dargs+=("$1"); same_ok=1; shift;;
     --title|--deps) targs+=("$1" "$2"); shift 2;;
