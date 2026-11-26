@@ -201,6 +201,8 @@ check "status shows dispatch" '[ "$(jq -r ".tasks[1].dispatch" <<<"$out")" = ctx
 "$team" status csv | grep -q "01-builder.md"
 check "status table prints" '[ $? -eq 0 ]'
 
+FAKE_FAIL_START=1 "$team" start csv support-engineer --catalog claude-fast --goal "Probe" --scope "src/" --selection x >/dev/null 2>"$tmp/err"
+check "a refused start says how to settle the ready Task" '[ $? -ne 0 ] && grep -q "is ready with no worker.*team dispatch csv task_.*task-update --id task_" "$tmp/err"'
 # read, close
 out=$("$team" read csv builder --last 2)
 check "read follows the cursor to the tail, skips textless messages" 'grep -q "tail message" <<<"$out" && grep -q "^--- user" <<<"$out" && ! grep -q "tool_use" <<<"$out"'

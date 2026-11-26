@@ -568,7 +568,10 @@ cmd_start() {
   local task_id; task_id=$(cmd_task "$feature" "$spec" ${targs[@]+"${targs[@]}"})
   UNDO_SPEC=""
   [ $made = 1 ] && echo "team: spec $spec" >&2
+  # A refused start leaves a ready Task with no worker. Do not touch it: say how to settle it.
+  trap 'echo "team: Task $task_id is ready with no worker. Same spec, cause fixed: team dispatch $feature $task_id. Spec wrong (Routing is create-only): orca orchestration task-update --id $task_id --status failed --result \"<why>\", then a new team start." >&2' EXIT
   cmd_dispatch "$feature" "$task_id" ${dargs[@]+"${dargs[@]}"}
+  trap - EXIT
 }
 
 # whoami_json: this session's Orca identity from the runtime environment (pane key -> agent list).
