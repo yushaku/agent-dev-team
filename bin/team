@@ -61,6 +61,9 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
       recorded worker, board completed and, when asked, remove the feature worktree. Refused with
       uncommitted changes, from inside the worktree, on a merge conflict (merge aborted) or a
       failed verify (merge kept, nothing closed).
+  agents [--json | --check]
+      Orca agents on this host: CLI, launch flags Orca passes, own default model, the models each
+      lists (read-only local sources). --check validates .team/config.yaml models against them.
   whoami
       This session's Orca identity (terminal handle, Orca session, agent), as init records it.
 
@@ -197,6 +200,187 @@ process.stdout.write(JSON.stringify(out));
 JS
 
 CFG='{}'
+read -r -d '' AGENTS_JS <<'JS' || true
+// team agents: what each Orca agent on this host can launch, from read-only local sources.
+// argv: mode (table|json|check). env: TEAM_ORCA, TEAM_ORCA_ENV, TEAM_CFG (config JSON, check mode).
+const { spawnSync } = require('node:child_process');
+const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const home = os.homedir();
+const run = (cmd, args, ms = 30000) => {
+  const r = spawnSync(cmd, args, { encoding: 'utf8', timeout: ms, maxBuffer: 32 << 20 });
+  return r.status === 0 ? r.stdout : null;
+};
+const which = (c) => (run('/bin/sh', ['-c', 'command -v ' + c]) || '').trim() || null;
+const json = (p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
+const text = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch { return ''; } };
+const PI_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+
+// Per agent: models it can be launched with, the flags Orca passes (worker-start --help), its own default.
+const probes = {
+  claude(cli) {
+    const help = run(cli, ['--help']) || '';
+    const efforts = ((help.match(/--effort[\s\S]*?\(([^)]*)\)/) || [])[1] || '').split(/,\s*/).filter(Boolean);
+    const block = (help.match(/--model <model>[\s\S]*?(?=\n\s{2}-)/) || [''])[0];
+    // Documented aliases (latest release of each family) plus the examples --help names.
+    const aliases = [...new Set(['haiku', 'sonnet', 'opus', ...[...block.matchAll(/'([a-z0-9.-]+)'/g)].map((m) => m[1])])];
+    const s = json(path.join(process.env.CLAUDE_CONFIG_DIR || path.join(home, '.claude'), 'settings.json')) || {};
+    return {
+      launch: { model: true, effort: efforts },
+      models: aliases.map((id) => ({ id, efforts })),
+      modelsComplete: false,
+      default: { model: s.model || null, effort: s.effortLevel || null },
+      source: 'claude --help (aliases), ~/.claude/settings.json',
+      notes: 'Full model names work too. Orca refuses an effort the model lacks: haiku takes none.',
+    };
+  },
+  codex() {
+    const cache = json(path.join(home, '.codex/models_cache.json')) || { models: [] };
+    const models = cache.models.filter((m) => m.visibility === 'list').map((m) => ({
+      id: m.slug,
+      efforts: (m.supported_reasoning_levels || []).map((l) => (typeof l === 'string' ? l : l.effort)).filter(Boolean),
+    }));
+    const t = text(path.join(home, '.codex/config.toml'));
+    const get = (k) => ((t.match(new RegExp('^' + k + '\\s*=\\s*"([^"]*)"', 'm')) || [])[1]) || null;
+    return {
+      launch: { model: true, effort: [...new Set(models.flatMap((m) => m.efforts))] },
+      models, modelsComplete: models.length > 0,
+      default: { model: get('model'), effort: get('model_reasoning_effort') },
+      source: '~/.codex/models_cache.json, ~/.codex/config.toml',
+    };
+  },
+  pi(cli) {
+    const out = run(cli, ['--list-models']) || '';
+    const models = out.split('\n').slice(1).map((l) => l.trim().split(/\s+/)).filter((c) => c.length >= 5)
+      .map((c) => ({ id: c[0] + '/' + c[1], efforts: c[4] === 'yes' ? PI_LEVELS : [] }));
+    const s = json(path.join(home, '.pi/agent/settings.json')) || {};
+    return {
+      launch: { model: true, effort: PI_LEVELS },
+      models, modelsComplete: models.length > 0,
+      default: { model: s.defaultProvider && s.defaultModel ? s.defaultProvider + '/' + s.defaultModel : null, effort: s.defaultThinkingLevel || null },
+      source: 'pi --list-models, ~/.pi/agent/settings.json',
+      notes: 'Model is provider/id; Orca maps effort to the thinking level.',
+    };
+  },
+  opencode(cli) {
+    const out = run(cli, ['models'], 60000) || '';
+    const models = out.split('\n').map((l) => l.trim()).filter((l) => /^[\w.-]+\/\S+$/.test(l)).map((id) => ({ id, efforts: [] }));
+    return {
+      launch: { model: true, effort: null },
+      models, modelsComplete: models.length > 0, default: { model: null, effort: null },
+      source: 'opencode models',
+      notes: 'Orca: model selection needs an existing worktree; effort unsupported.',
+    };
+  },
+  hermes() {
+    const t = text(path.join(home, '.hermes/config.yaml'));
+    const m = t.match(/^model:\n((?:[ \t]+.*\n)+)/m);
+    const get = (k) => (m && (m[1].match(new RegExp('^\\s+' + k + ':\\s*(\\S+)', 'm')) || [])[1]) || null;
+    return {
+      launch: { model: false, effort: null }, models: [], modelsComplete: false,
+      default: { model: get('provider') && get('default') ? get('provider') + '/' + get('default') : get('default'), effort: null },
+      source: '~/.hermes/config.yaml',
+      notes: 'Orca launches it with the model from its own config: catalog model and effort must be null.',
+    };
+  },
+};
+const other = () => ({
+  launch: { model: false, effort: null }, models: [], modelsComplete: false, default: { model: null, effort: null },
+  source: null, notes: 'No probe: Orca launches it with its own config; use model and effort null.',
+});
+
+function inventory() {
+  const orca = process.env.TEAM_ORCA || 'orca';
+  const out = run(orca, ['agent', 'installed', '--json', '--environment', process.env.TEAM_ORCA_ENV || 'local']);
+  if (!out) throw Error(orca + ' agent installed failed');
+  return JSON.parse(out).result.agents.map((a) => {
+    const cli = which(a.id);
+    const probe = probes[a.id] && cli ? probes[a.id](cli) : other();
+    return { id: a.id, name: a.name, orcaDefault: !!a.default, cli, ...probe };
+  });
+}
+
+function check(agents, cfg) {
+  const errors = [], warnings = [];
+  const byId = Object.fromEntries(agents.map((a) => [a.id, a]));
+  const m = cfg.models || {}, catalog = m.catalog || {}, tiers = m.tiers || {};
+  if (!Object.keys(catalog).length) errors.push('models.catalog is empty');
+  for (const [alias, e] of Object.entries(catalog)) {
+    if (!e || typeof e !== 'object') { errors.push(`${alias}: not a map`); continue; }
+    const a = byId[e.agent], at = `catalog.${alias}`;
+    if (!e.agent) { errors.push(`${at}: agent missing`); continue; }
+    if (!a) { (e.enabled === false ? warnings : errors).push(`${at}: agent ${e.agent} is not installed for Orca (installed: ${agents.map((x) => x.id).join(', ')})`); continue; }
+    if (e.enabled === false) continue;
+    if (e.model != null && !a.launch.model) errors.push(`${at}: Orca ignores --model for ${a.id}; use model: null`);
+    if (e.effort != null && a.launch.effort === null) errors.push(`${at}: ${a.id} takes no effort; use effort: null`);
+    if (e.effort != null && e.model == null) errors.push(`${at}: Orca needs --model with --effort; set model or effort: null`);
+    const known = a.models.find((x) => x.id === e.model);
+    if (e.model != null && a.launch.model && !known && a.modelsComplete) errors.push(`${at}: model ${e.model} is not in ${a.source.split(',')[0]}`);
+    if (e.model != null && a.launch.model && !known && !a.modelsComplete) warnings.push(`${at}: model ${e.model} not listed by ${a.id}; check it launches`);
+    if (e.effort != null && known && known.efforts.length && !known.efforts.includes(e.effort)) errors.push(`${at}: ${e.model} supports effort ${known.efforts.join('|')}, not ${e.effort}`);
+    if (e.effort != null && known && !known.efforts.length && a.launch.effort) errors.push(`${at}: ${e.model} lists no effort levels; use effort: null`);
+    if (a.id === 'claude' && /haiku/.test(e.model || '') && e.effort != null) errors.push(`${at}: Orca refuses an effort for haiku; use effort: null`);
+  }
+  const live = (alias) => catalog[alias] && catalog[alias].enabled !== false && byId[catalog[alias].agent];
+  for (const t of ['fast', 'work', 'top']) if (!tiers[t]) warnings.push(`tiers.${t} is missing`);
+  for (const [t, list] of Object.entries(tiers)) {
+    if (!['fast', 'work', 'top'].includes(t)) errors.push(`tiers.${t}: tier names are fast, work, top`);
+    for (const alias of list || []) if (!catalog[alias]) errors.push(`tiers.${t}: ${alias} is not in catalog`);
+    const agentsIn = [...new Set((list || []).filter(live).map((x) => catalog[x].agent))];
+    if (!agentsIn.length) errors.push(`tiers.${t}: no enabled, installed entry`);
+    else if (agentsIn.length === 1) warnings.push(`tiers.${t}: one agent (${agentsIn[0]}); a rate limit blocks the tier`);
+  }
+  const first = (t) => (tiers[t] || []).filter(live).map((x) => catalog[x].agent);
+  const builder = first('work')[0];
+  if (builder && first('top').length && first('top').every((a) => a === builder))
+    warnings.push(`tiers.top: only ${builder}, the work tier's first agent; the Reviewer needs another agent (PO exception otherwise)`);
+  for (const [role, r] of Object.entries(m.roles || {})) {
+    if (!['builder', 'reviewer', 'support-engineer'].includes(role)) errors.push(`roles.${role}: roles are builder, reviewer, support-engineer`);
+    for (const alias of (r && r.prefer) || []) {
+      const t = r.tier;
+      if (!catalog[alias]) errors.push(`roles.${role}: ${alias} is not in catalog`);
+      else if (t && !(tiers[t] || []).includes(alias)) errors.push(`roles.${role}: ${alias} is not in tier ${t}`);
+    }
+  }
+  return { errors, warnings };
+}
+
+const mode = process.argv[1] || 'table'; // node -e: argv[1] is the first argument
+const agents = inventory();
+if (mode === 'json') { console.log(JSON.stringify({ agents }, null, 2)); process.exit(0); }
+if (mode === 'check') {
+  const { errors, warnings } = check(agents, JSON.parse(process.env.TEAM_CFG || '{}'));
+  for (const w of warnings) console.log('warn:  ' + w);
+  for (const e of errors) console.log('error: ' + e);
+  console.log(errors.length ? `models: ${errors.length} error(s)` : 'models: ok' + (warnings.length ? ` (${warnings.length} warning(s))` : ''));
+  process.exit(errors.length ? 1 : 0);
+}
+const fx = (l) => (l === null ? 'none' : l.length ? l.join('|') : 'none');
+for (const a of agents) {
+  console.log(`${a.id}${a.orcaDefault ? ' (Orca default)' : ''}: ${a.cli || 'no CLI on PATH'}`);
+  console.log(`  launch: --model ${a.launch.model ? 'yes' : 'no'}, --effort ${a.launch.model ? fx(a.launch.effort) : 'no'}`);
+  console.log(`  own default: ${a.default.model || '-'}${a.default.effort ? ' / ' + a.default.effort : ''}`);
+  if (a.models.length) {
+    const groups = {};
+    for (const m of a.models) { const p = m.id.includes('/') ? m.id.split('/')[0] : ''; (groups[p] = groups[p] || []).push(m.id.slice(p ? p.length + 1 : 0)); }
+    for (const [p, ids] of Object.entries(groups))
+      console.log(`  models${p ? ' ' + p + '/' : ''} (${ids.length}): ${ids.slice(0, 12).join(', ')}${ids.length > 12 ? ', ...' : ''}`);
+  }
+  if (a.notes) console.log('  note: ' + a.notes);
+  if (a.source) console.log('  source: ' + a.source);
+}
+console.log('Full lists and per-model effort levels: team agents --json');
+JS
+
+cmd_agents() {
+  local mode=table
+  case "${1:-}" in "") ;; --json) mode=json;; --check) mode=check;; *) die "agents: unknown $1";; esac
+  if [ $mode = check ]; then
+    git rev-parse --git-dir >/dev/null 2>&1 || die "agents --check: run inside the repo"
+    load_cfg; [ -n "${CFG:-}" ] || die "agents --check: no $(config_file)"
+  fi
+  TEAM_ORCA="$ORCA" TEAM_ORCA_ENV="$ORCA_ENV" TEAM_CFG="${CFG:-}" node -e "$AGENTS_JS" "$mode"
+}
+
 load_cfg() {
   local f err; f=$(config_file); [ -f "$f" ] || return 0
   CFG=$(node -e "$YAML_JS" "$f" 2>&1) || {
@@ -868,7 +1052,7 @@ cmd_close() {
 
 need jq; need git
 cmd=${1:-help}; shift || true
-case $cmd in help|-h|--help) usage; exit 0;; whoami) need jq; whoami_json; exit 0;; esac
+case $cmd in help|-h|--help) usage; exit 0;; whoami) need jq; whoami_json; exit 0;; agents) need node; cmd_agents "$@"; exit;; esac
 git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
 need node; load_cfg
 case $cmd in

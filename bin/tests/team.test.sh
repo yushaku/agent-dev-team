@@ -35,6 +35,7 @@ case "$1 $2" in
   "orchestration worker-read")
     if [[ "$*" == *--cursor* ]]; then echo '{"ok":true,"result":{"transcript":{"messages":[{"role":"assistant","blocks":[{"type":"text","text":"tail message"}]}]}}}'
     else echo '{"ok":true,"result":{"transcript":{"nextCursor":"c2","messages":[{"role":"user","blocks":[{"type":"text","text":"prompt"}]},{"role":"assistant","blocks":[{"type":"tool_use"}]}]}}}'; fi;;
+  "agent installed") echo '{"ok":true,"result":{"agents":[{"id":"claude","name":"Claude","default":true},{"id":"codex","name":"Codex","default":false},{"id":"hermes","name":"Hermes","default":false},{"id":"ghost","name":"Ghost","default":false}]}}';;
   *) echo '{"ok":false}'; exit 1;;
 esac
 EOF
@@ -292,6 +293,58 @@ setverify false
 "$team" close vf --merge >/dev/null 2>"$tmp/err"
 check "a failed verify after the merge keeps the commit and closes nothing" '[ $? -ne 0 ] && grep -q "ORIG_HEAD" "$tmp/err" && [ -f "$repo/c.txt" ] && [ "$(jq -r .closed "$repo/.team/vf/run.json")" = null ]'
 cp "$tmp/cfg2" .team/config.yaml
+
+# agents: discovery and --check, against fake CLIs and a fake HOME
+A="$tmp/agents"; mkdir -p "$A/bin" "$A/home/.codex" "$A/home/.claude" "$A/repo/.team"
+printf '#!/bin/sh\ncat <<X\n  --effort <level>   Effort level\n                     (low, medium, high)\n  --model <model>    alias (e.g. '"'"'fable'"'"' or '"'"'opus'"'"')\n  --other\nX\n' >"$A/bin/claude"
+printf '#!/bin/sh\n' >"$A/bin/codex"; printf '#!/bin/sh\n' >"$A/bin/hermes"; chmod +x "$A/bin/"*
+echo '{"models":[{"slug":"gx-1","visibility":"list","supported_reasoning_levels":[{"effort":"low"},{"effort":"high"}]},{"slug":"hidden","visibility":"hide"}]}' >"$A/home/.codex/models_cache.json"
+printf 'model = "gx-1"\nmodel_reasoning_effort = "low"\n' >"$A/home/.codex/config.toml"
+printf 'model:\n  default: m-9\n  provider: acme\n' >"$A/home/.hermes.yaml"; mkdir -p "$A/home/.hermes"; mv "$A/home/.hermes.yaml" "$A/home/.hermes/config.yaml"
+ag() { (cd "$A/repo" && HOME="$A/home" CLAUDE_CONFIG_DIR="$A/home/.claude" PATH="$A/bin:/usr/bin:/bin:$(dirname "$(command -v node)")" "$team" agents "$@"); }
+j=$(ag --json)
+check "agents lists every Orca agent with its CLI" '[ "$(jq -r "[.agents[].id] | join(\",\")" <<<"$j")" = claude,codex,hermes,ghost ] && [ "$(jq -r ".agents[3].cli" <<<"$j")" = null ]'
+check "agents reads codex models, efforts and default" '[ "$(jq -c "[.agents[1].models[] | .id + \":\" + (.efforts | join(\"|\"))]" <<<"$j")" = "[\"gx-1:low|high\"]" ] && [ "$(jq -r ".agents[1].default.model" <<<"$j")" = gx-1 ]'
+check "agents reads claude aliases and efforts from --help" '[ "$(jq -c ".agents[0] | [(.models | map(.id)), .launch.effort]" <<<"$j")" = "[[\"haiku\",\"sonnet\",\"opus\",\"fable\"],[\"low\",\"medium\",\"high\"]]" ]'
+check "agents marks hermes as launched with its own model" '[ "$(jq -c ".agents[2] | [.launch.model, .default.model]" <<<"$j")" = "[false,\"acme/m-9\"]" ]'
+git -C "$A/repo" init -q
+cat >"$A/repo/.team/config.yaml" <<'X'
+models:
+  catalog:
+    c-fast: {agent: claude, model: haiku, effort: low}
+    c-top: {agent: claude, model: opus, effort: high}
+    x-work: {agent: codex, model: gx-1, effort: medium}
+    x-gone: {agent: codex, model: gx-2, effort: null}
+    h-any: {agent: hermes, model: m-9, effort: null}
+    g-off: {agent: zed, model: null, enabled: false}
+  tiers:
+    fast: [c-fast, h-any]
+    work: [x-work, x-gone, nope]
+    top: [x-work]
+X
+out=$(ag --check); rc=$?
+check "agents --check fails on config errors" '[ $rc -ne 0 ] && grep -q "error(s)" <<<"$out"'
+check "--check: effort unsupported by the model" 'grep -q "error: catalog.x-work: gx-1 supports effort low|high, not medium" <<<"$out"'
+check "--check: model missing from a complete list" 'grep -q "error: catalog.x-gone: model gx-2 is not in" <<<"$out"'
+check "--check: haiku with effort" 'grep -q "error: catalog.c-fast: Orca refuses an effort for haiku" <<<"$out"'
+check "--check: model on an agent Orca launches with its own config" 'grep -q "error: catalog.h-any: Orca ignores --model for hermes" <<<"$out"'
+check "--check: tier alias not in catalog" 'grep -q "error: tiers.work: nope is not in catalog" <<<"$out"'
+check "--check: Reviewer tier on the Builder agent only" 'grep -q "warn:  tiers.top: only codex" <<<"$out"'
+check "--check: a disabled entry of a missing agent is only a warning" 'grep -q "warn:  catalog.g-off: agent zed is not installed" <<<"$out" && ! grep -q "error: catalog.g-off" <<<"$out"'
+cat >"$A/repo/.team/config.yaml" <<'X'
+models:
+  catalog:
+    c-fast: {agent: claude, model: haiku, effort: null}
+    c-top: {agent: claude, model: opus, effort: high}
+    x-work: {agent: codex, model: gx-1, effort: high}
+    h-any: {agent: hermes, model: null, effort: null}
+  tiers:
+    fast: [c-fast, h-any]
+    work: [x-work, c-top]
+    top: [c-top, x-work]
+X
+out=$(ag --check); rc=$?
+check "agents --check passes a valid catalog" '[ $rc -eq 0 ] && grep -q "^models: ok$" <<<"$out"'
 
 # read, close
 : >"$FAKE_LOG"  # the close checks below count this feature's calls only
