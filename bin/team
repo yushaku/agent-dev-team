@@ -9,6 +9,8 @@ ORCA=${TEAM_ORCA_BIN:-orca}
 ORCA_ENV=${TEAM_ORCA_ENV:-local}
 SKILLS_DIR=${AGENT_SKILLS_DIR:-$HOME/.agents/skills}
 FILL="FILL:"
+SKELETON="<!-- team skeleton"
+TEAM_BIN="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
 ROLES="builder|reviewer|support-engineer"
 
 # Bash clears set -e inside $(...). Functions that run there start with `set -e` again, so a refusal
@@ -61,6 +63,10 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
       recorded worker, board completed and, when asked, remove the feature worktree. Refused with
       uncommitted changes, from inside the worktree, on a merge conflict (merge aborted) or a
       failed verify (merge kept, nothing closed).
+  submit <report> [--summary <text>] [--check] [--from <orca_session_id:...>]
+      Worker side: check the prefilled report (FILL lines, verdict word first, Evidence, Reviewer
+      Standards/Spec, Builder "implemented" on a clean tree), record Revision, then send worker_done
+      (outcome failed only for blocked/failed). --check validates without sending.
   agents [--json | --check]
       Orca agents on this host: CLI, launch flags Orca passes, own default model, the models each
       lists (read-only local sources). --check validates .team/config.yaml models against them.
@@ -593,7 +599,7 @@ cmd_spec() {
   skills="$SKILLS_DIR/team-$role/SKILL.md first"
   case $role in reviewer) skills="$skills; $SKILLS_DIR/code-review/SKILL.md; $SKILLS_DIR/anti-ai/SKILL.md";; esac
   local x; for x in ${extra_s[@]+"${extra_s[@]}"}; do skills="$skills; $x"; done
-  local constraints="Worker communication: $SKILLS_DIR/orchestrator/references/specs.md \"Worker communication\". Browser: Orca via orca-cli only."
+  local constraints="Finish: the report at Output is prefilled; replace its FILL lines, then run \`$TEAM_BIN submit <Output path>\`. It checks the report and sends worker_done for you: do not send worker_done yourself. Worker communication: $SKILLS_DIR/orchestrator/references/specs.md \"Worker communication\". Browser: Orca via orca-cli only."
   constraints="$constraints$(cfg '[
       (if .matt.glossary then "Glossary: \(.matt.glossary)." else empty end),
       (if .matt.adr then "ADRs: \(.matt.adr)." else empty end),
@@ -622,7 +628,7 @@ cmd_spec() {
     echo "Skills: $skills"
     echo "Refs: $refs"
     echo "Evidence: ${verify:-$FILL acceptance checks}${serial:+ (serial: $serial)}"
-    echo "Output: $fdir/reports/$base.md (format: $SKILLS_DIR/orchestrator/references/specs.md \"Report\", Result and Evidence required); raw logs $fdir/logs/$n-<command>.log"
+    echo "Output: $fdir/reports/$base.md (prefilled at dispatch; format: $SKILLS_DIR/orchestrator/references/specs.md \"Report\"); raw logs $fdir/logs/$n-<command>.log"
   } >"$spec"
   echo "$spec"
 }
@@ -736,6 +742,7 @@ cmd_dispatch() {
   st=$(jq --arg t "$task_id" --arg d "$d" --arg term "$r_term" --arg a "$r_agent" \
     '.tasks[$t].dispatches |= ((map(select(.id != $d))) + [{id:$d, terminal:$term, agent:$a}])' <<<"$st")
   save_state "$feature" "$st"
+  write_skeleton "$(report_of "$spec")" "$role" "$run" "$task_id" "$d" "$(jq -r .workspace.path <<<"$st")" "$(jq -r .workspace.branch <<<"$st")"
   mark dispatch "$run" task "$task_id" dispatch "$d"
   jq -c --arg t "$task_id" '{task:$t, dispatch:.dispatchId, terminal, next}' <<<"$res"
 }
@@ -794,6 +801,140 @@ whoami_line() {
   fi
 }
 
+# ---------- worker reports ----------
+
+report_written() { [ -f "$1" ] && ! grep -q "^$SKELETON" "$1"; }
+verdicts_of() {
+  case $1 in
+    builder) echo "implemented|partial|blocked|failed";;
+    reviewer) echo "pass|changes requested|blocked|inconclusive";;
+    support-engineer) echo "confirmed|not reproduced|needs clarification|blocked";;
+  esac
+}
+
+# write_skeleton path role run task dispatch workspace branch: the report the worker fills in. A report
+# a worker already wrote at that path (an earlier Dispatch) is kept as <name>-<its dispatch>.md.
+write_skeleton() {
+  local path=$1 role=$2 v; v=$(verdicts_of "$role" | sed 's/|/, /g')
+  mkdir -p "$(dirname "$path")"
+  if report_written "$path"; then
+    local old; old=$(spec_line "$path" Dispatch); old=${old:-previous}
+    mv "$path" "${path%.md}-$old.md"; echo "kept earlier report: ${path%.md}-$old.md" >&2
+  fi
+  {
+    echo "$SKELETON: replace every FILL line; delete OPTIONAL lines you do not use; then run: $TEAM_BIN submit $path -->"
+    echo "Role: $role"; echo "Run: $3"; echo "Task: $4"; echo "Dispatch: $5"
+    echo "Workspace: $6 (branch $7)"
+    echo "Revision: set by team submit"
+    echo
+    echo "## Result"
+    case $role in
+      builder) echo "FILL: verdict word first ($v), then the behavior delivered and criteria left unmet.";;
+      reviewer) echo "FILL: verdict word first ($v), then the reviewed base...HEAD.";;
+      *) echo "FILL: verdict word first ($v), then the answer to the investigation question.";;
+    esac
+    echo "## Evidence"
+    case $role in
+      builder) echo "FILL: each acceptance criterion with its check and result; failing-before and passing-after output; verify result per command with the HEAD sha; raw logs under logs/.";;
+      reviewer) echo "FILL: verify reused (same sha, clean tree) or rerun, per command; acceptance evidence inspected; targeted checks run.";;
+      *) echo "FILL: requirements summary (at most 10 lines); reproduction and impact; confirmed cause or labelled hypotheses; affected path:line.";;
+    esac
+    case $role in
+      reviewer)
+        echo "## Standards"
+        echo "FILL: findings S1.. (Must fix or Should fix, file:line, impact, evidence; tags mechanical/recurring), or \"No findings.\" Re-review: each prior ID resolved or not."
+        echo "## Spec"
+        echo "FILL: findings P1.. quoting the violated ticket/spec line, or \"No findings.\"";;
+      builder)
+        echo "## Findings"; echo "OPTIONAL: fix rounds: each finding ID with its fix commit or evidence-based rejection."
+        echo "## Changed paths"; echo "OPTIONAL: paths changed."
+        echo "## Commit body"; echo "OPTIONAL: when committing or delivering.";;
+      *)
+        echo "## Findings"; echo "OPTIONAL: proposed next step and effort drivers; ticket replies add a client-language draft and a PO translation.";;
+    esac
+    echo "## Leftovers"; echo "OPTIONAL: open risks and human steps."
+  } >"$path"
+}
+
+section() { awk -v h="## $2" '$0==h{f=1;next} f&&/^## /{exit} f' "$1"; }
+
+# team submit <report> [--summary text] [--check] [--from id]: run by the worker. Checks the report,
+# records Revision, drops unused OPTIONAL sections, then sends worker_done with the outcome the
+# verdict implies. --check stops before sending (also for PO-invoked roles without a Task).
+cmd_submit() {
+  local path="" summary="" check=0 from=""
+  while [ $# -gt 0 ]; do case $1 in
+    --summary) summary=$2; shift 2;; --check) check=1; shift;; --from) from=$2; shift 2;;
+    -*) die "submit: unknown $1";; *) [ -z "$path" ] || die "submit: one report path"; path=$1; shift;; esac; done
+  [ -n "$path" ] || die "submit: <report path> required (the spec's Output)"
+  [ -f "$path" ] || die "submit: $path not found"
+  path=$(abs_path "$path")
+  local role run task dispatch ws errs=()
+  role=$(spec_line "$path" Role); run=$(spec_line "$path" Run); task=$(spec_line "$path" Task)
+  dispatch=$(spec_line "$path" Dispatch); ws=$(spec_line "$path" Workspace | sed -E 's/ \(branch .*//')
+  case $role in builder|reviewer|support-engineer) ;; *) die "submit: Role: must be builder, reviewer or support-engineer";; esac
+  [ $check = 1 ] || { [ -n "$run" ] && [ -n "$task" ] && [ -n "$dispatch" ]; } \
+    || die "submit: Run, Task and Dispatch lines are required to send worker_done (--check validates only)"
+
+  local fills; fills=$(grep -n "^$FILL" "$path" | cut -d: -f1 | paste -sd, - || true)
+  [ -z "$fills" ] || errs+=("unfilled FILL lines: $fills")
+  local verdict word ok=""; verdict=$(section "$path" Result | awk 'NF{print;exit}')
+  word=$(verdicts_of "$role")
+  shopt -s nocasematch
+  local w; IFS='|' read -ra ws_ <<<"$word"
+  for w in "${ws_[@]}"; do [[ "$verdict" =~ ^$w($|[.:,;[:space:]]) ]] && ok=$w; done
+  shopt -u nocasematch
+  [ -n "$ok" ] || errs+=("## Result must start with the verdict word ($(sed 's/|/, /g' <<<"$word")), found: \"${verdict:0:60}\"")
+  [ -n "$(section "$path" Evidence | grep -v '^OPTIONAL:' | tr -d '[:space:]')" ] || errs+=("## Evidence is empty")
+  if [ "$role" = reviewer ]; then
+    for w in Standards Spec; do
+      [ -n "$(section "$path" "$w" | tr -d '[:space:]')" ] || errs+=("## $w is missing or empty (write \"No findings.\" for a clean axis)"); done
+  fi
+
+  local rev=""
+  if [ -n "$ws" ] && git -C "$ws" rev-parse --git-dir >/dev/null 2>&1; then
+    local head dirty; head=$(git -C "$ws" rev-parse HEAD); dirty=$(git -C "$ws" status --porcelain | cut -c4- | paste -sd, - || true)
+    rev="$head ${dirty:+(uncommitted: $dirty)}"; rev=${rev% }; [ -n "$dirty" ] || rev="$head (clean)"
+    [ "$role:$ok" != builder:implemented ] || [ -z "$dirty" ] \
+      || errs+=("verdict implemented with uncommitted changes in $ws: $dirty (commit them, or report partial)")
+  else
+    rev="not applicable (no git workspace)"
+  fi
+  if [ ${#errs[@]} -gt 0 ]; then
+    printf 'team: submit: %s\n' "${errs[@]}" >&2; die "submit: fix $path and run it again"
+  fi
+
+  # Record the revision, drop the skeleton marker, OPTIONAL hints and the sections they leave empty.
+  local tmpf; tmpf=$(mktemp)
+  awk -v rev="$rev" -v sk="$SKELETON" '
+    index($0, sk) == 1 { next }
+    /^Revision:/ { lines[++n] = "Revision: " rev; next }
+    /^OPTIONAL:/ { next }
+    { lines[++n] = $0 }
+    END {
+      for (i = 1; i <= n; i++) {
+        if (lines[i] ~ /^## /) { j = i + 1; empty = 1
+          while (j <= n && lines[j] !~ /^## /) { if (lines[j] ~ /[^[:space:]]/) empty = 0; j++ }
+          if (empty) { i = j - 1; continue } }
+        print lines[i]
+      }
+    }' "$path" >"$tmpf" && cat "$tmpf" >"$path" && rm -f "$tmpf"
+  echo "report ok: $role, $ok, $rev"
+  [ $check = 0 ] || return 0
+
+  local outcome=succeeded; case $ok in blocked|failed) outcome=failed;; esac
+  if [ -z "$from" ]; then
+    from=$(whoami_json | jq -r '.session // empty'); [ -z "$from" ] || from="orca_session_id:$from"
+  fi
+  [ -n "$from" ] || die "submit: no Orca session found here; pass --from <the orca_session_id from your preamble>"
+  local body; body=${summary:-$(section "$path" Result | tr '\n' ' ' | sed -E 's/  +/ /g' | cut -c1-600)}
+  local res; res=$(orca_call orchestration send --from "$from" --type worker_done \
+    --subject "$role: ${verdict:0:80}" --body "$body Report: $path" \
+    --task-id "$task" --dispatch-id "$dispatch" --outcome "$outcome" --report-path "$path")
+  echo "worker_done sent ($outcome): $(jq -c . <<<"$res" | cut -c1-200)"
+  echo "Done: return to an idle prompt."
+}
+
 # ---------- review rounds ----------
 
 task_index() { jq -r --arg t "$2" '[.tasks | keys_unsorted[]] | index($t)' <<<"$1"; }
@@ -823,7 +964,7 @@ round_source() {
 }
 round_report() { # spec role -> report path, refusing a missing one
   local r; r=$(report_of "$1")
-  [ -f "$r" ] || die "$2 report missing: $r (team read $2; ask the worker to write it)"
+  report_written "$r" || die "$2 report missing: $r (team read $2; ask the worker to write it)"
   echo "$r"
 }
 
@@ -942,8 +1083,8 @@ cmd_rereview() {
   processed "$feature" "$b" "$report" "$verdict" "re-review r$n"
 }
 
-report_verdict() { # report path -> first non-empty line under "## Result"
-  [ -f "$1" ] || { echo "-"; return; }
+report_verdict() { # report path -> first non-empty line under "## Result"; "-" when not written yet
+  report_written "$1" || { echo "-"; return; }
   local v; v=$(awk '/^## Result/{f=1;next} f&&/^## /{exit} f&&NF{print;exit}' "$1" | cut -c1-120)
   echo "${v:-?}"
 }
@@ -1052,7 +1193,7 @@ cmd_close() {
 
 need jq; need git
 cmd=${1:-help}; shift || true
-case $cmd in help|-h|--help) usage; exit 0;; whoami) need jq; whoami_json; exit 0;; agents) need node; cmd_agents "$@"; exit;; esac
+case $cmd in help|-h|--help) usage; exit 0;; whoami) need jq; whoami_json; exit 0;; agents) need node; cmd_agents "$@"; exit;; submit) need jq; cmd_submit "$@"; exit;; esac
 git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
 need node; load_cfg
 case $cmd in

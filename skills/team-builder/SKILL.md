@@ -13,7 +13,7 @@ description: "Use only when an Orchestrator Task assigns the Builder role or the
 1. Read Task ticket/spec, glossary/ADRs and necessary code; justify reads beyond ticket scope in the report.
 2. Build with `tdd` at spec seams, or the highest existing seam proving behavior; record fallback seams. Typecheck and run touched tests before each ticket's `feat` commit.
 3. Update related docs per relevant `docs-policy.md` sections. After the final commit, run full `commands.verify` on a clean tree through `rtk err` (`rtk test` for test runners).
-4. Write the assigned report per `skills/orchestrator/references/specs.md` "Report", including the Builder row, then send `worker_done`. Partial, blocked or failed attempts also produce a report. Delivery Tasks include `## Commit body` per `references/delivery.md`.
+4. Fill the prefilled report at the Task's `Output:` path (content: `skills/orchestrator/references/specs.md` "Report", Builder row), then finish with `team submit <path>`: it checks the report and sends `worker_done`. Partial, blocked or failed attempts also produce a report. Delivery Tasks include `## Commit body` per `references/delivery.md`.
 
 ## Rules
 - **Scope:** work assigned tickets in dependency order in one session; a named ticket uses `references/parallel.md`. Compact only near context capacity.

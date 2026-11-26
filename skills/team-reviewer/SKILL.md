@@ -13,7 +13,7 @@ description: "Use only when an Orchestrator Task assigns the Reviewer role or th
 1. Reuse Builder verify only when its sha equals HEAD and the tree is clean. Otherwise, or if evidence is missing, run `commands.verify` through `rtk err`/`rtk test`; without RTK, read failing output only. Each failure is a `mechanical` Must fix quoting failing lines. Skip manual checks covered by passing automation.
 2. Read tests before implementation; run `code-review` from the base branch against Task spec/tickets. Standards: repo rules, Fowler baseline and triggered security/performance references. Both review sub-agents start fresh, report under 400 words each; keep their axes/rankings separate.
 3. Check acceptance evidence (failing-before output, screenshots, measurements); run targeted checks for missing/doubtful evidence.
-4. Write the assigned report per `skills/orchestrator/references/specs.md` "Report", including the Reviewer row, then send `worker_done`, also for blocked/inconclusive reviews. Keep Standards and Spec separate. PR comments, when authorized, link back to this report.
+4. Fill the prefilled report at the Task's `Output:` path (content: `skills/orchestrator/references/specs.md` "Report", Reviewer row), then finish with `team submit <path>`, also for blocked/inconclusive reviews. Keep Standards and Spec separate. PR comments, when authorized, link back to this report.
 
 ## Rules
 - **Must fix:**

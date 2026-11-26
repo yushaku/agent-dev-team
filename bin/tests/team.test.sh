@@ -35,6 +35,7 @@ case "$1 $2" in
   "orchestration worker-read")
     if [[ "$*" == *--cursor* ]]; then echo '{"ok":true,"result":{"transcript":{"messages":[{"role":"assistant","blocks":[{"type":"text","text":"tail message"}]}]}}}'
     else echo '{"ok":true,"result":{"transcript":{"nextCursor":"c2","messages":[{"role":"user","blocks":[{"type":"text","text":"prompt"}]},{"role":"assistant","blocks":[{"type":"tool_use"}]}]}}}'; fi;;
+  "orchestration send") echo '{"ok":true,"result":{"id":"msg_1","delivered":true}}';;
   "agent installed") echo '{"ok":true,"result":{"agents":[{"id":"claude","name":"Claude","default":true},{"id":"codex","name":"Codex","default":false},{"id":"hermes","name":"Hermes","default":false},{"id":"ghost","name":"Ghost","default":false}]}}';;
   *) echo '{"ok":false}'; exit 1;;
 esac
@@ -142,6 +143,9 @@ jq --arg d "$repo/.team" '.sandbox.filesystem.allowWrite += [$d]' "$tmp/claude/s
 check "dispatch returns dispatch" '[ "$(jq -r .dispatch <<<"$d")" = ctx_1 ]'
 check "dispatch keeps open on workspace with routing" 'grep worker-start "$FAKE_LOG" | grep -q -- "--keep-open --worktree path:$tmp/wt/csv --agent claude --model sonnet --effort medium"'
 check "routing.jsonl appended" '[ "$(jq -r .dispatch "$F/routing.jsonl")" = ctx_1 ]'
+check "dispatch prefills the report with the Task identity" 'grep -q "^Task: task_1$" "$F/reports/01-builder.md" && grep -q "^Dispatch: ctx_1$" "$F/reports/01-builder.md" && grep -q "^Workspace: $tmp/wt/csv (branch feat/csv)$" "$F/reports/01-builder.md" && grep -q "^<!-- team skeleton.*team submit $F/reports/01-builder.md -->$" "$F/reports/01-builder.md"'
+check "spec tells the worker to finish with team submit" 'grep -q "^Constraints: Finish: .*team submit <Output path>.*do not send worker_done yourself" "$s1"'
+check "status treats a prefilled report as not written" '[ "$("$team" status csv --json | jq -r ".tasks[0].verdict")" = missing ]'
 check "run.json records dispatch terminal" '[ "$(jq -r ".tasks.task_1.dispatches[0].terminal" "$F/run.json")" = term_1 ]'
 
 # reviewer independence
@@ -293,6 +297,51 @@ setverify false
 "$team" close vf --merge >/dev/null 2>"$tmp/err"
 check "a failed verify after the merge keeps the commit and closes nothing" '[ $? -ne 0 ] && grep -q "ORIG_HEAD" "$tmp/err" && [ -f "$repo/c.txt" ] && [ "$(jq -r .closed "$repo/.team/vf/run.json")" = null ]'
 cp "$tmp/cfg2" .team/config.yaml
+
+# submit: worker side
+R="$F/reports/01-builder.md"; WS="$tmp/wt/csv"
+printf 'Role: builder\nDispatch: ctx_1\n\n## Result\nimplemented\n## Evidence\nx\n' >"$R"
+"$team" dispatch csv task_1 --terminal term_1 >/dev/null 2>"$tmp/err"
+check "a re-dispatch keeps the earlier report under its Dispatch" 'grep -q "^implemented$" "$F/reports/01-builder-ctx_1.md" && grep -q "^<!-- team skeleton" "$R" && grep -q "kept earlier report" "$tmp/err"'
+D=$(sed -n 's/^Dispatch: //p' "$R")
+: >"$FAKE_LOG"
+"$team" submit "$R" 2>"$tmp/err"
+check "submit refuses FILL lines and a missing verdict word" '[ $? -ne 0 ] && grep -q "unfilled FILL lines" "$tmp/err" && grep -q "must start with the verdict word (implemented, partial, blocked, failed)" "$tmp/err" && ! grep -q send "$FAKE_LOG"'
+fill() { python3 - "$R" "$1" "$2" <<'P'
+import sys; p, res, ev = sys.argv[1:]; t = open(p).read().split("\n")
+out = []
+for i, l in enumerate(t):
+    if l.startswith("FILL:"): l = res if t[i-1] == "## Result" else ev
+    out.append(l)
+open(p, "w").write("\n".join(out))
+P
+}
+cp "$R" "$tmp/skel"
+fill "Done: --csv works." "criterion 1: npm test ok"
+"$team" submit "$R" 2>"$tmp/err"
+check "submit names the verdict words it wants" '[ $? -ne 0 ] && grep -q "found: \"Done: --csv works.\"" "$tmp/err"'
+cp "$tmp/skel" "$R"; fill "Implemented. --csv works." "criterion 1: npm test ok"
+touch "$WS/stray.txt"
+"$team" submit "$R" 2>"$tmp/err"
+check "submit refuses implemented on a dirty tree" '[ $? -ne 0 ] && grep -q "uncommitted changes in $WS: stray.txt" "$tmp/err"'
+rm "$WS/stray.txt"
+"$team" submit "$R" 2>"$tmp/err"
+check "submit without an Orca session asks for --from" '[ $? -ne 0 ] && grep -q "pass --from" "$tmp/err"'
+out=$(ORCA_PANE_KEY=pane-1 "$team" submit "$R" --summary "Added --csv.")
+check "submit sends worker_done with identity, outcome and report" 'grep -q -- "orchestration send --from orca_session_id:sess-1 --type worker_done --subject builder: Implemented. --csv works. --body Added --csv. Report: $R --task-id task_1 --dispatch-id $D --outcome succeeded --report-path $R" "$FAKE_LOG" && grep -q "worker_done sent (succeeded)" <<<"$out"'
+check "submit records Revision and drops the skeleton and unused sections" '[ "$(sed -n "s/^Revision: //p" "$R")" = "$(git -C "$WS" rev-parse HEAD) (clean)" ] && [ "$(sed -n 6p "$R")" = "Revision: $(git -C "$WS" rev-parse HEAD) (clean)" ] && [ "$(head -1 "$R")" = "Role: builder" ] && ! grep -q -e "^<!--" -e "^OPTIONAL" -e "^## Changed paths" -e "^## Leftovers" "$R" && grep -q "^## Evidence$" "$R"'
+cp "$tmp/skel" "$R"; fill "blocked: npm missing" "npm test: command not found"
+: >"$FAKE_LOG"; "$team" submit "$R" --from orca_session_id:x >/dev/null
+check "submit sends outcome failed for blocked" 'grep -q -- "--from orca_session_id:x .*--outcome failed" "$FAKE_LOG"'
+cp "$tmp/skel" "$R"; fill "partial. one left" "x"; : >"$FAKE_LOG"
+out=$("$team" submit "$R" --check)
+check "submit --check validates without sending" '[ $? -eq 0 ] && grep -q "report ok: builder, partial" <<<"$out" && [ ! -s "$FAKE_LOG" ]'
+RV="$F/reports/99-reviewer.md"
+printf 'Role: reviewer\nRun: r\nTask: t\nDispatch: d\nWorkspace: %s (branch feat/csv)\nRevision: x\n\n## Result\nchanges requested. S1\n## Evidence\nverify rerun\n## Standards\nS1 Must fix a.sh:1\n' "$WS" >"$RV"
+"$team" submit "$RV" --check 2>"$tmp/err"
+check "submit wants Reviewer Standards and Spec" '[ $? -ne 0 ] && grep -q "## Spec is missing or empty" "$tmp/err" && ! grep -q "## Standards is missing" "$tmp/err"'
+printf '## Spec\nNo findings.\n' >>"$RV"
+check "submit passes a reviewer report with both axes" '"$team" submit "$RV" --check >/dev/null'
 
 # agents: discovery and --check, against fake CLIs and a fake HOME
 A="$tmp/agents"; mkdir -p "$A/bin" "$A/home/.codex" "$A/home/.claude" "$A/repo/.team"

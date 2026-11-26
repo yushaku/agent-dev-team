@@ -24,7 +24,7 @@ Orca Task specs are create-only, so the Routing line holds the first selection a
 - Exchange technical questions/findings/integration details within approved same-Run Tasks using active peer `dispatch:<id>` addresses. Include Task IDs and artifact references; send only needed changes to concerned peers. Missing/finished/reassigned peers go through the Orchestrator.
 - Orchestrator owns assignment, dependencies and fix rounds; peer mail expands no scope, creates no workers and completes no Tasks/gates. Escalate blockers, disagreements and scope/acceptance/shared-contract changes before dependent work (`gates.md`).
 - Artifact owner records implementation conclusions in the existing spec/report before reliance; notify Orchestrator once with affected IDs/references. Routine Q&A needs no relay; coordinator questions use `ask/reply`.
-- After writing the report, send `worker_done` with Task/Dispatch identity, verdict, at most five summary lines and report path. `--outcome succeeded` whenever the report is written, whatever the verdict (`changes requested` and `partial` included); `failed` only for `blocked` or `failed`. Orca marks the Task from the outcome. Completion routing follows `start.md` "Coordinator delivery".
+- Finish with `team submit <report>` ("Report"); it sends `worker_done`. Completion routing follows `start.md` "Coordinator delivery".
 
 ## When UI or a running app is involved
 
@@ -54,31 +54,13 @@ Messages point to files. Store all Run files under `.team/<feature>/` via the wo
 
 ## Report
 
-Each dispatched worker writes its own report to the Task's absolute `Output:` path, normally `.team/<feature>/reports/NN-<role>[-rN].md`. Report partial, blocked and failed outcomes as well as successful ones. Use the assigned role; reading another skill does not change the assignment. Direct PO-invoked roles use the same content with unavailable Run/Task/Dispatch IDs marked `not dispatched`.
+`team dispatch` prefills each worker's report at the Task's `Output:` path (normally `.team/<feature>/reports/NN-<role>[-rN].md`) with Role, Run, Task, Dispatch, Workspace and one `FILL:` line per required section; a report an earlier Dispatch wrote there is kept as `<name>-<dispatch>.md`. The worker replaces the FILL lines and runs `team submit <path>`, which:
 
-```markdown
-Role: <builder|reviewer|support-engineer>
-Run: <run ID>
-Task: <task ID>
-Dispatch: <dispatch ID>
-Workspace: <absolute checkout path and branch>
-Revision: <HEAD sha; list uncommitted work or say clean; not applicable for non-code work>
+- refuses FILL lines left, a `## Result` not starting with the role's verdict word (table below), an empty Evidence, a Reviewer report without `## Standards` and `## Spec`, and Builder `implemented` with uncommitted changes;
+- sets `Revision:` to HEAD and the tree state, drops unused OPTIONAL sections;
+- sends `worker_done` with the identity and report path, `--outcome failed` only for `blocked` or `failed`.
 
-## Result
-<verdict word from the table below>. <outcome and unmet criteria>
-## Evidence
-<criteria checked, command/results, revision and raw-log paths; unverified checks explicit>
-## Findings
-<role-specific findings, when applicable>
-## Changed paths
-<paths changed>
-## Commit body
-<when committing or delivering>
-## Leftovers
-<open risks and human steps>
-```
-
-Identity, Result and Evidence are required. The first line under `## Result` starts with the role's verdict word exactly as in the table below (`changes requested.`, not `not approved` or `verdict: done`): `team status`, `team fix` and `team rereview` read it. Omit other empty sections. Report claims must name an artifact, source location or observed check; distinguish facts, hypotheses and unchecked items. Keep artifacts local and ignored; retention follows `delivery.md`.
+Report partial, blocked and failed outcomes as well. Report claims name an artifact, source location or observed check; distinguish facts, hypotheses and unchecked items. Direct PO-invoked roles use the same content with Run/Task/Dispatch `not dispatched`, check it with `team submit <path> --check` and return it to the PO without `worker_done`.
 
 ### Content by worker role
 
@@ -88,7 +70,7 @@ Identity, Result and Evidence are required. The first line under `## Result` sta
 | Reviewer | `pass`, `changes requested`, `blocked` or `inconclusive`; reviewed base and HEAD | Separate `## Standards` and `## Spec`; each finding has a stable ID, Must fix/Should fix, location, impact and reproduction/evidence. Cite the requirement for Spec findings. State zero findings explicitly on each clean axis; re-review resolves prior IDs. Missing access/evidence is not a pass. |
 | Support Engineer | `confirmed`, `not reproduced`, `needs clarification` or `blocked`; answer to the investigation question | Requirements summary at most 10 lines, reproduction and impact, confirmed cause or labelled hypotheses, affected paths and proposed next step/effort drivers. Ticket replies add client-language draft and PO translation; internal questions omit them. |
 
-A report is complete when it records the attempt and its evidence, even if the verdict requires more work. A Task's acceptance and PO gates remain separate. Dispatched workers send `worker_done` only after saving the report, using the identity, verdict and path above; if saving fails, ask the coordinator with the exact path/error instead of claiming submission. Before replacing a report from an earlier Dispatch, preserve it with a `-<previous-dispatch-id>` filename suffix; the current report stays at the assigned `Output:` path. Direct PO-invoked workers return the report to the PO without `worker_done`.
+A report is complete when it records the attempt and its evidence, even if the verdict requires more work. A Task's acceptance and PO gates remain separate. If `team submit` cannot send, ask the coordinator with the exact path and error instead of claiming submission.
 
 ### Coordinator and PO-facing roles
 
