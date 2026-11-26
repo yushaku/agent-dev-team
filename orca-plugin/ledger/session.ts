@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { teams } from './metadata.ts';
+import { SENIOR, teams } from './metadata.ts';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
@@ -92,12 +92,13 @@ export const aliases: Record<string, string> = Object.fromEntries(
     'solution-architect': 'solution sa solution-architect arch-review',
   }).flatMap(([role, words]) => words.split(' ').map((w) => [w, role])),
 );
-const roleFile = /(?:roles|checks)\/([a-z0-9-]+)\.md|skills\/(researcher|solution-architect)\/SKILL\.md|skills\/team-([a-z0-9-]+)\//;
+const roleFile =
+  /(?:roles|checks)\/([a-z0-9-]+)\.md|skills\/(researcher|solution-architect|senior-backend|senior-frontend)\/SKILL\.md|skills\/team-([a-z0-9-]+)\//;
 export function role(word: string) {
   if (Object.hasOwn(aliases, word)) return aliases[word];
   if (['anti-ai', 'security', 'perf-a11y', 'tech-lead', 'designer'].includes(word)) return word;
   if (!/^[a-z0-9-]+$/.test(word)) return null;
-  const skill = ['orchestrator', 'solution-architect', 'researcher'].includes(word) ? word : 'team-' + word;
+  const skill = ['orchestrator', 'solution-architect', 'researcher', ...SENIOR].includes(word) ? word : 'team-' + word;
   return existsSync(join(teams, 'skills', skill, 'SKILL.md')) ? word : null;
 }
 export function newSession(agent: string, id: string): Session {
@@ -294,9 +295,9 @@ function tool(s: Session, name: string, args: unknown, ts: Time) {
 }
 // bin/team runs the orca commands itself, so the coordinator's own command lines carry no `--run`.
 // It prints a marker line per Run-scoped step, `{"team":"start","run":"run_…",…}`, which counts only in a
-// tool result of a session that called `team init|task|dispatch|start|review|fix|rereview`, on its own line (escaped inside JSONL).
+// tool result of a session that called `team init|task|dispatch|start|review|fix|rereview|solo`, on its own line (escaped inside JSONL).
 const teamCallers = new WeakSet<Session>();
-const teamCall = /(?:^|[\s;&|('"`/])team\s+(?:init|task|dispatch|start|review|fix|rereview)\b/;
+const teamCall = /(?:^|[\s;&|('"`/])team\s+(?:init|task|dispatch|start|review|fix|rereview|solo)\b/;
 const teamMarker = /(?:\\n|\\r|^|")\{(\\*)"team\1":\1"(?:init|task|dispatch|start)\1",\1"run\1":\1"(run_[0-9a-z]+)\1"/g;
 function teamRuns(s: Session, raw: string, ts: Time) {
   if (!teamCallers.has(s) || !raw.includes('team')) return;

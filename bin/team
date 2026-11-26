@@ -12,6 +12,7 @@ FILL="FILL:"
 SKELETON="<!-- team skeleton"
 TEAM_BIN="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
 ROLES="builder|reviewer|support-engineer"
+SENIOR="senior-backend|senior-frontend"  # PO-invoked roles that work their own Task (team solo)
 
 # Bash clears set -e inside $(...). Functions that run there start with `set -e` again, so a refusal
 # deep inside (say a spec check under `start`) stops the step instead of creating the Task anyway.
@@ -77,11 +78,20 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
       Worker side: commands.verify in the workspace, logged as logs/verify-<sha>.log with the result
       per command (serial: true waits for other verifies). --reuse keeps a green log at the same
       clean HEAD. Uncommitted changes log as -dirty and do not count for submit.
+  solo <feature> --role senior-backend|senior-frontend --goal TEXT [--scope TEXT] [--branch B]
+       [--base REF] [--worktree]
+      PO-invoked senior session working its own Task: init (current checkout, switched off the
+      base branch to B, default feat/<feature>; --worktree for a new one), spec, Orca Task,
+      Dispatch to this terminal (dashboard: in progress), prefilled report. Rerun resumes the
+      role's open Task.
   submit <report> [--summary <text>] [--check] [--from <orca_session_id:...>]
       Worker side: check the prefilled report (FILL lines, verdict word first, Evidence, Reviewer
       Standards/Spec, Builder "implemented" on a clean tree, a green team verify log at HEAD for
       implemented and pass), record Revision, then send worker_done
       (outcome failed only for blocked/failed). --check validates without sending.
+      Senior roles: builder checks, then the Task is set completed (implemented) or failed
+      (failed); partial and blocked keep it in progress for the next team solo. The report is
+      recorded as processed in handoff.md.
   agents [--json | --check]
       Orca agents on this host: CLI, launch flags Orca passes, own default model, the models each
       lists (read-only local sources). --check validates .team/config.yaml models against them.
@@ -804,6 +814,106 @@ cmd_start() {
   trap - EXIT
 }
 
+# team solo: a PO-invoked senior session (skills/senior-*) is its own worker. It gets the same Run,
+# spec, Task and prefilled report as a dispatched Builder, and a Dispatch to its own terminal, so the
+# dashboard shows the Task in progress and links this session to the Run. team submit finishes it.
+cmd_solo() {
+  set -e
+  local feature=${1:-}; [ -n "$feature" ] && [ "${feature#-}" = "$feature" ] || die "solo: feature name required"; shift
+  local role="" goal="" scope="" branch="" base="" wt=0
+  while [ $# -gt 0 ]; do case $1 in
+    --role) role=$2; shift 2;; --goal) goal=$2; shift 2;; --scope) scope=$2; shift 2;;
+    --branch) branch=$2; shift 2;; --base) base=$2; shift 2;; --worktree) wt=1; shift;;
+    *) die "solo: unknown $1";; esac; done
+  [[ "$role" =~ ^($SENIOR)$ ]] || die "solo: --role must be ${SENIOR//|/ or }"
+  [ -n "$goal" ] || die "solo: --goal required"
+
+  local fdir ex; fdir=$(feature_dir "$feature")
+  if ! git -C "$(main_checkout)" check-ignore -q .team 2>/dev/null; then # init-team step 1, for repos without it
+    ex="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"; mkdir -p "$(dirname "$ex")"; echo "/.team" >>"$ex"
+  fi
+  if [ -f "$fdir/run.json" ]; then
+    cmd_init "$feature" --objective "$goal" >/dev/null
+  else
+    [ -n "$base" ] || base=$(cfg '.branches.base // "main"')
+    [ -n "$branch" ] || branch="feat/$feature"
+    if [ $wt = 0 ] && [ "$(git symbolic-ref --short -q HEAD || true)" = "$base" ]; then
+      if git show-ref --verify -q "refs/heads/$branch"; then git switch -q "$branch"; else git switch -q -c "$branch"; fi
+      echo "team: switched to $branch (off $base)" >&2
+    fi
+    local had=0; [ -f "$fdir/handoff.md" ] && had=1
+    local iargs=(--objective "$goal" --branch "$branch" --base "$base"); [ $wt = 1 ] || iargs+=(--here)
+    cmd_init "$feature" "${iargs[@]}" >/dev/null
+    if [ $had = 0 ]; then
+      local tmpf; tmpf=$(mktemp)
+      sed -e "s/^- Next: .*/- Next: $role works the Task itself (team solo), then team submit./" \
+        -e "s/^- Skills: .*/- Skills: $role./" "$fdir/handoff.md" >"$tmpf" && cat "$tmpf" >"$fdir/handoff.md"; rm -f "$tmpf"
+    fi
+  fi
+
+  local st run wpath wbranch handle task_id spec report d=""
+  st=$(load_state "$feature"); run=$(jq -r .run <<<"$st")
+  wpath=$(jq -r .workspace.path <<<"$st"); wbranch=$(jq -r .workspace.branch <<<"$st")
+  handle=$(whoami_json | jq -r '.terminal // empty')
+  task_id=$(jq -r --arg r "$role" '[.tasks | to_entries[] | select(.value.role==$r and (.value.done|not)) | .key] | last // empty' <<<"$st")
+
+  if [ -n "$task_id" ]; then # resume the open Task; dispatch again unless it is still in progress
+    spec=$(jq -r --arg t "$task_id" '.tasks[$t].spec' <<<"$st"); report=$(report_of "$spec")
+    echo "team: resuming $task_id ($spec)" >&2; mark task "$run" task "$task_id"
+    local status; status=$(orca_call orchestration task-list --run "$run" | jq -r --arg t "$task_id" '.tasks[] | select(.id==$t) | .status')
+    [ "$status" = dispatched ] && d=$(jq -r --arg t "$task_id" '.tasks[$t].self.dispatch // empty' <<<"$st")
+  else
+    local n; n=$(find "$fdir/specs" -maxdepth 1 -name '[0-9][0-9]-*.md' 2>/dev/null | sed -E 's#.*/([0-9]+)-.*#\1#' | sort -n | tail -1)
+    n=$(printf '%02d' $(( 10#${n:-0} + 1 )))
+    spec="$fdir/specs/$n-$role.md"; report="$fdir/reports/$n-$role.md"
+    local verify; verify=$(cfg '.commands.verify // [] | if type=="array" then join("; ") else tostring end')
+    {
+      echo "Role: $role"
+      echo "Run: $run"
+      echo 'Measurement: {"kind":"build","round":null,"cause":null}'
+      echo "Goal: $goal"
+      echo "Scope: ${scope:-set by the $role session within the Goal}"
+      echo "Spec: none (PO-invoked $role session)"
+      echo "Workspace: path:$wpath, branch $wbranch."
+      echo "Skills: $SKILLS_DIR/$role/SKILL.md"
+      echo "Evidence: ${verify:-acceptance checks named in the report}"
+      echo "Output: $report (prefilled; format: $SKILLS_DIR/orchestrator/references/reports.md)"
+    } >"$spec"
+    local res; res=$(orca_call orchestration task-create --run "$run" --spec-file "$spec" --task-title "$role: ${goal:0:70}")
+    task_id=$(jq -r '.taskId // .id // empty' <<<"$res"); [ -n "$task_id" ] || die "solo: receipt has no taskId"
+    st=$(jq --arg t "$task_id" --arg s "$spec" --arg r "$role" --arg ti "$role: ${goal:0:70}" \
+      '.tasks[$t] = {spec:$s, role:$r, title:$ti, dispatches:[]}' <<<"$st")
+    save_state "$feature" "$st"; mark task "$run" task "$task_id"
+  fi
+
+  if [ -z "$d" ] && [ -n "$handle" ]; then
+    local res; res=$(orca_call orchestration dispatch --task "$task_id" --to "$handle" --run "$run")
+    d=$(jq -r '.dispatch.id // .dispatchId // empty' <<<"$res")
+    [ -n "$d" ] || { echo "$res" >&2; die "solo: dispatch receipt has no id"; }
+    st=$(jq --arg t "$task_id" --arg d "$d" --arg h "$handle" '.tasks[$t].self = {dispatch:$d, terminal:$h}' <<<"$(load_state "$feature")")
+    save_state "$feature" "$st"; mark dispatch "$run" task "$task_id" dispatch "$d"
+  elif [ -z "$handle" ]; then
+    echo "team: no Orca terminal in this session; the Task stays ready on the dashboard until team submit" >&2
+  fi
+  report_written "$report" || write_skeleton "$report" "$role" "$run" "$task_id" "${d:-none}" "$wpath" "$wbranch"
+  jq -n --arg f "$feature" --arg r "$run" --arg t "$task_id" --arg d "${d:-none}" --arg p "$wpath" --arg b "$wbranch" \
+    --arg s "$spec" --arg o "$report" '{feature:$f, run:$r, task:$t, dispatch:$d, workspace:$p, branch:$b, spec:$s, report:$o}'
+}
+
+# solo_finish path role run task verdict-word verdict-line summary: team submit's end for senior roles.
+solo_finish() {
+  local path=$1 role=$2 run=$3 task=$4 ok=$5 verdict=$6 summary=$7 status fdir feature
+  # Orca refuses blocked while the self-Dispatch is active: partial and blocked keep the Task in progress.
+  case $ok in implemented) status=completed;; failed) status=failed;; *) status="in progress";; esac
+  fdir=$(dirname "$(dirname "$path")"); feature=$(basename "$fdir")
+  local body; body=${summary:-$(section "$path" Result | tr '\n' ' ' | sed -E 's/  +/ /g' | cut -c1-600)}
+  [ "$status" = "in progress" ] \
+    || orca_call orchestration task-update --id "$task" --run "$run" --status "$status" --result "$body Report: $path" >/dev/null
+  processed "$feature" "$task" "$(feature_dir "$feature")/reports/$(basename "$path")" "${verdict:0:80}" "PO"
+  [ "$status" = "in progress" ] || save_state "$feature" "$(jq --arg t "$task" --arg v "$ok" '.tasks[$t].done = $v' <<<"$(load_state "$feature")")"
+  echo "Task $task: $status ($role). Report: $path"
+}
+
 # whoami_json: this session's Orca identity from the runtime environment (pane key -> agent list).
 whoami_json() {
   local agents=""
@@ -827,7 +937,7 @@ whoami_line() {
 report_written() { [ -f "$1" ] && ! grep -q "^$SKELETON" "$1"; }
 verdicts_of() {
   case $1 in
-    builder) echo "implemented|partial|blocked|failed";;
+    builder|senior-*) echo "implemented|partial|blocked|failed";;
     reviewer) echo "pass|changes requested|blocked|inconclusive";;
     support-engineer) echo "confirmed|not reproduced|needs clarification|blocked";;
   esac
@@ -850,13 +960,13 @@ write_skeleton() {
     echo
     echo "## Result"
     case $role in
-      builder) echo "FILL: verdict word first ($v), then the behavior delivered and criteria left unmet.";;
+      builder|senior-*) echo "FILL: verdict word first ($v), then the behavior delivered and criteria left unmet.";;
       reviewer) echo "FILL: verdict word first ($v), then the reviewed base...HEAD.";;
       *) echo "FILL: verdict word first ($v), then the answer to the investigation question.";;
     esac
     echo "## Evidence"
     case $role in
-      builder) echo "FILL: each acceptance criterion with its check and result; failing-before and passing-after output; the team verify lines (run it after the final commit); other raw logs under logs/.";;
+      builder|senior-*) echo "FILL: each acceptance criterion with its check and result; failing-before and passing-after output; the team verify lines (run it after the final commit); other raw logs under logs/.";;
       reviewer) echo "FILL: team verify --reuse lines; acceptance evidence inspected; targeted checks run.";;
       *) echo "FILL: requirements summary (at most 10 lines); reproduction and impact; confirmed cause or labelled hypotheses; affected path:line.";;
     esac
@@ -866,7 +976,7 @@ write_skeleton() {
         echo "FILL: findings S1.. (Must fix or Should fix, file:line, impact, evidence; tags mechanical/recurring), or \"No findings.\" Re-review: each prior ID resolved or not."
         echo "## Spec"
         echo "FILL: findings P1.. quoting the violated ticket/spec line, or \"No findings.\"";;
-      builder)
+      builder|senior-*)
         echo "## Findings"; echo "OPTIONAL: fix rounds: each finding ID with its fix commit or evidence-based rejection."
         echo "## Changed paths"; echo "OPTIONAL: paths changed."
         echo "## Commit body"; echo "OPTIONAL: when committing or delivering.";;
@@ -893,7 +1003,8 @@ cmd_submit() {
   local role run task dispatch ws errs=()
   role=$(spec_line "$path" Role); run=$(spec_line "$path" Run); task=$(spec_line "$path" Task)
   dispatch=$(spec_line "$path" Dispatch); ws=$(spec_line "$path" Workspace | sed -E 's/ \(branch .*//')
-  case $role in builder|reviewer|support-engineer) ;; *) die "submit: Role: must be builder, reviewer or support-engineer";; esac
+  local as=$role; [[ "$role" =~ ^($SENIOR)$ ]] && as=builder # senior roles pass the Builder's checks
+  case $as in builder|reviewer|support-engineer) ;; *) die "submit: Role: must be builder, reviewer, support-engineer, ${SENIOR//|/ or }";; esac
   [ $check = 1 ] || { [ -n "$run" ] && [ -n "$task" ] && [ -n "$dispatch" ]; } \
     || die "submit: Run, Task and Dispatch lines are required to send worker_done (--check validates only)"
 
@@ -916,10 +1027,10 @@ cmd_submit() {
   if [ -n "$ws" ] && git -C "$ws" rev-parse --git-dir >/dev/null 2>&1; then
     local head dirty; head=$(git -C "$ws" rev-parse HEAD); dirty=$(git -C "$ws" status --porcelain | cut -c4- | paste -sd, - || true)
     rev="$head ${dirty:+(uncommitted: $dirty)}"; rev=${rev% }; [ -n "$dirty" ] || rev="$head (clean)"
-    [ "$role:$ok" != builder:implemented ] || [ -z "$dirty" ] \
+    [ "$as:$ok" != builder:implemented ] || [ -z "$dirty" ] \
       || errs+=("verdict implemented with uncommitted changes in $ws: $dirty (commit them, or report partial)")
-    if [ "$role:$ok" = builder:implemented ] || [ "$role:$ok" = reviewer:pass ]; then
-      local vlog re=""; vlog=$(verify_log "$(dirname "$(dirname "$path")")" "$ws"); [ $role = builder ] || re=" --reuse"
+    if [ "$as:$ok" = builder:implemented ] || [ "$as:$ok" = reviewer:pass ]; then
+      local vlog re=""; vlog=$(verify_log "$(dirname "$(dirname "$path")")" "$ws"); [ $as = builder ] || re=" --reuse"
       verify_ok "$vlog" || errs+=("verdict $ok needs a green verify at HEAD: run team verify$re (no ok $vlog)")
     fi
   else
@@ -946,6 +1057,7 @@ cmd_submit() {
     }' "$path" >"$tmpf" && cat "$tmpf" >"$path" && rm -f "$tmpf"
   echo "report ok: $role, $ok, $rev"
   [ $check = 0 ] || return 0
+  if [ "$as" != "$role" ]; then solo_finish "$path" "$role" "$run" "$task" "$ok" "$verdict" "$summary"; return; fi
 
   local outcome=succeeded; case $ok in blocked|failed) outcome=failed;; esac
   if [ -z "$from" ]; then
@@ -1081,7 +1193,7 @@ work_args() { # spec -> the --ticket or --goal/--scope flags that spec was writt
 }
 processed() { # feature task report verdict next: handoff line per start.md "Handoff"
   local fdir st d head; fdir=$(feature_dir "$1"); st=$(load_state "$1")
-  d=$(jq -r --arg t "$2" '.tasks[$t].dispatches[-1].id' <<<"$st")
+  d=$(jq -r --arg t "$2" '.tasks[$t].dispatches[-1].id // .tasks[$t].self.dispatch // "-"' <<<"$st")
   head=$(git -C "$(jq -r .workspace.path <<<"$st")" rev-parse --short HEAD 2>/dev/null || echo "?")
   echo "- Processed: $2 | $d | ${3#"$fdir"/} | $4 | $head | $5" >>"$fdir/handoff.md"
 }
@@ -1354,6 +1466,7 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
 need node; load_cfg
 case $cmd in
   init) cmd_init "$@";;
+  solo) cmd_solo "$@";;
   spec|task|dispatch|start|review|fix|rereview|accept|status|board|read|close|verify|retry|pr-preflight)
     if [ -n "${1:-}" ] && [ -f "$(state_file "$1")" ]; then feature=$1; shift; else feature=$(infer_feature); fi
     "cmd_${cmd//-/_}" "$feature" "$@";;

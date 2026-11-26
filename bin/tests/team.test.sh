@@ -37,6 +37,7 @@ case "$1 $2" in
     else echo '{"ok":true,"result":{"transcript":{"nextCursor":"c2","messages":[{"role":"user","blocks":[{"type":"text","text":"prompt"}]},{"role":"assistant","blocks":[{"type":"tool_use"}]}]}}}'; fi;;
   "orchestration worker-stop") echo '{"ok":true,"result":{"state":"stopped"}}';;
   "orchestration task-update") echo '{"ok":true,"result":{}}';;
+  "orchestration dispatch") c=$(grep -c "orchestration dispatch" "$FAKE_LOG"); echo "{\"ok\":true,\"result\":{\"dispatch\":{\"id\":\"ctx_self$c\",\"status\":\"dispatched\"},\"injected\":false}}";;
   "orchestration send") echo '{"ok":true,"result":{"id":"msg_1","delivered":true}}';;
   "agent installed") echo '{"ok":true,"result":{"agents":[{"id":"claude","name":"Claude","default":true},{"id":"codex","name":"Codex","default":false},{"id":"hermes","name":"Hermes","default":false},{"id":"ghost","name":"Ghost","default":false}]}}';;
   *) echo '{"ok":false}'; exit 1;;
@@ -449,6 +450,34 @@ models:
 X
 out=$(ag --check); rc=$?
 check "agents --check passes a valid catalog" '[ $rc -eq 0 ] && grep -q "^models: ok$" <<<"$out"'
+
+# solo: a PO-invoked senior session works its own Task (separate repo, no config)
+solo="$tmp/solo"; mkdir -p "$solo"; git -C "$solo" init -q -b main && git -C "$solo" commit -q --allow-empty -m init
+SF="$solo/.team/api"; : >"$FAKE_LOG"
+out=$(cd "$solo" && ORCA_TERMINAL_HANDLE=term_me "$team" solo api --role senior-backend --goal "Add GET /health" 2>"$tmp/err")
+check "solo exits 0 and switches off the base branch" '[ $? -eq 0 ] && [ "$(git -C "$solo" symbolic-ref --short HEAD)" = feat/api ]'
+check "solo inits on the current checkout (no worktree)" '! grep -q "worktree create" "$FAKE_LOG" && [ "$(jq -r .workspace.path "$SF/run.json")" = "$solo" ]'
+check "solo writes a senior spec and creates the Task" 'grep -q "^Role: senior-backend$" "$SF/specs/01-senior-backend.md" && grep -q -- "task-create --run run_test1 --spec-file $SF/specs/01-senior-backend.md --task-title senior-backend: Add GET /health" "$FAKE_LOG"'
+check "solo dispatches the Task to its own terminal" 'grep -q -- "orchestration dispatch --task task_1 --to term_me --run run_test1" "$FAKE_LOG" && [ "$(jq -r ".tasks.task_1.self.dispatch" "$SF/run.json")" = ctx_self1 ] && [ "$(jq -r ".tasks.task_1.dispatches|length" "$SF/run.json")" = 0 ]'
+check "solo marks init, task and dispatch for the dashboard" 'grep -q "\"team\":\"init\"" "$tmp/err" && grep -q "\"team\":\"task\"" "$tmp/err" && grep -q "\"team\":\"dispatch\",\"run\":\"run_test1\"" "$tmp/err"'
+check "solo prefills the report and handoff names the role" 'grep -q "^Role: senior-backend$" "$SF/reports/01-senior-backend.md" && grep -q "^Dispatch: ctx_self1$" "$SF/reports/01-senior-backend.md" && grep -q "^- Skills: senior-backend.$" "$SF/handoff.md"'
+check "solo excludes .team in a repo without init-team" 'git -C "$solo" check-ignore -q .team'
+check "solo prints the Task and report" '[ "$(jq -r .task <<<"$out")" = task_1 ] && [ "$(jq -r .report <<<"$out")" = "$SF/reports/01-senior-backend.md" ]'
+(cd "$solo" && ORCA_TERMINAL_HANDLE=term_me "$team" solo api --role senior-backend --goal "Add GET /health" >/dev/null 2>"$tmp/err")
+check "solo rerun resumes the open Task" '[ "$(grep -c task-create "$FAKE_LOG")" = 1 ] && grep -q "resuming task_1" "$tmp/err" && [ ! -f "$SF/specs/02-senior-backend.md" ]'
+(cd "$solo" && "$team" solo api --role builder --goal x >/dev/null 2>"$tmp/err")
+check "solo refuses a non-senior role" '[ $? -ne 0 ] && grep -q "role must be senior-backend or senior-frontend" "$tmp/err"'
+SR="$SF/reports/01-senior-backend.md"
+python3 - "$SR" <<'P'
+import sys; p = sys.argv[1]; t = open(p).read().split("\n")
+open(p, "w").write("\n".join(("partial. route only" if t[i-1] == "## Result" else "curl ok") if l.startswith("FILL:") else l for i, l in enumerate(t)))
+P
+: >"$FAKE_LOG"; out=$(cd "$solo" && "$team" submit "$SR")
+rc=$?; check "senior submit partial keeps the Task in progress, records handoff" '[ $rc -eq 0 ] && ! grep -q -e task-update -e "orchestration send" "$FAKE_LOG" && grep -q "^- Processed: task_1 | ctx_self[0-9] | reports/01-senior-backend.md | partial" "$SF/handoff.md" && [ "$(jq -r ".tasks.task_1.done // empty" "$SF/run.json")" = "" ]'
+perl -pi -e "s/^partial\. route only/implemented. GET \/health/" "$SR"; touch "$solo/x.txt"; git -C "$solo" add x.txt; git -C "$solo" commit -qm x
+(cd "$solo" && "$team" verify >/dev/null)
+: >"$FAKE_LOG"; out=$(cd "$solo" && "$team" submit "$SR")
+check "senior submit implemented completes the Task" 'grep -q -- "task-update --id task_1 --run run_test1 --status completed --result implemented. GET /health" "$FAKE_LOG" && [ "$(jq -r .tasks.task_1.done "$SF/run.json")" = implemented ] && grep -q "Task task_1: completed" <<<"$out"'
 
 # read, close
 : >"$FAKE_LOG"  # the close checks below count this feature's calls only

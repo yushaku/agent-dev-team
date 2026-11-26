@@ -149,6 +149,8 @@ export const ROLE_GROUP = {
   support: "plan",
   "support-engineer": "plan",
   builder: "build",
+  "senior-backend": "build",
+  "senior-frontend": "build",
   "anti-ai": "verify",
   reviewer: "verify",
   security: "verify",
