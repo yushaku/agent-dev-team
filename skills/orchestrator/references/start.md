@@ -51,7 +51,7 @@
 
 ## Dispatch and follow-ups
 
-- Use `specs.md` for inputs and peer communication. Keep the same workers/Reviewer through fixes and delivery; start follow-up Tasks on their terminals with `team start ... --reuse <role>` (`specs.md` "Task specs"). Keep sessions open until Run end. Replace only for Orca refusal or changed capability/tier, with handoff first; recheck eligibility through `routing.md`.
+- Use `specs.md` for inputs and peer communication. Keep the same workers/Reviewer through fixes and delivery; start fix rounds with `team fix` / `team rereview` (`review.md`) and other follow-up Tasks with `team start ... --reuse <role>` (`specs.md` "Task specs"). Keep sessions open until Run end. Replace only for Orca refusal or changed capability/tier, with handoff first; recheck eligibility through `routing.md`.
 - Preserve Task/round metadata and verify receipt identity. With `serial: true`, run one worker's verify at a time.
 - Unexpected HEAD change or handoff: compare reviewed and current revisions, preserve PO edits, redirect workers and review the delta.
 - Missing report: ask the same worker; if unavailable, read its latest output with `team read <role|task>`. A commit hash alone is insufficient.

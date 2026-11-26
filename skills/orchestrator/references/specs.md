@@ -13,7 +13,7 @@ You supply the judgment:
 - `--constraint` for project rules, protected user files, branch/delivery rules and, on UI tickets, `ui_rules` and the `design` slot. Isolated Tasks name their child worktree and integration target; workers need coordinator approval to change checkout/branch or create another worktree.
 - `--ref` for Task-specific references: source decisions and approval boundaries, related docs. Routine scoped reads, edits, tests and authorized delivery proceed; changed decisions use `gates.md`, permission failures use `start.md` "Worker permissions".
 
-Every new unit of work (build, fix, re-review, retro, close) is its own Task. Continue on the same worker with `--reuse <role>`: workers start `--keep-open`, so their terminal stays reusable. `send` to a settled Dispatch becomes a follow-up Task without this metadata; use `send` only to steer a worker on its current Task.
+Every new unit of work (build, fix, re-review, retro, close) is its own Task. Fix rounds: `team fix` / `team rereview` (`review.md`). Otherwise continue on the same worker with `--reuse <role>`: workers start `--keep-open`, so their terminal stays reusable. `send` to a settled Dispatch becomes a follow-up Task without this metadata; use `send` only to steer a worker on its current Task.
 
 ## Routing history
 
@@ -65,7 +65,7 @@ Workspace: <absolute checkout path and branch>
 Revision: <HEAD sha; list uncommitted work or say clean; not applicable for non-code work>
 
 ## Result
-<role verdict, outcome and unmet criteria>
+<verdict word from the table below>. <outcome and unmet criteria>
 ## Evidence
 <criteria checked, command/results, revision and raw-log paths; unverified checks explicit>
 ## Findings
@@ -78,7 +78,7 @@ Revision: <HEAD sha; list uncommitted work or say clean; not applicable for non-
 <open risks and human steps>
 ```
 
-Identity, Result and Evidence are required. Omit other empty sections. Report claims must name an artifact, source location or observed check; distinguish facts, hypotheses and unchecked items. Keep artifacts local and ignored; retention follows `delivery.md`.
+Identity, Result and Evidence are required. The first line under `## Result` starts with the role's verdict word exactly as in the table below (`changes requested.`, not `not approved` or `verdict: done`): `team status`, `team fix` and `team rereview` read it. Omit other empty sections. Report claims must name an artifact, source location or observed check; distinguish facts, hypotheses and unchecked items. Keep artifacts local and ignored; retention follows `delivery.md`.
 
 ### Content by worker role
 
