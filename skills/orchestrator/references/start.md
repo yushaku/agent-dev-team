@@ -3,27 +3,27 @@
 ## Preflight
 
 1. Identify repo, objective, source branch and any named Task/handoff. Read the project config, request, `todo.md` and named carry-over/research notes. Ask only for unresolved identity or scope; preserve user work.
-2. Establish "Shared feature workspace" and link `.team` and `worktree_links` to the main checkout. Verify "Coordinator delivery", then complete "Run selection" before planning, gates or worker Tasks. `team init <feature> --objective <text>` does the mechanical part (worktree, links, Run, `run.json`, handoff skeleton, board); identity and ownership checks stay yours. Run `team` from this session, as `team ...` or by path; `team help` lists the commands.
+2. Run `team init <feature> --objective <text>` from this session (`--here` keeps the current checkout). It creates the worktree and branch, links `.team` and `worktree_links`, creates and binds the Run, and writes `run.json` and a handoff skeleton with this session's Orca identity. Check what it recorded against "Shared feature workspace", "Coordinator delivery" and "Run selection" before planning, gates or worker Tasks. Call `team` as `team ...` or by path, never through a shell variable: the dashboard links this session to the Run from that command line.
 3. Follow install/verify commands and `serial`; separate baseline failures from regressions. With `codegraph: on`, initialize a missing worktree index before dispatch (`skills/init-team/references/config-schema.md` "Code search setup"). Read-only Support Engineers without a worktree use the main index.
 4. Plan and choose the team. Resolve models/slots through `routing.md`, and Task inputs through `specs.md`.
 
 ## Shared feature workspace
 
 - Orchestrator, default Builder and independent Reviewer use separate sessions in the same Orca worktree and feature branch through planning, build, review and delivery. Reuse the matching branch, or create the configured feature branch from the configured/PO-named base before grill writes repo docs.
-- If another objective or pending gate occupies the checkout, create a feature worktree through `orca-cli` and relocate coordination using its guide. A new coordinator session requires a handoff; changing shell cwd alone does not relocate an Orca session.
+- If another objective or pending gate occupies the checkout, `team init` gives the feature its own worktree. This session can coordinate from where it is; moving coordination there needs a handoff and a new session (load `orca-cli`). Changing shell cwd alone does not relocate an Orca session.
 - Verify workspace, checkout and branch before Run creation or dispatch and on resume. Record them in the handoff; use them for placement and check receipts against them. Use `--worktree current` only from that verified workspace.
 - Alternate build/fix and review. Commit writes before review and hold the reviewed revision stable until the verdict. Child-worktree exceptions are under "Team decisions"; the coordinator and integration Reviewer remain in the feature workspace.
 
 ## Run selection
 
-- New independent objective on `/orchestrator`, including after `/clear` or in a reused session/worktree: automatically create and bind one Orca Run once repo, workspace and coordinator identity are verified, before planning or the first gate/Task. Use `team init`, or the version-matched orchestration guide's `run-create`, name it for the objective and save the returned Run ID in `.team/<feature>/handoff.md` before continuing. Mechanical edits, UI rounds and read-only investigations follow this rule too. Failed or uncertain creation follows Orca recovery before Run-scoped work continues.
+- New independent objective on `/orchestrator`, including after `/clear` or in a reused session/worktree: create and bind one Orca Run with `team init`, named for the objective, before planning or the first gate/Task; it saves the Run ID in `run.json` and the handoff. Mechanical edits, UI rounds and read-only investigations follow this rule too. Failed or uncertain creation follows Orca recovery before Run-scoped work continues.
 - Continuing work: match handoff and live Orca state by repo, objective and Task ownership; reuse Run/Task identities. Without a handoff, discover through Orca; ask only when ownership is ambiguous. The session's current Run alone is insufficient.
 - Planning, Builder, Reviewer, specialists, fixes, re-reviews and delivery belong to that Run, including child-worktree and remote workers. Each ticket or review may have its own Task/Dispatch ID; carry the same Run ID in every Task spec.
-- Pass `--run <id>` explicitly on commands that accept it, including Task creation and worker starts. For Dispatch-addressed follow-ups, use the Dispatch belonging to that Run. Verify Task/Dispatch ownership in receipts and refresh handoff references before further dispatch; reconcile mismatches through Orca recovery. Process older-Run wakes under their owning IDs.
+- `team` passes `--run` on every Run-scoped command; pass it yourself on direct Orca commands that accept it. For Dispatch-addressed follow-ups, use the Dispatch belonging to that Run. Verify Task/Dispatch ownership in receipts and refresh handoff references before further dispatch; reconcile mismatches through Orca recovery. Process older-Run wakes under their owning IDs.
 
 ## Coordinator delivery
 
-- Identify this conversation's live chat or agent terminal through runtime metadata and Orca `agent show`/`agent list`. Workspace, title or mailbox existence alone does not prove identity or wake support.
+- `team whoami` reads this session's terminal handle and Orca session from runtime metadata and `agent list`; `team init` records it in the handoff. Workspace, title or mailbox existence alone does not prove identity or wake support.
 - Bind from the coordinator's own runtime environment; a chat ID passed as `--from` from another session is refused. Record receiver identity/surface in the handoff and inspect delivery warnings. Revalidate after replacement, relocation or a missing-sender error.
 - Never proxy a chat through a shell pane or another pane's `ORCA_TERMINAL_HANDLE`. Without a supported identity/wake route, hold dispatch, report the missing capability and transfer coordination through the Orca guide. PO pings, polling and background mailbox consumers are not delivery mechanisms.
 - Use supervised `worker-start` when a result must return. Completion follows the Dispatch's `worker_done` route after the report is written; shell-addressed `status` mail is insufficient. Accepted launch/stored mail does not prove wake or processing.
@@ -51,10 +51,10 @@
 
 ## Dispatch and follow-ups
 
-- Use `specs.md` for inputs and peer communication. Keep the same workers/Reviewer through fixes and delivery; start follow-up Tasks on their terminals (`specs.md` "Task specs"). Keep sessions open until Run end. Replace only for Orca refusal or changed capability/tier, with handoff first; recheck eligibility through `routing.md`.
+- Use `specs.md` for inputs and peer communication. Keep the same workers/Reviewer through fixes and delivery; start follow-up Tasks on their terminals with `team start ... --reuse <role>` (`specs.md` "Task specs"). Keep sessions open until Run end. Replace only for Orca refusal or changed capability/tier, with handoff first; recheck eligibility through `routing.md`.
 - Preserve Task/round metadata and verify receipt identity. With `serial: true`, run one worker's verify at a time.
 - Unexpected HEAD change or handoff: compare reviewed and current revisions, preserve PO edits, redirect workers and review the delta.
-- Missing report: ask the same worker; if unavailable, inspect its exact receipt session through the Orca guide, discovering transcript location/format. A commit hash alone is insufficient.
+- Missing report: ask the same worker; if unavailable, read its latest output with `team read <role|task>`. A commit hash alone is insufficient.
 - Before retry, stop, release or reassignment, load Orca's recovery/cleanup reference. Silence, timeout or uncertain liveness does not prove failure. Steer/stop by Dispatch identity; preserve retry limits.
 - On PO pause, stop workers still under coordinator control through the guide, preserve changes and write the handoff. Resume with existing identities/history.
 - On PO takeover, provide Task/Dispatch IDs, session/terminal, spec and dev URL; record transfer and leave that worker under PO control until returned.
@@ -67,7 +67,7 @@
 ## Board mapping
 
 - Dashboard work groups use repo then Orca Run ID, labelled by objective; use worktree only for activity without a Run ID. One Run spans coordinator/worker worktrees, while different Runs stay separate even in the same worktree. Worktree or branch equality alone does not assign activity to a Run.
-- Place Run card, status and ticket/PR links in the shared feature workspace: started `in-progress`, delivered/Gate 2 pending `in-review`, merged `completed`.
+- Place Run card, status and ticket/PR links in the shared feature workspace: started `in-progress` (`team init`), delivered/Gate 2 pending `in-review` (`team board in-review`), merged `completed` (`team close`).
 - No-code production investigations use the configured `branches.client_visible` remote ref.
 
 ## Worker permissions

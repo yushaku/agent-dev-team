@@ -9,7 +9,9 @@ Coordinate planning, worker Tasks, PO gates and delivery from an Orca chat or ag
 
 ## Rules
 
-- Load `orca-cli` and `orchestration` first; use their resolved executable, version-matched guides and recovery instructions.
+- Run the mechanical steps through `team` (`$AGENT_TEAM_HOME/bin/team`; `team help`): Run, worktree, Task spec, Task, Dispatch, status, worker output, close.
+- Load `orchestration` before the first dispatch: its version-matched guide covers waking, `check`, `reply`, `send` and escalations. Load one of its references only when the guide names it for the situation, such as recovery.
+- Load `orca-cli` only when a step needs Orca beyond both: relocating coordination, a browser check or gate screenshot, a DEV terminal, or worktree work `team` does not cover.
 - Read the main checkout's `.team/config.yaml` on entry/resume and before dispatch/follow-up. Missing config or model catalog: complete `init-team` before starting workers. Unknown keys: `skills/init-team/references/config-schema.md`.
 - Delegate implementation, investigation and review. Read process/config, requests, `todo.md`, `.team/` artifacts, gate material, Orca state and worker reports; leave source, diffs and full logs to workers.
 - Assign worker roles through Task specs; workers load their role skills and select applicable references. Coordinator dispatch inputs and report requirements live in `references/specs.md`.

@@ -1,44 +1,23 @@
 # Task specs
 
-Pass each Task's spec by absolute path. Follow-ups may reuse the file; new Tasks carry their own metadata.
+`team start <role> ...` writes the Task spec under `.team/<feature>/specs/`, creates the Task and dispatches the worker; `team spec` writes only the file, for edits before `team start <spec>`. `team help` lists the flags. A generated spec is the format reference, also for a hand-written one when `team` cannot place the worker.
 
-```text
-Role: <role id: builder|reviewer|support-engineer>
-Run: <owning Orca Run ID from start.md "Run selection">
-Measurement: {"kind":"build","round":null,"cause":null}
-Routing: {"tier":"work","catalog":"<alias>","agent":"<agent-id>","model":null,"effort":null}
-Routing-log: <absolute .team/<feature>/routing.jsonl path>
-Selection: <why this tier and catalog entry fit the Task>
-Ticket: <absolute path of the ticket file; replaces Goal and Scope>
-Goal: <only without a ticket (review, delivery, close, investigation): observable result>
-Scope: <only without a ticket: entry points, editable paths, spec/decisions by path>
-Spec: <absolute path of .team/<feature>/spec.md, seams included>
-Workspace: <exact Orca workspace selector, absolute checkout path and branch>
-Peers: <related same-Run Task IDs, roles and current Dispatch IDs when known>
-Constraints: <project rules, `matt.glossary`, `matt.adr`, protected user files, branch/delivery rules, human_only; UI ticket: `ui_rules` and `design` slot skills>
-Skills: <load skill team-<role> first, then other absolute SKILL.md paths; load conditional skills only when needed>
-Refs: <known Task-specific references; worker selects applicable role references after loading its skill>
-Evidence: <acceptance checks and commands.verify; serial if configured>
-Output: <report path and raw-log paths under .team/<feature>/>
-```
+`team` fills Role, Run, Measurement, Routing, Routing-log, Spec, Workspace, Peers, Skills (role skill first), Evidence (`commands.verify`, `serial`), Output, and Constraints from config: worker communication, browser, `matt.*`, `human_only`, codegraph. It refuses missing metadata, `FILL:` lines, a fix/re-review without a positive round, an alias outside its tier, and a Reviewer on a Builder's agent. The dashboard reads `Role`, `Measurement`, `Routing` and `Routing-log` from the Orca Task spec.
 
-- Start Tasks with `team start <role> --catalog <alias> --selection <why> (--ticket <path> | --goal <text> --scope <text>)`; fix rounds add `--kind fix --round N --cause C --reuse builder`. It writes the spec with these lines, refuses missing or `FILL:` values and Reviewer/Builder agent clashes, creates the Task, dispatches with `--keep-open` and records Routing history. Use `team spec` and edit the file when Constraints, Refs or Skills need more than the defaults. `team status` joins Task state with report verdicts.
-- Title: `<role>: <what>`. `Role`, `Measurement`, `Routing` and `Routing-log` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
-- Before each `task-create`, check the spec file has all four lines, `Run:` and, for `fix`/`re-review`, a positive `round`. Every new unit of work (build, fix, re-review, retro, close) is its own `task-create`, started by `--task <id>`; reuse the same worker with `--terminal <handle>`. Start Builders and Reviewers with `--keep-open` so that handle stays reusable. Do not hand new work to a settled Dispatch with `send`: Orca turns it into a follow-up Task without this metadata. Use `send` only to steer a worker on its current Task.
-- `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
-- Link tickets without restating them. Put the assigned role skill and resolved project slots in `Skills:` by absolute path, including `disable-model-invocation` skills. Workers load their role skill, resolve its core/conditional skills and read applicable references; the coordinator uses this contract to dispatch.
-- Pass resolved config/skills, not the full config. Models follow `routing.md`; Dispatch records follow "Routing history". Workers use "Report" and relevant `docs-policy.md` sections for docs.
-- Include an absolute pointer to "Worker communication" below in each Task's Constraints; supply related peer Dispatch IDs when available and refresh them after reassignment.
-- Set `Workspace:` per `start.md` "Shared feature workspace"; isolated Tasks name their child worktree and integration target. Workers need coordinator approval to change checkout/branch or create another worktree.
-- With `codegraph: on`, add to Constraints: "Code search: codegraph first (`codegraph_explore` MCP or `codegraph explore|callers|impact` CLI) for symbols, callers and impact; `rg` only for literal text. Do not `cat` whole files to find a symbol." (`skills/init-team/references/config-schema.md` "Code search setup").
-- Link source decisions and approval boundaries; include related docs and protect user files. Routine scoped reads, edits, tests and authorized delivery proceed; changed decisions use `gates.md`, permission failures use `start.md` "Worker permissions".
+You supply the judgment:
+
+- `--catalog` and `--selection`: tier and entry per `routing.md`, and why they fit.
+- `--ticket <path>`, linked without restating it; or `--goal` and `--scope` for reviews, delivery, close and investigations.
+- Measurement: `--kind` build|review|fix|re-review|delivery|close|merge|other. Fix/re-review Tasks in one cycle share a positive `--round`; fix `--cause` is defect|requirements|scope|standards, or omitted if unknown. Preserve metadata on retries.
+- `--skill` for resolved slot skills (`routing.md` "Skill slots"), `disable-model-invocation` ones included. Workers select their role references themselves.
+- `--constraint` for project rules, protected user files, branch/delivery rules and, on UI tickets, `ui_rules` and the `design` slot. Isolated Tasks name their child worktree and integration target; workers need coordinator approval to change checkout/branch or create another worktree.
+- `--ref` for Task-specific references: source decisions and approval boundaries, related docs. Routine scoped reads, edits, tests and authorized delivery proceed; changed decisions use `gates.md`, permission failures use `start.md` "Worker permissions".
+
+Every new unit of work (build, fix, re-review, retro, close) is its own Task. Continue on the same worker with `--reuse <role>`: workers start `--keep-open`, so their terminal stays reusable. `send` to a settled Dispatch becomes a follow-up Task without this metadata; use `send` only to steer a worker on its current Task.
 
 ## Routing history
 
-- At Task creation, fill `Routing:` with the initial selection, keeping null for omitted flags, and `Routing-log:` with the absolute `.team/<feature>/routing.jsonl` path. Orca Task specs are create-only in this CLI; later selections belong in that log.
-- After a successful dispatch receipt (`team dispatch` and `team start` do this), append `{"task":"<task-id>","dispatch":"<dispatch-id>","tier":"work","catalog":"<alias>","agent":"<agent-id>","model":null,"effort":null}` with resolved values. Check the Dispatch id first: receipt replay retains its existing record rather than appending a duplicate.
-- A retry/replacement gets its own record before follow-up work. Preserve previous attempts and pass the log path in the Run handoff.
-- The dashboard reads only matching Task records contained in `.team/` and binds settings to the exact Dispatch window; missing/ambiguous records stay unverified.
+Orca Task specs are create-only, so the Routing line holds the first selection and `routing.jsonl` holds every Dispatch: `team dispatch` and `team start` append one record per Dispatch id. Start retries and replacements through `team` as well, before follow-up work, and keep the log path in the handoff. The dashboard binds settings to the exact Dispatch window from matching records in `.team/`; missing or ambiguous records stay unverified.
 
 ## Worker communication
 
@@ -62,7 +41,7 @@ Messages point to files. Store all Run files under `.team/<feature>/` via the wo
 
 | Path | Writer | Content |
 |---|---|---|
-| `specs/NN-<role>[-rN].md` | Orchestrator | Task input; follow-ups may reuse it. Embed metadata in each new Task |
+| `specs/NN-<role>[-rN].md` | `team spec`/`team start` | Task input, one per Task |
 | `reports/NN-<role>[-rN].md` | The worker of Task NN | Task output, same NN as its spec |
 | `logs/NN-<command>.log` | The worker of Task NN | Full verify, test and tool output (`WRANGLER_LOG_PATH` included) |
 | `inputs/` | Orchestrator, from the PO | Reference docs, screenshots, sketches |
@@ -70,7 +49,7 @@ Messages point to files. Store all Run files under `.team/<feature>/` via the wo
 | `decisions.md` | Orchestrator | Numbered PO decisions: Gate 1 answers, scope cuts, Orchestrator defaults |
 | `spec.md` | Orchestrator (`to-spec`) | Spec and test seams |
 | `issues/NN-<slug>.md` | Orchestrator (`to-tickets`) | One ticket per Orca Task; `Blocked by:` line, no status |
-| `handoff.md` | Orchestrator | `start.md` "Handoff" |
+| `handoff.md` | Orchestrator | `start.md` "Handoff"; `team init` writes the skeleton |
 | `run.json` | `team` CLI | Run, workspace and each Task's spec, role and Dispatch terminals; read by `--reuse` and `team status` |
 
 ## Report
