@@ -35,6 +35,14 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
       routing.jsonl; record the Dispatch in run.json.
   start [feature] <spec|role> [spec flags] [task flags] [dispatch flags]
       With a role: spec + task + dispatch in one step (spec removed if the Task is refused).
+  fix [feature] [--cause C] [--round N] [--read-as V] [--selection T] [--constraint|--ref|--skill X]...
+      After a "changes requested" review: fix round N (review round + 1) on the same Builder,
+      same ticket, the review report as Ref; records the review as processed in handoff.md.
+      A third round is refused until the PO approves it (then pass --round 3). A report verdict
+      worded otherwise is refused unless --read-as "changes requested" (rereview: "implemented").
+  rereview [feature] [--read-as V] [--selection T] [--constraint|--ref|--skill X]...
+      After a fix round: scoped re-review of round N on the same Reviewer, with the prior review
+      and the fix report as Refs; records the fix as processed in handoff.md.
   status [feature] [--json]
       Orca Task status joined with Dispatch, report path and report verdict.
   board [feature] <todo|in-progress|in-review|completed>
@@ -592,12 +600,109 @@ whoami_line() {
   fi
 }
 
+# ---------- review rounds ----------
+
+task_index() { jq -r --arg t "$2" '[.tasks | keys_unsorted[]] | index($t)' <<<"$1"; }
+report_of() { spec_line "$1" Output | sed -E 's/[; (].*//'; }
+spec_round() { spec_line "$1" Measurement | jq -r '.round // 0' 2>/dev/null || echo 0; }
+work_args() { # spec -> the --ticket or --goal/--scope flags that spec was written with, one per line
+  local tk; tk=$(spec_line "$1" Ticket)
+  if [ -n "$tk" ]; then printf '%s\n' --ticket "$tk"
+  else printf '%s\n' --goal "$(spec_line "$1" Goal)" --scope "$(spec_line "$1" Scope)"; fi
+}
+processed() { # feature task report verdict next: handoff line per specs.md "Report"
+  local fdir st d head; fdir=$(feature_dir "$1"); st=$(load_state "$1")
+  d=$(jq -r --arg t "$2" '.tasks[$t].dispatches[-1].id' <<<"$st")
+  head=$(git -C "$(jq -r .workspace.path <<<"$st")" rev-parse --short HEAD 2>/dev/null || echo "?")
+  echo "- Processed: $2 | $d | ${3#"$fdir"/} | $4 | $head | $5" >>"$fdir/handoff.md"
+}
+# round_source feature role want-after-role -> task id of the role's latest Task, refusing when a
+# want-after-role Task already follows it (that round was started).
+round_source() {
+  set -e
+  local st t a; st=$(load_state "$1"); t=$(last_of_role "$st" "$2")
+  [ -n "$t" ] || die "no dispatched $2 Task in run.json"
+  a=$(last_of_role "$st" "$3")
+  [ -z "$a" ] || [ "$(task_index "$st" "$a")" -lt "$(task_index "$st" "$t")" ] \
+    || die "$3 Task $a already follows $2 Task $t"
+  echo "$t"
+}
+round_report() { # spec role -> report path, refusing a missing one
+  local r; r=$(report_of "$1")
+  [ -f "$r" ] || die "$2 report missing: $r (team read $2; ask the worker to write it)"
+  echo "$r"
+}
+
+# read_verdict report want read-as context -> verdict for the handoff. The report's own verdict must
+# start with <want>; otherwise the Orchestrator, having read the report, states it with --read-as.
+read_verdict() {
+  set -e
+  local v; v=$(report_verdict "$1")
+  shopt -s nocasematch
+  if [[ "$v" == "$2"* ]]; then echo "$v"
+  elif [ -z "$3" ]; then die "$4 says \"$v\", not $2. If the report means $2, pass --read-as \"$2\"; otherwise settle it first."
+  elif [[ "$3" == "$2" ]]; then echo "$2 (read as; report: ${v:0:60})"
+  else die "--read-as must be \"$2\""; fi
+}
+
+cmd_fix() {
+  local feature=$1; shift
+  local cause=defect round="" sel="" read_as="" extra=()
+  while [ $# -gt 0 ]; do case $1 in
+    --cause) cause=$2; shift 2;; --round) round=$2; shift 2;; --selection) sel=$2; shift 2;;
+    --read-as) read_as=$2; shift 2;;
+    --constraint|--ref|--skill) extra+=("$1" "$2"); shift 2;;
+    *) die "fix: unknown $1";; esac; done
+  local st rv spec report verdict n
+  rv=$(round_source "$feature" reviewer builder); st=$(load_state "$feature")
+  spec=$(jq -r --arg t "$rv" '.tasks[$t].spec' <<<"$st")
+  report=$(round_report "$spec" reviewer); verdict=$(read_verdict "$report" "changes requested" "$read_as" "fix: review $rv")
+  n=$(( $(spec_round "$spec") + 1 ))
+  if [ -n "$round" ]; then n=$round
+  elif [ $n -gt 2 ]; then die "fix: round $n would follow two failed fix rounds; ask the PO (review.md). After approval: team fix --round $n"; fi
+  local work=(); while IFS= read -r l; do work+=("$l"); done < <(work_args "$spec")
+  cmd_start "$feature" builder --kind fix --round "$n" --cause "$cause" --reuse builder "${work[@]}" \
+    --selection "${sel:-same Builder, fix round $n}" --ref "$report" \
+    --constraint "Fix round $n: answer every Must fix in $report (reproduce and fix, or reject with evidence); amend into the commits they correct." \
+    ${extra[@]+"${extra[@]}"}
+  processed "$feature" "$rv" "$report" "$verdict" "fix r$n"
+}
+
+cmd_rereview() {
+  local feature=$1; shift
+  local sel="" read_as="" extra=()
+  while [ $# -gt 0 ]; do case $1 in
+    --selection) sel=$2; shift 2;; --read-as) read_as=$2; shift 2;; --constraint|--ref|--skill) extra+=("$1" "$2"); shift 2;;
+    *) die "rereview: unknown $1";; esac; done
+  local st b spec kind report verdict n prior head
+  st=$(load_state "$feature"); b=$(last_of_role "$st" builder)
+  [ -n "$b" ] || die "rereview: no dispatched builder Task in run.json"
+  spec=$(jq -r --arg t "$b" '.tasks[$t].spec' <<<"$st")
+  kind=$(spec_line "$spec" Measurement | jq -r .kind)
+  [ "$kind" = fix ] || die "rereview: Builder Task $b is $kind, not a fix; a first review is team start reviewer"
+  b=$(round_source "$feature" builder reviewer)
+  report=$(round_report "$spec" builder); verdict=$(read_verdict "$report" implemented "$read_as" "rereview: fix $b")
+  n=$(spec_round "$spec")
+  prior=$(report_of "$(jq -r --arg t "$(last_of_role "$st" reviewer)" '.tasks[$t].spec' <<<"$st")")
+  head=$(git -C "$(jq -r .workspace.path <<<"$st")" rev-parse --short HEAD)
+  local work=(); while IFS= read -r l; do work+=("$l"); done < <(work_args "$spec")
+  cmd_start "$feature" reviewer --kind re-review --round "$n" --reuse reviewer "${work[@]}" \
+    --selection "${sel:-same Reviewer, scoped re-review round $n}" --ref "$prior" --ref "$report" \
+    --constraint "Scoped re-review round $n at $head: each finding of $prior resolved or not, with file:line; new findings only for fix-induced regressions." \
+    ${extra[@]+"${extra[@]}"}
+  processed "$feature" "$b" "$report" "$verdict" "re-review r$n"
+}
+
 report_verdict() { # report path -> first non-empty line under "## Result"
   [ -f "$1" ] || { echo "-"; return; }
   local v; v=$(awk '/^## Result/{f=1;next} f&&/^## /{exit} f&&NF{print;exit}' "$1" | cut -c1-120)
   echo "${v:-?}"
 }
 
+task_verdict() { # report status -> verdict; "missing" once the Task finished without a report
+  local v; v=$(report_verdict "$1")
+  if [ "$v" = - ] && { [ "$2" = completed ] || [ "$2" = failed ]; }; then echo missing; else echo "$v"; fi
+}
 cmd_status() {
   local feature=$1; shift
   local json=0; [ "${1:-}" = --json ] && json=1
@@ -610,7 +715,7 @@ cmd_status() {
     d=$(jq -r --arg i "$id" '.tasks[$i].dispatches[-1].id // "-"' <<<"$st")
     report=""; [ -n "$spec" ] && report=$(spec_line "$spec" Output | sed -E 's/[; (].*//')
     rows=$(jq -c --arg i "$id" --arg s "$status" --arg ti "$title" --arg d "$d" --arg r "$report" \
-      --arg v "$(report_verdict "$report")" '. + [{task:$i, status:$s, title:$ti, dispatch:$d, report:$r, verdict:$v}]' <<<"$rows")
+      --arg v "$(task_verdict "$report" "$status")" '. + [{task:$i, status:$s, title:$ti, dispatch:$d, report:$r, verdict:$v}]' <<<"$rows")
   done < <(jq -c '.[]' <<<"$tasks")
   if [ $json = 1 ]; then jq --arg r "$run" --arg f "$feature" '{feature:$f, run:$r, tasks:.}' <<<"$rows"; return; fi
   echo "$feature  Run $run  $(jq -r '.workspace.path + " (" + .workspace.branch + ")"' <<<"$st")"
@@ -685,7 +790,7 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
 need node; load_cfg
 case $cmd in
   init) cmd_init "$@";;
-  spec|task|dispatch|start|status|board|read|close)
+  spec|task|dispatch|start|fix|rereview|status|board|read|close)
     if [ -n "${1:-}" ] && [ -f "$(state_file "$1")" ]; then feature=$1; shift; else feature=$(infer_feature); fi
     "cmd_$cmd" "$feature" "$@";;
   *) usage >&2; exit 2;;

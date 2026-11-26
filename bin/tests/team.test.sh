@@ -200,9 +200,54 @@ check "status joins report verdict" '[ "$(jq -r ".tasks[0].verdict" <<<"$out")" 
 check "status shows dispatch" '[ "$(jq -r ".tasks[1].dispatch" <<<"$out")" = ctx_2 ]'
 "$team" status csv | grep -q "01-builder.md"
 check "status table prints" '[ $? -eq 0 ]'
+mv "$F/reports/01-builder.md" "$tmp/r1"
+check "status says missing for a finished Task without report" '[ "$("$team" status csv --json | jq -r ".tasks[0].verdict")" = missing ] && [ "$("$team" status csv --json | jq -r ".tasks[1].verdict")" = - ]'
+mv "$tmp/r1" "$F/reports/01-builder.md"
 
 FAKE_FAIL_START=1 "$team" start csv support-engineer --catalog claude-fast --goal "Probe" --scope "src/" --selection x >/dev/null 2>"$tmp/err"
 check "a refused start says how to settle the ready Task" '[ $? -ne 0 ] && grep -q "is ready with no worker.*team dispatch csv task_.*task-update --id task_" "$tmp/err"'
+# fix and rereview rounds (feature other)
+O="$repo/.team/other"; printf '# 01 thing\n' >"$O/issues/01-thing.md"
+"$team" start other builder --catalog claude-work --ticket "$O/issues/01-thing.md" --selection x >/dev/null 2>&1
+"$team" start other reviewer --catalog codex-work --ticket "$O/issues/01-thing.md" --selection y >/dev/null 2>&1
+bterm=$(jq -r '[.tasks[] | select(.role=="builder")][0].dispatches[-1].terminal' "$O/run.json")
+rterm=$(jq -r '[.tasks[] | select(.role=="reviewer")][0].dispatches[-1].terminal' "$O/run.json")
+"$team" fix other >/dev/null 2>"$tmp/err"
+check "fix refuses a missing review report" '[ $? -ne 0 ] && grep -q "reviewer report missing: $O/reports/02-reviewer.md" "$tmp/err"'
+printf '## Result\npass\n' >"$O/reports/02-reviewer.md"
+"$team" fix other >/dev/null 2>"$tmp/err"
+check "fix refuses a passing review" '[ $? -ne 0 ] && grep -q "says \"pass\", not changes requested" "$tmp/err"'
+"$team" fix other --read-as pass >/dev/null 2>"$tmp/err"
+check "--read-as names only the verdict the step needs" '[ $? -ne 0 ] && grep -q "read-as must be \"changes requested\"" "$tmp/err"'
+"$team" rereview other >/dev/null 2>"$tmp/err"
+check "rereview refuses when the last Builder Task is no fix" '[ $? -ne 0 ] && grep -q "is build, not a fix" "$tmp/err"'
+printf '## Result\nChanges requested: S1 Must fix.\n' >"$O/reports/02-reviewer.md"
+"$team" fix other >/dev/null 2>&1
+s=$O/specs/03-builder-r1.md
+check "fix writes round 1 with the ticket and the review as Ref" '[ -f "$s" ] && grep -q "\"kind\":\"fix\",\"round\":1,\"cause\":\"defect\"" "$s" && grep -q "^Ticket: $O/issues/01-thing.md" "$s" && grep -q "^Refs: .*02-reviewer.md" "$s"'
+check "fix dispatches to the Builder terminal" 'grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- "--terminal $bterm"'
+check "fix records the review as processed" 'grep -q "^- Processed: task_.* | reports/02-reviewer.md | Changes requested: S1 Must fix. | [0-9a-f]* | fix r1$" "$O/handoff.md"'
+"$team" fix other >/dev/null 2>"$tmp/err"
+check "a second fix for the same review is refused" '[ $? -ne 0 ] && grep -q "builder Task .* already follows reviewer Task" "$tmp/err"'
+"$team" rereview other >/dev/null 2>"$tmp/err"
+check "rereview refuses a missing fix report" '[ $? -ne 0 ] && grep -q "builder report missing" "$tmp/err"'
+printf '## Result\nimplemented\n' >"$O/reports/03-builder-r1.md"
+"$team" rereview other >/dev/null 2>&1
+s=$O/specs/04-reviewer-r1.md
+check "rereview writes round 1 with both reports as Refs" '[ -f "$s" ] && grep -q "\"kind\":\"re-review\",\"round\":1" "$s" && grep -q "^Refs: .*02-reviewer.md.*03-builder-r1.md" "$s"'
+check "rereview dispatches to the Reviewer terminal" 'grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- "--terminal $rterm"'
+check "rereview records the fix as processed" 'grep -q "| reports/03-builder-r1.md | implemented | .* | re-review r1$" "$O/handoff.md"'
+printf '## Result\nNot approved: S2 open\n' >"$O/reports/04-reviewer-r1.md"
+"$team" fix other --read-as "changes requested" >/dev/null 2>&1
+check "fix --read-as records the reading and the report wording" 'grep -q "| changes requested (read as; report: Not approved: S2 open) | .* | fix r2$" "$O/handoff.md"'
+check "fix after a failed re-review is round 2" '[ -f "$O/specs/05-builder-r2.md" ]'
+printf '## Result\nimplemented\n' >"$O/reports/05-builder-r2.md"; "$team" rereview other >/dev/null 2>&1
+printf '## Result\nchanges requested\n' >"$O/reports/06-reviewer-r2.md"
+"$team" fix other >/dev/null 2>"$tmp/err"
+check "a third fix round waits for the PO" '[ $? -ne 0 ] && grep -q "two failed fix rounds; ask the PO" "$tmp/err" && [ ! -f "$O/specs/07-builder-r3.md" ]'
+"$team" fix other --round 3 >/dev/null 2>&1
+check "fix --round 3 after PO approval" '[ -f "$O/specs/07-builder-r3.md" ]'
+
 # read, close
 out=$("$team" read csv builder --last 2)
 check "read follows the cursor to the tail, skips textless messages" 'grep -q "tail message" <<<"$out" && grep -q "^--- user" <<<"$out" && ! grep -q "tool_use" <<<"$out"'
