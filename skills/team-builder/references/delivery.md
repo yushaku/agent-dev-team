@@ -7,13 +7,11 @@
 
 Before final review:
 
-- Fetch origin; confirm target and count outgoing commits/authors with `git log origin/<target>..HEAD`.
-- Other-author commits absent from remote branches and not marked `-` by `git cherry origin/<target> <sha>`: disclose and ask before opening PR.
+- Run `team pr-preflight <target>`: it fetches, counts outgoing commits by author, and lists each `ask PO` (another author's commit on no remote branch and not in target) and each `wip` commit with its live lines. Disclose every `ask PO` line and ask before opening the PR; a `wip` with live lines needs squash on merge, not deletion.
 - Merge target in a separate worktree; no rebase while PO's dev server runs. Check semantic conflicts in changed models/callers; typecheck with that worktree's generated clients.
 - Apply migrations to a throwaway empty DB; require empty schema diff, then drop DB.
 - Rerun post-merge failing tests unmerged; pre-existing failures get separate `test:`/`fix:` commits.
 - Stacked PRs: after base merges, merge target into dependents again. Stale remote overwrite requires PO approval and `--force-with-lease=<branch>:<sha>`.
-- Before dropping `wip`, measure live lines with `git blame`; surviving lines require squash on merge, not deletion.
 
 ## Body
 

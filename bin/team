@@ -65,9 +65,22 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
       recorded worker, board completed and, when asked, remove the feature worktree. Refused with
       uncommitted changes, from inside the worktree, on a merge conflict (merge aborted) or a
       failed verify (merge kept, nothing closed).
+  retry [feature] <task-id|role> --reason TEXT [--catalog A] [--same-agent-ok]
+      A worker that failed to run (launch, account, balance, crash): stop its Dispatch, set the
+      Task ready and dispatch again on catalog entry A of the spec's tier (default: the failed
+      Dispatch's entry); records
+      the reason in handoff.md. Refused for a completed Task.
+  pr-preflight [feature] <target> [--remote R]
+      Before a PR from a long-lived branch: fetch, outgoing commits by author, other-author commits
+      on no remote branch and not in target (ask the PO), wip commits with their live lines.
+  verify [feature] [--reuse]
+      Worker side: commands.verify in the workspace, logged as logs/verify-<sha>.log with the result
+      per command (serial: true waits for other verifies). --reuse keeps a green log at the same
+      clean HEAD. Uncommitted changes log as -dirty and do not count for submit.
   submit <report> [--summary <text>] [--check] [--from <orca_session_id:...>]
       Worker side: check the prefilled report (FILL lines, verdict word first, Evidence, Reviewer
-      Standards/Spec, Builder "implemented" on a clean tree), record Revision, then send worker_done
+      Standards/Spec, Builder "implemented" on a clean tree, a green team verify log at HEAD for
+      implemented and pass), record Revision, then send worker_done
       (outcome failed only for blocked/failed). --check validates without sending.
   agents [--json | --check]
       Orca agents on this host: CLI, launch flags Orca passes, own default model, the models each
@@ -843,8 +856,8 @@ write_skeleton() {
     esac
     echo "## Evidence"
     case $role in
-      builder) echo "FILL: each acceptance criterion with its check and result; failing-before and passing-after output; verify result per command with the HEAD sha; raw logs under logs/.";;
-      reviewer) echo "FILL: verify reused (same sha, clean tree) or rerun, per command; acceptance evidence inspected; targeted checks run.";;
+      builder) echo "FILL: each acceptance criterion with its check and result; failing-before and passing-after output; the team verify lines (run it after the final commit); other raw logs under logs/.";;
+      reviewer) echo "FILL: team verify --reuse lines; acceptance evidence inspected; targeted checks run.";;
       *) echo "FILL: requirements summary (at most 10 lines); reproduction and impact; confirmed cause or labelled hypotheses; affected path:line.";;
     esac
     case $role in
@@ -905,6 +918,10 @@ cmd_submit() {
     rev="$head ${dirty:+(uncommitted: $dirty)}"; rev=${rev% }; [ -n "$dirty" ] || rev="$head (clean)"
     [ "$role:$ok" != builder:implemented ] || [ -z "$dirty" ] \
       || errs+=("verdict implemented with uncommitted changes in $ws: $dirty (commit them, or report partial)")
+    if [ "$role:$ok" = builder:implemented ] || [ "$role:$ok" = reviewer:pass ]; then
+      local vlog re=""; vlog=$(verify_log "$(dirname "$(dirname "$path")")" "$ws"); [ $role = builder ] || re=" --reuse"
+      verify_ok "$vlog" || errs+=("verdict $ok needs a green verify at HEAD: run team verify$re (no ok $vlog)")
+    fi
   else
     rev="not applicable (no git workspace)"
   fi
@@ -941,6 +958,115 @@ cmd_submit() {
     --task-id "$task" --dispatch-id "$dispatch" --outcome "$outcome" --report-path "$path")
   echo "worker_done sent ($outcome): $(jq -c . <<<"$res" | cut -c1-200)"
   echo "Done: return to an idle prompt."
+}
+
+# ---------- worker checks ----------
+
+verify_ok() { [ -f "$1" ] && [ "$(tail -1 "$1")" = "# result: ok" ]; }
+verify_log() { echo "$1/logs/verify-$(git -C "$2" rev-parse --short=12 HEAD).log"; } # fdir workspace
+
+# team verify [feature] [--reuse]: worker side. commands.verify in the feature workspace, logged as
+# logs/verify-<sha>.log; team submit wants a green one at HEAD for implemented and pass.
+cmd_verify() {
+  set -e
+  local feature=$1; shift; local reuse=0
+  while [ $# -gt 0 ]; do case $1 in --reuse) reuse=1; shift;; *) die "verify: unknown $1";; esac; done
+  local st ws fdir log dirty head
+  st=$(load_state "$feature"); ws=$(jq -r .workspace.path <<<"$st"); fdir=$(feature_dir "$feature")
+  head=$(git -C "$ws" rev-parse HEAD); log=$(verify_log "$fdir" "$ws"); mkdir -p "$fdir/logs"
+  dirty=$(git -C "$ws" status --porcelain | cut -c4- | paste -sd, - || true)
+  if [ $reuse = 1 ] && [ -z "$dirty" ] && verify_ok "$log"; then
+    echo "verify at $head (clean), reused $log"
+    sed -n 's/^# ok: /verify ok (reused): /p' "$log"; return 0
+  fi
+  if [ -n "$dirty" ]; then
+    log=${log%.log}-dirty.log
+    echo "team: uncommitted changes ($dirty): this run does not count for team submit" >&2
+  fi
+  local lock=""
+  if [ "$(cfg '.commands.serial // .serial // false')" = true ]; then # one verify at a time across workers
+    lock="$(main_checkout)/.team/.verify.lock"
+    until mkdir "$lock" 2>/dev/null; do
+      local pid; pid=$(cat "$lock/pid" 2>/dev/null || true)
+      if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then rm -rf "$lock"; continue; fi
+      echo "team: waiting for another verify (serial: true)" >&2; sleep 5
+    done
+    echo $$ >"$lock/pid"; trap 'rm -rf "$lock"' EXIT
+  fi
+  echo "verify at $head ($([ -z "$dirty" ] && echo clean || echo "uncommitted: $dirty")), log $log"
+  local rc=0; run_verify "$ws" "$log" || rc=1
+  [ -z "$lock" ] || { rm -rf "$lock"; trap - EXIT; }
+  return $rc
+}
+
+# team pr-preflight [feature] <target> [--remote R]: delivery.md "Before a PR from a long-lived
+# branch", the read-only part. Lists what needs the PO; merging, migrations and tests stay manual.
+cmd_pr_preflight() {
+  set -e
+  local feature=$1 target=${2:-}; [ -n "$target" ] || die "pr-preflight: <target branch> required"; shift 2
+  local remote=origin
+  while [ $# -gt 0 ]; do case $1 in --remote) remote=$2; shift 2;; *) die "pr-preflight: unknown $1";; esac; done
+  local st ws up me ask=0
+  st=$(load_state "$feature"); ws=$(jq -r .workspace.path <<<"$st"); up="$remote/$target"
+  git -C "$ws" fetch -q "$remote" || die "pr-preflight: git fetch $remote failed"
+  git -C "$ws" rev-parse -q --verify "$up" >/dev/null || die "pr-preflight: $up not found after fetch"
+  me=$(git -C "$ws" config user.email || true)
+  echo "outgoing $up..HEAD: $(git -C "$ws" rev-list --count "$up..HEAD") commit(s)"
+  git -C "$ws" log --format='%an <%ae>' "$up..HEAD" | sort | uniq -c | sed 's/^ */  /'
+  local sha email subj
+  while IFS=$'\t' read -r sha email subj; do
+    [ -n "$sha" ] && [ "$email" != "$me" ] || continue
+    [ -z "$(git -C "$ws" branch -r --contains "$sha" 2>/dev/null | head -1)" ] || continue
+    git -C "$ws" cherry "$up" "$sha" | grep -q "^- $sha" && continue
+    echo "ask PO: ${sha:0:9} by $email ($subj) is on no remote branch and not in $target"; ask=$((ask+1))
+  done < <(git -C "$ws" log --format=$'%H\t%ae\t%s' "$up..HEAD")
+  local f live
+  while IFS=$'\t' read -r sha subj; do
+    [ -n "$sha" ] || continue
+    live=0
+    while IFS= read -r f; do
+      [ -n "$f" ] && git -C "$ws" cat-file -e "HEAD:$f" 2>/dev/null || continue
+      live=$((live + $(git -C "$ws" blame --line-porcelain HEAD -- "$f" | grep -c "^$sha " || true)))
+    done < <(git -C "$ws" show --format= --name-only "$sha")
+    if [ $live -gt 0 ]; then echo "wip ${sha:0:9} ($subj): $live live line(s); squash on merge, do not drop"; ask=$((ask+1))
+    else echo "wip ${sha:0:9} ($subj): no live lines; safe to drop"; fi
+  done < <(git -C "$ws" log -i --grep='^wip' --format=$'%H\t%s' "$up..HEAD")
+  echo "preflight: $([ $ask = 0 ] && echo "nothing for the PO" || echo "$ask item(s) for the PO")"
+}
+
+# team retry [feature] <task|role> --reason TEXT [--catalog A] [--same-agent-ok]: a worker that failed
+# to run (launch, account, crash). Stops its Dispatch, sets the Task ready, dispatches again (on
+# another entry of the tier with --catalog) and records the reason in handoff.md.
+cmd_retry() {
+  set -e
+  local feature=$1 ref=${2:-}; [ -n "$ref" ] || die "retry: <task-id|role> required"; shift 2
+  local reason="" dargs=()
+  while [ $# -gt 0 ]; do case $1 in
+    --reason) reason=$2; shift 2;; --catalog) dargs+=(--catalog "$2"); shift 2;; --same-agent-ok) dargs+=("$1"); shift;;
+    *) die "retry: unknown $1";; esac; done
+  [ -n "$reason" ] || die "retry: --reason required (the error the worker hit)"
+  local st run task d status
+  st=$(load_state "$feature"); run=$(jq -r .run <<<"$st")
+  if [[ "$ref" =~ ^($ROLES)$ ]]; then task=$(last_of_role "$st" "$ref"); else task=$ref; fi
+  d=$(jq -r --arg t "$task" '.tasks[$t].dispatches[-1].id // empty' <<<"$st")
+  [ -n "$d" ] || die "retry: no Dispatch recorded for $ref"
+  status=$(orca_call orchestration task-list --run "$run" | jq -r --arg t "$task" '.tasks[] | select(.id==$t) | .status')
+  [ "$status" != completed ] || die "retry: $task is completed; a new round is team fix, rereview or start"
+  if [ "${dargs[0]-}" != --catalog ]; then # default: the entry of the failed Dispatch, not the spec's first
+    local last; last=$(jq -r --arg d "$d" 'select(.dispatch==$d) | .catalog' "$(jq -r .routingLog <<<"$st")" 2>/dev/null | tail -1)
+    [ -z "$last" ] || dargs=(--catalog "$last" ${dargs[@]+"${dargs[@]}"})
+  fi
+  local spec routing role same=0; spec=$(jq -r --arg t "$task" '.tasks[$t].spec' <<<"$st"); role=$(jq -r --arg t "$task" '.tasks[$t].role' <<<"$st")
+  routing=$(spec_line "$spec" Routing)
+  [ "${dargs[0]-}" != --catalog ] || routing=$(routing_for "$role" "${dargs[1]}" "$(jq -r .tier <<<"$routing")")
+  [[ " ${dargs[*]-} " != *" --same-agent-ok "* ]] || same=1
+  check_independent "$st" "$role" "$(jq -r '.agent // empty' <<<"$routing")" $same # refuse before stopping the worker
+  local res; res=$(orca_call orchestration worker-stop --dispatch "$d")
+  echo "stopped $d: $(jq -r '.state // "ok"' <<<"$res")"
+  orca_call orchestration task-update --id "$task" --status ready >/dev/null
+  local out; out=$(cmd_dispatch "$feature" "$task" ${dargs[@]+"${dargs[@]}"})
+  echo "- Retry: $task | $d -> $(jq -r .dispatch <<<"$out") | $(tail -1 "$(jq -r .routingLog <<<"$st")" | jq -r .catalog) | $reason" >>"$(feature_dir "$feature")/handoff.md"
+  echo "$out"
 }
 
 # ---------- review rounds ----------
@@ -995,10 +1121,11 @@ run_verify() {
   while IFS= read -r c; do
     [ -n "$c" ] || continue; n=$((n+1))
     echo "\$ $c" >>"$log"
-    if (cd "$dir" && sh -c "$c") >>"$log" 2>&1; then echo "verify ok: $c"
-    else echo "verify FAILED: $c (log $log)"; ok=1; fi
+    if (cd "$dir" && sh -c "$c") >>"$log" 2>&1; then echo "verify ok: $c"; echo "# ok: $c" >>"$log"
+    else echo "verify FAILED: $c (log $log)"; echo "# FAILED: $c" >>"$log"; ok=1; fi
   done < <(cfg '.commands.verify // [] | if type=="array" then .[] else . end')
   [ $n -gt 0 ] || echo "verify: commands.verify is empty; nothing run"
+  if [ $ok = 0 ]; then echo "# result: ok" >>"$log"; else echo "# result: failed" >>"$log"; fi
   return $ok
 }
 base_of() { jq -r '.workspace.base // empty' <<<"$1" | grep . || cfg '.branches.base // "main"'; }
@@ -1227,8 +1354,8 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
 need node; load_cfg
 case $cmd in
   init) cmd_init "$@";;
-  spec|task|dispatch|start|review|fix|rereview|accept|status|board|read|close)
+  spec|task|dispatch|start|review|fix|rereview|accept|status|board|read|close|verify|retry|pr-preflight)
     if [ -n "${1:-}" ] && [ -f "$(state_file "$1")" ]; then feature=$1; shift; else feature=$(infer_feature); fi
-    "cmd_$cmd" "$feature" "$@";;
+    "cmd_${cmd//-/_}" "$feature" "$@";;
   *) usage >&2; exit 2;;
 esac

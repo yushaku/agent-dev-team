@@ -35,6 +35,8 @@ case "$1 $2" in
   "orchestration worker-read")
     if [[ "$*" == *--cursor* ]]; then echo '{"ok":true,"result":{"transcript":{"messages":[{"role":"assistant","blocks":[{"type":"text","text":"tail message"}]}]}}}'
     else echo '{"ok":true,"result":{"transcript":{"nextCursor":"c2","messages":[{"role":"user","blocks":[{"type":"text","text":"prompt"}]},{"role":"assistant","blocks":[{"type":"tool_use"}]}]}}}'; fi;;
+  "orchestration worker-stop") echo '{"ok":true,"result":{"state":"stopped"}}';;
+  "orchestration task-update") echo '{"ok":true,"result":{}}';;
   "orchestration send") echo '{"ok":true,"result":{"id":"msg_1","delivered":true}}';;
   "agent installed") echo '{"ok":true,"result":{"agents":[{"id":"claude","name":"Claude","default":true},{"id":"codex","name":"Codex","default":false},{"id":"hermes","name":"Hermes","default":false},{"id":"ghost","name":"Ghost","default":false}]}}';;
   *) echo '{"ok":false}'; exit 1;;
@@ -339,6 +341,21 @@ touch "$WS/stray.txt"
 check "submit refuses implemented on a dirty tree" '[ $? -ne 0 ] && grep -q "uncommitted changes in $WS: stray.txt" "$tmp/err"'
 rm "$WS/stray.txt"
 "$team" submit "$R" 2>"$tmp/err"
+check "submit wants a green team verify at HEAD for implemented" '[ $? -ne 0 ] && grep -q "needs a green verify at HEAD: run team verify (no ok .*/logs/verify-" "$tmp/err"'
+VLOG="$F/logs/verify-$(git -C "$WS" rev-parse --short=12 HEAD).log"
+setverify false; (cd "$WS" && "$team" verify >"$tmp/out" 2>&1); rc=$?
+check "verify from the worktree logs a failed run under the sha" '[ $rc -ne 0 ] && grep -q "verify FAILED: false" "$tmp/out" && [ "$(tail -1 "$VLOG")" = "# result: failed" ]'
+setverify true; (cd "$WS" && "$team" verify >"$tmp/out" 2>&1)
+check "verify passes and names sha and tree state" 'grep -q "^verify at $(git -C "$WS" rev-parse HEAD) (clean), log $VLOG" "$tmp/out" && grep -q "^verify ok: true$" "$tmp/out"'
+out=$(cd "$WS" && "$team" verify --reuse 2>&1)
+check "verify --reuse keeps a green log at the same clean HEAD" 'grep -q "reused $VLOG" <<<"$out" && grep -q "^verify ok (reused): true$" <<<"$out"'
+touch "$WS/stray.txt"; out=$(cd "$WS" && "$team" verify --reuse 2>&1); rm "$WS/stray.txt"
+check "verify on a dirty tree reruns into a -dirty log that does not count" 'grep -q "does not count" <<<"$out" && [ -f "${VLOG%.log}-dirty.log" ]'
+perl -pi -e "s/serial: false/serial: true/" .team/config.yaml; mkdir -p .team/.verify.lock; echo 999999 >.team/.verify.lock/pid
+out=$(cd "$WS" && "$team" verify 2>&1)
+check "serial verify clears a stale lock and releases its own" 'grep -q "verify ok: true" <<<"$out" && [ ! -d .team/.verify.lock ]'
+cp "$tmp/cfg2" .team/config.yaml
+"$team" submit "$R" 2>"$tmp/err"
 check "submit without an Orca session asks for --from" '[ $? -ne 0 ] && grep -q "pass --from" "$tmp/err"'
 out=$(ORCA_PANE_KEY=pane-1 "$team" submit "$R" --summary "Added --csv.")
 check "submit sends worker_done with identity, outcome and report" 'grep -q -- "orchestration send --from orca_session_id:sess-1 --type worker_done --subject builder: Implemented. --csv works. --body Added --csv. Report: $R --task-id task_1 --dispatch-id $D --outcome succeeded --report-path $R" "$FAKE_LOG" && grep -q "worker_done sent (succeeded)" <<<"$out"'
@@ -355,6 +372,31 @@ printf 'Role: reviewer\nRun: r\nTask: t\nDispatch: d\nWorkspace: %s (branch feat
 check "submit wants Reviewer Standards and Spec" '[ $? -ne 0 ] && grep -q "## Spec is missing or empty" "$tmp/err" && ! grep -q "## Standards is missing" "$tmp/err"'
 printf '## Spec\nNo findings.\n' >>"$RV"
 check "submit passes a reviewer report with both axes" '"$team" submit "$RV" --check >/dev/null'
+
+# pr-preflight
+git init -q --bare "$tmp/origin.git"; git -C "$repo" remote add origin "$tmp/origin.git"; git -C "$repo" push -q origin main
+echo x >"$WS/w.txt"; git -C "$WS" add w.txt; git -C "$WS" -c user.email=other@x -c user.name=Other commit -qm "WIP: try"
+echo y >"$WS/d.txt"; git -C "$WS" add d.txt; git -C "$WS" commit -qm "wip: dead"; git -C "$WS" rm -q d.txt; git -C "$WS" commit -qm "drop d"
+out=$("$team" pr-preflight csv main 2>&1)
+check "pr-preflight flags another author's commit on no remote" 'grep -q "^ask PO: [0-9a-f]* by other@x (WIP: try)" <<<"$out"'
+check "pr-preflight measures live wip lines" 'grep -q "(WIP: try): 1 live line(s); squash" <<<"$out" && grep -q "(wip: dead): no live lines; safe to drop" <<<"$out" && grep -q "^preflight: 2 item(s) for the PO" <<<"$out"'
+git -C "$WS" push -q origin HEAD:refs/heads/feat/csv
+check "a pushed commit is no longer an ask" '! "$team" pr-preflight csv main | grep -q "^ask PO"'
+
+# retry
+"$team" retry csv task_2 >/dev/null 2>"$tmp/err"
+check "retry needs a reason" '[ $? -ne 0 ] && grep -q "reason required" "$tmp/err"'
+"$team" retry csv task_1 --reason x >/dev/null 2>"$tmp/err"
+check "retry refuses a completed Task" '[ $? -ne 0 ] && grep -q "task_1 is completed" "$tmp/err"'
+old=$(jq -r ".tasks.task_2.dispatches[-1].id" "$F/run.json"); : >"$FAKE_LOG"
+"$team" retry csv task_2 --reason "Insufficient balance" >/dev/null 2>"$tmp/err"
+check "retry checks agent independence before it stops the worker" '[ $? -ne 0 ] && grep -q "equals a Builder agent" "$tmp/err" && ! grep -q worker-stop "$FAKE_LOG"'
+out=$("$team" retry csv task_2 --reason "Insufficient balance" --same-agent-ok 2>/dev/null)
+check "retry stops, sets ready and dispatches again" 'grep -q "worker-stop --dispatch $old" "$FAKE_LOG" && grep -q "task-update --id task_2 --status ready" "$FAKE_LOG" && grep -q "worker-start --run run_test1 --task task_2 --keep-open --worktree" "$FAKE_LOG" && [ "$(jq -r .dispatch <<<"$(tail -1 <<<"$out")")" != "$old" ]'
+"$team" retry csv task_2 --reason again --catalog codex-work --same-agent-ok >/dev/null 2>&1
+"$team" retry csv task_2 --reason third --same-agent-ok >/dev/null 2>&1
+check "retry without --catalog keeps the failed Dispatch's entry" '[ "$(tail -1 "$F/routing.jsonl" | jq -r .catalog)" = codex-work ] && grep -q "| codex-work | third$" "$F/handoff.md"'
+check "retry records the reason in the handoff" 'grep -q "^- Retry: task_2 | $old -> ctx_[0-9]* | .* | Insufficient balance$" "$F/handoff.md"'
 
 # agents: discovery and --check, against fake CLIs and a fake HOME
 A="$tmp/agents"; mkdir -p "$A/bin" "$A/home/.codex" "$A/home/.claude" "$A/repo/.team"

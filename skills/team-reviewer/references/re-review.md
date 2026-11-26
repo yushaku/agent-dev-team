@@ -1,3 +1,3 @@
 # Re-review
 
-Check verify evidence at the fix head first (`SKILL.md` step 1), then inspect only previous findings and the Task's named fix commits; mark each resolved or unresolved with file:line; add findings only for problems the fix introduced.
+The Task constraint lists the prior finding IDs and the fix delta (`git diff` or `git range-diff`). Run `team verify --reuse`, mark each ID resolved or unresolved with file:line, and add findings only for problems the fix introduced.

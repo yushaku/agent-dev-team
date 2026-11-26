@@ -43,7 +43,8 @@ Messages point to files. Store all Run files under `.team/<feature>/` via the wo
 |---|---|---|
 | `specs/NN-<role>[-rN].md` | `team spec`/`team start` | Task input, one per Task |
 | `reports/NN-<role>[-rN].md` | The worker of Task NN | Task output, same NN as its spec |
-| `logs/NN-<command>.log` | The worker of Task NN | Full verify, test and tool output (`WRANGLER_LOG_PATH` included) |
+| `logs/verify-<sha>.log` | `team verify` | `commands.verify` output and per-command result for that revision (`-dirty` when uncommitted) |
+| `logs/NN-<command>.log` | The worker of Task NN | Other test and tool output (`WRANGLER_LOG_PATH` included) |
 | `inputs/` | Orchestrator, from the PO | Reference docs, screenshots, sketches |
 | `shots/` | Builder (visual loop) | Screenshots per viewport and colour scheme |
 | `decisions.md` | Orchestrator | Numbered PO decisions: Gate 1 answers, scope cuts, Orchestrator defaults |
@@ -66,7 +67,7 @@ Report partial, blocked and failed outcomes as well. Report claims name an artif
 
 | Role | Result | Evidence and role-specific content |
 |---|---|---|
-| Builder | `implemented`, `partial`, `blocked` or `failed`; behavior delivered and criteria left unmet | Map acceptance criteria to checks; final revision and per-command verify results; changed paths, deviations and leftovers. Fix rounds map each finding ID to its fix or evidence-based rejection. Delivery adds Commit body and delivery references. |
+| Builder | `implemented`, `partial`, `blocked` or `failed`; behavior delivered and criteria left unmet | Map acceptance criteria to checks; `team verify` lines for the final revision; changed paths, deviations and leftovers. Fix rounds map each finding ID to its fix or evidence-based rejection. Delivery adds Commit body and delivery references. |
 | Reviewer | `pass`, `changes requested`, `blocked` or `inconclusive`; reviewed base and HEAD | Separate `## Standards` and `## Spec`; each finding has a stable ID, Must fix/Should fix, location, impact and reproduction/evidence. Cite the requirement for Spec findings. State zero findings explicitly on each clean axis; re-review resolves prior IDs. Missing access/evidence is not a pass. |
 | Support Engineer | `confirmed`, `not reproduced`, `needs clarification` or `blocked`; answer to the investigation question | Requirements summary at most 10 lines, reproduction and impact, confirmed cause or labelled hypotheses, affected paths and proposed next step/effort drivers. Ticket replies add client-language draft and PO translation; internal questions omit them. |
 
