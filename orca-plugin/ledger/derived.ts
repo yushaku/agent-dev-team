@@ -1,9 +1,10 @@
 import type { SQLInputValue, SQLOutputValue } from 'node:sqlite';
 import type { Store } from './store.ts';
-import { type HermesMessage, type HermesSession, parseFile, parseHermes } from './session.ts';
-import { dirname, join, basename } from 'node:path';
+import { type HermesMessage, type HermesSession, type OpenCodeRow, type OpenCodeSession, parseFile, parseHermes, parseOpenCode } from './session.ts';
+import { SOURCE_PATHS } from './sources.ts';
+import { basename } from 'node:path';
 
-export const PARSER_VERSION = 11;
+export const PARSER_VERSION = 12;
 
 // Match repeated records by occurrence. Place old-only records before the next shared
 // record, or before the new tail if the streams have no further common anchor.
@@ -110,29 +111,16 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
   const sessionRows = db.prepare(`SELECT item,bytes FROM dashboard_hermes JOIN archive.blobs USING(hash)
     WHERE version=? AND source=? AND sid=? ORDER BY generation,item`);
   const priorSession = db.prepare('SELECT sid FROM dashboard_hermes WHERE version=? AND source=? AND generation=? AND item=?');
-  const directory = db.prepare("SELECT 1 FROM versions WHERE source=? AND generation=? AND item='directory'");
   function file(source: SQLInputValue, generation: SQLInputValue, endId?: number) {
     const chunks = endId === undefined ? parts.all(source, generation) : historicParts.all(source, generation, endId);
     return Buffer.concat(chunks.map((r) => Buffer.from(r.bytes as Uint8Array))).toString();
   }
-  function sibling(path: string) {
-    return db.prepare("SELECT id,generation FROM sources JOIN cursors ON sources.id=cursors.source WHERE kind='copilot' AND path=?").get(path);
-  }
   function parse(kind: string, path: string, source: SQLInputValue, generation: SQLInputValue) {
-    const meta: Record<string, string> = Object.create(null);
-    if (kind === 'copilot') {
-      const side = sibling(join(dirname(path), 'workspace.yaml'));
-      if (side)
-        for (const line of file(side.id, side.generation).split('\n')) {
-          const m = /^([^ #\t-][^:]*):\s*(.*)$/.exec(line);
-          if (m) meta[m[1].trim()] = m[2].trim().replace(/^['"]|['"]$/g, '');
-        }
-    }
     const start = performance.now();
     const bytes = file(source, generation);
     let replayBytes = Buffer.byteLength(bytes);
     try {
-      let s = parseFile(kind, path, bytes, meta);
+      let s = parseFile(kind, path, bytes);
       let sid = s.id;
       if (
         (kind === 'codex' && sid === basename(path, '.jsonl') && !/"session_meta"/.test(bytes)) ||
@@ -158,7 +146,7 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
           if (old.generation !== generation) replayBytes += Buffer.byteLength(text);
           merged = merged ? mergeFile(kind, merged, text) : text;
         }
-        s = parseFile(kind, path, merged, meta);
+        s = parseFile(kind, path, merged);
       }
       if (previous && previous.sid !== sid) removeSession.run(version, source, previous.sid);
       removeSession.run(version, source, sid);
@@ -172,12 +160,13 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
     // sources.kind and sources.path are TEXT NOT NULL.
     const kind = job.kind as string,
       path = job.path as string;
-    if (kind === 'copilot' && directory.get(source, generation)) return;
-    if (kind === 'hermes' || kind === 'rtk') {
+    // Sources this version no longer reads (an archived GitHub Copilot session, say) stay archived but are not projected.
+    if (kind !== 'orca' && !Object.hasOwn(SOURCE_PATHS, kind)) return;
+    if (kind === 'hermes' || kind === 'rtk' || kind === 'opencode') {
       const dirty = new Set<string>();
       for (const { item, hash, bytes } of rows.iterate(source, generation, last, source, generation)) {
         const table = String(item).split('/')[0];
-        if (!['commands', 'sessions', 'messages'].includes(table)) continue;
+        if (!['commands', 'sessions', 'messages', 'session_v2', 'session_message', 'session_part'].includes(table)) continue;
         const r = JSON.parse(Buffer.from(bytes as Uint8Array).toString());
         if (kind === 'rtk') {
           removeRestoredCommand.run(version, source, generation, item, r.timestamp ?? null, r.rtk_cmd ?? null, r.project_path ?? null);
@@ -189,7 +178,7 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
             ...['timestamp', 'rtk_cmd', 'project_path', 'input_tokens', 'output_tokens', 'saved_tokens', 'exec_time_ms'].map((k) => r[k] ?? null),
           );
         } else {
-          const sid = table === 'sessions' ? r.id : r.session_id;
+          const sid = table === 'sessions' || table === 'session_v2' ? r.id : r.session_id;
           if (sid == null) continue;
           const old = priorSession.get(version, source, generation, item);
           if (old) dirty.add(String(old.sid));
@@ -197,27 +186,46 @@ export function projections({ db }: Store, version = PARSER_VERSION) {
           dirty.add(String(sid));
         }
       }
-      for (const sid of dirty) {
-        let session: HermesSession | undefined;
-        const messages = new Map<unknown, HermesMessage>();
-        for (const row of sessionRows.iterate(version, source, sid)) {
-          const r = JSON.parse(Buffer.from(row.bytes as Uint8Array).toString());
-          if (String(row.item).startsWith('sessions/')) session = r;
-          else messages.set(r.id ?? row.item, r);
+      if (kind === 'opencode')
+        for (const sid of dirty) {
+          // Rows are updated in place and may come back under a new rowid: keep the newest copy of each key.
+          let session: OpenCodeSession | undefined;
+          const messages = new Map<string, OpenCodeRow & { time_updated: number }>(),
+            parts = new Map<string, OpenCodeRow & { time_updated: number }>();
+          for (const row of sessionRows.iterate(version, source, sid)) {
+            const r = JSON.parse(Buffer.from(row.bytes as Uint8Array).toString());
+            const table = String(row.item).split('/')[0];
+            if (table === 'session_v2') {
+              if (!session || (r.time_updated ?? 0) >= (session.time_updated ?? 0)) session = r;
+              continue;
+            }
+            const map = table === 'session_message' ? messages : parts,
+              key = table === 'session_message' ? String(r.id) : r.message_id + '/' + r.ordinal,
+              old = map.get(key);
+            if (!old || (r.time_updated ?? 0) >= (old.time_updated ?? 0)) map.set(key, r);
+          }
+          removeSession.run(version, source, sid);
+          if (session && session.time_created != null)
+            save.run(version, source, generation, sid, JSON.stringify(parseOpenCode(session, [...messages.values()], [...parts.values()])));
         }
-        removeSession.run(version, source, sid);
-        if (session && session.started_at != null) {
-          const active = [...messages.values()].filter((r) => r.active === 1).sort((a, b) => a.timestamp - b.timestamp);
-          save.run(version, source, generation, sid, JSON.stringify(parseHermes(session, active)));
+      else
+        for (const sid of dirty) {
+          let session: HermesSession | undefined;
+          const messages = new Map<unknown, HermesMessage>();
+          for (const row of sessionRows.iterate(version, source, sid)) {
+            const r = JSON.parse(Buffer.from(row.bytes as Uint8Array).toString());
+            if (String(row.item).startsWith('sessions/')) session = r;
+            else messages.set(r.id ?? row.item, r);
+          }
+          removeSession.run(version, source, sid);
+          if (session && session.started_at != null) {
+            const active = [...messages.values()].filter((r) => r.active === 1).sort((a, b) => a.timestamp - b.timestamp);
+            save.run(version, source, generation, sid, JSON.stringify(parseHermes(session, active)));
+          }
         }
-      }
     } else if (kind === 'orca')
       db.prepare('INSERT OR REPLACE INTO dashboard_orca VALUES(?,?,?,?,?)').run(version, source, generation, path, file(source, generation));
-    else if (kind === 'copilot' && String(path).endsWith('/workspace.yaml')) {
-      const events = join(dirname(String(path)), 'events.jsonl'),
-        e = sibling(events);
-      if (e) parse(kind, events, e.id, e.generation);
-    } else parse(kind, path, source, generation);
+    else parse(kind, path, source, generation);
   }
   let pruned = false;
   function prune() {

@@ -26,12 +26,12 @@ test('the snapshot lists every source the ledger reads, with path, file count an
   assert.deepEqual(
     sources.map((s) => s.kind),
     [...Object.keys(SOURCE_PATHS), 'orca'],
-    'claude, codex, copilot, jcode, pi, hermes, rtk and orca',
+    'claude, codex, jcode, pi, hermes, rtk, opencode and orca',
   );
   for (const s of sources) {
     assert.ok(s.note.length > 20 && s.note === SOURCE_NOTES[s.kind], s.kind + ' has its note');
     assert.equal(s.present, false);
-    assert.equal(s.files, ['claude', 'codex', 'copilot', 'jcode', 'pi'].includes(s.kind) ? 0 : null, 'only file sources have a file count');
+    assert.equal(s.files, ['claude', 'codex', 'jcode', 'pi'].includes(s.kind) ? 0 : null, 'only file sources have a file count');
   }
   assert.ok(sources.find((s) => s.kind === 'claude')?.path.startsWith('~/'), 'the home directory is shown as ~');
 });
@@ -49,14 +49,14 @@ test('the configured roots, not the defaults, are what the methodology shows, an
   assert.ok(homedir().length > 1);
 });
 
-test('a Copilot directory marker is not counted as a file, and databases and Orca answers have no file count', (t) => {
+test('databases and Orca answers have no file count', (t) => {
   const { root, store } = scratch(t);
-  const dir = store.source('copilot', join(root, 'session-state', 'empty'));
-  store.db.prepare("INSERT INTO versions(source,generation,item,hash) VALUES(?,?,'directory','x')").run(dir, 1);
   store.source('hermes', join(root, 'state.db'));
+  store.source('opencode', join(root, 'opencode.db'));
   store.source('orca', 'run-list');
   const by = Object.fromEntries(readSources(store.db).map((s) => [s.kind, s]));
-  assert.equal(by.copilot.files, 0, 'an empty session directory is not a file');
+  assert.equal(by.opencode.files, null);
+  assert.equal(by.opencode.present, true);
   assert.equal(by.hermes.files, null);
   assert.equal(by.hermes.present, true);
   assert.equal(by.orca.files, null);

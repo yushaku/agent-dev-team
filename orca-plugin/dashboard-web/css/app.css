@@ -38,7 +38,7 @@
   --tier-async: var(--mauve);
   --tier-data: var(--pink);
   --tier-external: var(--peach);
-  /* Sapphire unused: too close to sky. Teal only for the Copilot agent series. */
+  /* Sapphire unused: too close to sky. */
   --sapphire: #85c1dc;
   --teal: #81c8be;
   /* Reserved: do not use */
@@ -601,9 +601,9 @@ section > p code {
   /* Chart series: one meaning per colour, charts and their legends only */
   --claude: var(--mauve);
   --codex: var(--green);
-  --copilot: var(--blue);
   --cursor: var(--sky);
   --hermes: var(--peach);
+  --opencode: var(--blue);
   --p-fin: var(--sky);
   --p-cr: var(--yellow);
   --p-cw: var(--red);

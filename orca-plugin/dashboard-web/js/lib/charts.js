@@ -72,8 +72,8 @@ export const persist = () => {
 const LEGACY_COL = {
   claude: "var(--claude)",
   codex: "var(--codex)",
-  copilot: "var(--copilot)",
   hermes: "var(--hermes)",
+  opencode: "var(--opencode)",
 };
 /* Any other agent gets a colour that depends only on its id (a hash), so it never changes with what else is loaded; two ids may share one.
    Swatches: a hue every 10 degrees (skipping 18 degrees around the legacy mauve, green, blue and peach) in two steps. Each is a light-dark() pair

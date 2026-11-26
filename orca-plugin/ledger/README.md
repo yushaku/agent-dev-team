@@ -12,11 +12,11 @@ Run the tests as the plugin README says ("Verify").
 | AGENT_LEDGER_HOME | ~/.agents/ledger | Private output directory |
 | AGENT_LEDGER_CLAUDE | ~/.claude/projects | Recursive *.jsonl |
 | AGENT_LEDGER_CODEX | ~/.codex/sessions | Recursive *.jsonl |
-| AGENT_LEDGER_COPILOT | ~/.copilot/session-state | */events.jsonl and */workspace.yaml |
 | AGENT_LEDGER_JCODE | ~/.jcode/sessions | *.json |
 | AGENT_LEDGER_PI | ~/.pi/agent/sessions | Recursive *.jsonl |
 | AGENT_LEDGER_HERMES | ~/.hermes/state.db | sessions, messages, system_prompts and session_model_usage |
 | AGENT_LEDGER_RTK | ~/Library/Application Support/rtk/history.db | commands |
+| AGENT_LEDGER_OPENCODE | ~/.local/share/opencode/opencode.db | session_v2, session_message and session_part (tool parts only) |
 | AGENT_LEDGER_ORCA | orca on PATH | CLI executable |
 
 Use absolute paths for overrides. Choose a private output directory outside
@@ -59,9 +59,7 @@ and `projection.lag`, the highest ingest-log ID minus the committed cursor.
 During a rebuild, the response contains the sources projected so far.
 
 A changed JSONL file replays its archived transcript. The replay log records
-its source ID, generation, byte count and duration. Copilot workspace
-metadata is available from the first pass that archives its sidecar. Older
-archives with events only use the event context.
+its source ID, generation, byte count and duration.
 
 The projection groups transcript generations by source path and session ID.
 For JSONL it matches complete lines byte for byte and by occurrence within
@@ -78,7 +76,9 @@ archived row for their message ID, falling back to the archived item key.
 For RTK, a restored row with the same rowid, timestamp, command and project
 uses the latest counters. Reusing the rowid for a different command,
 project or time preserves both commands. A row found only in a previous
-generation remains available.
+generation remains available. OpenCode rows are keyed by their primary key
+(session ID, message ID, message ID plus part ordinal); the copy with the
+latest `time_updated` wins, so a row rewritten under a new rowid counts once.
 
 All `dashboard_*` tables in `ledger.sqlite` are derived and safe to drop
 with the API stopped. Restarting the API rebuilds them from `ledger.sqlite`
@@ -146,6 +146,12 @@ messages it tracks count, active and compacted sums, and maximum rowid by
 session. A changed fingerprint triggers a session rescan. The newest 256
 rowid positions are also revisited. Older content-only edits that leave the
 fingerprint unchanged can be missed.
+OpenCode `session_v2` rows are rehashed whole on every change. For
+`session_message` and the tool rows of `session_part` the fingerprint is
+row count and maximum `time_updated` per session, because a message gets its
+tokens and a tool part its result after the row is first written. Only the
+OpenCode 2 schema (`session_v2`) is read; an older database reports a
+missing table.
 
 Orca lists runs every minute and fetches details immediately for new or
 changed entries. A run with a live dispatch gets fresh details every minute.

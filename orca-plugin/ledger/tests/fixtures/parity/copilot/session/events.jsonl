@@ -1,4 +1,0 @@
-{"type":"session.start","timestamp":"2026-11-13T17:00:00.012345Z","data":{"sessionId":"copilot-example","context":{"cwd":"/example/project"}}}
-{"type":"session.usage_record","timestamp":"2026-11-13T17:00:01.012345Z","data":{"usage":{"inputTokens":20,"cacheReadTokens":7,"cacheWriteTokens":1,"outputTokens":4,"reasoningTokens":1,"initiator":"user","cost":1,"model":"example-model","reasoningEffort":"high","accounting":{"sourceSessionId":"copilot-example","sequence":2}}}}
-{"type":"skill.invoked_ref","timestamp":"2026-11-13T17:00:02.012345Z","data":{"name":"example-skill"}}
-{"type":"session.usage_checkpoint","timestamp":"2026-11-13T17:00:03.012345Z","data":{"accountingSnapshot":{"totalPremiumRequestCost":1,"tokenDetails":{"input":{"tokenCount":12},"cache_read":{"tokenCount":7},"cache_write":{"tokenCount":1},"output":{"tokenCount":4}},"modelMetrics":{}}}}

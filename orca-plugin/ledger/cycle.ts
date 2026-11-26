@@ -17,7 +17,7 @@ export async function cycle(store: Store, env = process.env, timings?: Record<st
     const unreadable: string[] = [];
     try {
       store.db.exec('BEGIN IMMEDIATE');
-      for (const path of kind === 'hermes' || kind === 'rtk'
+      for (const path of kind === 'hermes' || kind === 'rtk' || kind === 'opencode'
         ? [root]
         : files(root, kind, (dir, error) => {
             unreadable.push(dir + sep);

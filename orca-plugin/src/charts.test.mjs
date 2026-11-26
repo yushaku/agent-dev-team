@@ -24,7 +24,7 @@ test('dashboard agent series come from the data, unknown agents included', async
       ],
     },
   })
-  assert.deepEqual(AGENTS, ['claude', 'codex', 'jcode', 'opencode', 'pi'], 'legacy order first, reserved key skipped')
+  assert.deepEqual(AGENTS, ['claude', 'codex', 'opencode', 'jcode', 'pi'], 'legacy order first, reserved key skipped')
   assert.deepEqual(Object.keys(zeroAg()), AGENTS)
   assert.equal(AG.jcode, 'jcode')
   assert.equal(AG.claude, 'claude', 'no labels from Orca: the raw id')
@@ -126,7 +126,7 @@ test('work colours stay attached to Run IDs across agents, order and filters', a
 test('a non-legacy agent colour depends only on its id, whatever else is loaded', async () => {
   const { COL, agentColour, setAgents, state } = await import('../dashboard-web/js/lib/charts.js')
   const orcaIds =
-    'claude-agent-teams codebuddy qoder qoder-cn qwen-code gemini antigravity opencode opencode2 pi mimo-code droid grok devin omp prime-agent cursor kimi muse zcode dsh jcode kiro'.split(
+    'claude-agent-teams codebuddy qoder qoder-cn qwen-code gemini antigravity copilot opencode2 pi mimo-code droid grok devin omp prime-agent cursor kimi muse zcode dsh jcode kiro'.split(
       ' ',
     )
   state.agent = ''
@@ -225,12 +225,12 @@ test('the web bundle has no agent-name check or premium-request field outside th
     ...readdirSync(join(root, 'lib')).map((f) => 'lib/' + f),
   ].filter((f) => f.endsWith('.js'))
   const hits = []
-  const allowed = /LEGACY_AGENTS =|^\s*(claude|codex|copilot|hermes): "var\(--|^\s*(\/\/|\/\*)/ // the legacy colour map, and comments
+  const allowed = /LEGACY_AGENTS =|^\s*(claude|codex|hermes|opencode): "var\(--|^\s*(\/\/|\/\*)/ // the legacy colour map, and comments
   for (const f of files) {
     readFileSync(join(root, f), 'utf8')
       .split('\n')
       .forEach((line, i) => {
-        if (/\b(claude|codex|copilot|hermes|jcode)\b|\bprem\b|premium|accountingSnapshot/i.test(line) && !allowed.test(line)) hits.push(`${f}:${i + 1}`)
+        if (/\b(claude|codex|hermes|opencode|jcode)\b|\bprem\b|premium|accountingSnapshot/i.test(line) && !allowed.test(line)) hits.push(`${f}:${i + 1}`)
       })
   }
   assert.deepEqual(hits, [])

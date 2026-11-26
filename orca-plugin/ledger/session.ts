@@ -34,7 +34,6 @@ export interface Session {
   aggregate?: boolean;
   /** A Codex helper session (guardian auto-review), not the dispatched worker: counted in usage, never compared with the Task's routing. */
   auxiliary?: boolean;
-  snapshot?: Record<string, Time> | null;
 }
 /** A Hermes `sessions` row, as the ledger archives it. */
 export type HermesSession = {
@@ -350,7 +349,7 @@ function branch(s: Session, ts: Time, cwd: string | null | undefined, branch: st
     (s.branch_segments ??= []).push({ ...ctx, at: ts });
   return ctx;
 }
-export function parseFile(agent: string, path: string, text: string, ws: Record<string, string> = {}) {
+export function parseFile(agent: string, path: string, text: string) {
   const s = newSession(agent, basename(path).replace(/\.jsonl?$/, ''));
   let first = '',
     ctx: Context = { cwd: null, branch: null },
@@ -368,16 +367,6 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
   if (agent === 'claude') {
     s.sid = null;
     s.subagent = path.includes('/subagents/');
-  }
-  if (agent === 'copilot') {
-    s.id = ws.id || basename(dirname(path));
-    s.start = tsOf(ws.created_at);
-    s.cwd = ws.cwd || null;
-    s.branch = ws.branch || null;
-    s.originator = ws.client_name || null;
-    s.snapshot = null;
-    delete s.hooks;
-    delete s.dispatcher;
   }
   if (agent === 'jcode') {
     const d = JSON.parse(text);
@@ -601,57 +590,6 @@ export function parseFile(agent: string, path: string, text: string, ws: Record<
         } else if (['custom_tool_call', 'function_call', 'local_shell_call'].includes(p.type) && p.name !== 'apply_patch')
           tool(s, p.name, p.input || p.arguments || p.action || '', ts);
       }
-    } else if (agent === 'copilot') {
-      if (
-        !/"type":"(?:session\.(?:start|resume|usage_record|usage_checkpoint|shutdown)|user\.message|model\.model_call_success|skill\.invoked(?:_ref)?)"/.test(
-          line.slice(0, 48),
-        )
-      )
-        continue;
-      bounds(s, ts);
-      const p = d.data || {};
-      if (t === 'session.start' || t === 'session.resume') {
-        s.cwd ||= p.context?.cwd ?? null;
-        s.branch ||= p.context?.branch ?? null;
-      }
-      if (t === 'user.message') {
-        const txt = p.content || '';
-        tasks(s, txt, ts);
-        if (!first && !txt.trimStart().startsWith('<')) first = txt;
-      }
-      if (t.startsWith('skill.invoked') && p.name) s.skills.push([p.name, ts]);
-      if (t === 'session.usage_record') {
-        const u = p.usage || {},
-          a = u.accounting || {},
-          key = 'cp:' + (a.sourceSessionId || s.id) + ':' + (a.sequence || d.id || 'None');
-        const cr = u.cacheReadTokens || 0,
-          cw = u.cacheWriteTokens || 0;
-        records.set(key, [
-          ts,
-          u.model || '?',
-          u.reasoningEffort ?? null,
-          Math.max(0, (u.inputTokens || 0) - cr - cw),
-          cr,
-          cw,
-          u.outputTokens || 0,
-          u.reasoningTokens || 0,
-          key,
-          u.initiator === 'user' ? u.cost || 0 : 0,
-        ]);
-      }
-      if (t === 'session.shutdown' || t === 'session.usage_checkpoint') {
-        const a = p.accountingSnapshot || {},
-          td = a.tokenDetails || {};
-        s.snapshot = {
-          ts,
-          premium: a.totalPremiumRequestCost || 0,
-          fin: td.input?.tokenCount || 0,
-          cr: td.cache_read?.tokenCount || 0,
-          cw: td.cache_write?.tokenCount || 0,
-          out: td.output?.tokenCount || 0,
-          requests: Object.keys(a.modelMetrics || {}).reduce((n, k) => n + (a.modelMetrics[k]?.requests?.count || 0), 0),
-        };
-      }
     }
   }
   if (agent === 'claude') s.id = s.subagent ? (s.sid || '?') + ':' + s.id : s.sid || s.id;
@@ -707,5 +645,85 @@ export function parseHermes(r: HermesSession, messages: HermesMessage[]) {
       null,
     ],
   ];
+  return finish(s, first);
+}
+/** An OpenCode `session_v2` row, as the ledger archives it (times in milliseconds). */
+export type OpenCodeSession = {
+  id: string;
+  parent_id?: string | null;
+  directory?: string | null;
+  title?: string | null;
+  agent?: string | null;
+  model?: string | null;
+  time_created: number;
+  time_updated?: number | null;
+  tokens_input?: number | null;
+  tokens_output?: number | null;
+  tokens_reasoning?: number | null;
+  tokens_cache_read?: number | null;
+  tokens_cache_write?: number | null;
+};
+/** An OpenCode `session_message` or `session_part` row: `data` is the JSON body. */
+export type OpenCodeRow = { id?: string; message_id?: string; type: string; seq?: number; ordinal?: number; time_created: number; data: string };
+type OpenCodeModel = { id?: string; providerID?: string; variant?: string };
+const modelName = (m: OpenCodeModel | null | undefined) => (m?.id ? (m.providerID ? m.providerID + '/' + m.id : m.id) : null);
+/**
+ * One session from OpenCode's SQLite tables. Each assistant message is a call. OpenCode stores input without cache and
+ * output without reasoning, so reasoning is added to output (as Claude and Codex report it). Usage the messages do not
+ * account for (session totals minus their sum, such as title generation) is one more call at the session start.
+ */
+export function parseOpenCode(r: OpenCodeSession, messages: OpenCodeRow[], parts: OpenCodeRow[]) {
+  const s = newSession('opencode', r.id);
+  const sec = (ms: number | null | undefined): Time => (ms ? ms / 1000 : null);
+  s.sid = r.id;
+  s.title = r.title || '';
+  s.cwd = r.directory || null;
+  s.subagent = !!r.parent_id;
+  s.originator = 'opencode' + (r.agent ? ':' + r.agent : '');
+  bounds(s, sec(r.time_created));
+  bounds(s, sec(r.time_updated));
+  const byMessage = new Map<string, OpenCodeRow[]>();
+  for (const p of parts) {
+    const list = byMessage.get(p.message_id || '');
+    if (list) list.push(p);
+    else byMessage.set(p.message_id || '', [p]);
+  }
+  let first = '';
+  const sum = [0, 0, 0, 0, 0];
+  for (const m of [...messages].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0))) {
+    const d = json(m.data) || {};
+    const ts = sec(d.time?.completed ?? d.time?.created ?? m.time_created);
+    bounds(s, ts);
+    if (m.type === 'user') {
+      const txt = typeof d.text === 'string' ? d.text : '';
+      tasks(s, txt, ts);
+      if (!first && !txt.trimStart().startsWith('<')) first = txt;
+    } else if (m.type === 'assistant') {
+      const t = d.tokens || {},
+        u = [t.input || 0, t.cache?.read || 0, t.cache?.write || 0, t.output || 0, t.reasoning || 0];
+      u.forEach((n, i) => (sum[i] += n));
+      if (u.some((n) => n > 0)) {
+        const variant = d.model?.variant;
+        s.calls.push([ts, modelName(d.model) || '?', variant && variant !== 'default' ? variant : null, u[0], u[1], u[2], u[3] + u[4], u[4], 'oc:' + m.id]);
+      }
+    }
+    for (const p of (byMessage.get(m.id || '') || []).sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))) {
+      const c = json(p.data);
+      if (c?.type !== 'tool' || !c.name) continue;
+      const input = c.state?.input || {},
+        at = sec(c.time?.completed ?? c.time?.created ?? p.time_created);
+      if (c.name === 'skill' && typeof input.name === 'string') s.skills.push([input.name, at]);
+      tool(s, c.name, input, at);
+      const out = c.state?.status === 'completed' ? (c.state.output ?? (c.state.content || []).map((x: TextPart) => x?.text || '').join('\n')) : '';
+      if (typeof out === 'string' && out) teamRuns(s, JSON.stringify(out), at);
+    }
+  }
+  const rest = [r.tokens_input, r.tokens_cache_read, r.tokens_cache_write, r.tokens_output, r.tokens_reasoning].map((n, i) => Math.max(0, (n || 0) - sum[i]));
+  if (rest.some((n) => n > 0)) {
+    const model = json(r.model);
+    s.calls.unshift([s.start, modelName(model) || '?', null, rest[0], rest[1], rest[2], rest[3] + rest[4], rest[4], 'oc:' + r.id + ':rest']);
+  }
+  delete s.tool_count;
+  s.discussion_read ??= null;
   return finish(s, first);
 }

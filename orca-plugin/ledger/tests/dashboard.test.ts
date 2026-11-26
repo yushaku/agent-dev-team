@@ -8,8 +8,9 @@ import { hostname, tmpdir, type as osType } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer, get } from 'node:http';
 import { once } from 'node:events';
+import { DatabaseSync } from 'node:sqlite';
 import { Store } from '../store.ts';
-import { files, ingestFile } from '../files.ts';
+import { ingestFile } from '../files.ts';
 import { projections, PARSER_VERSION } from '../derived.ts';
 import { parseFile, parseHermes } from '../session.ts';
 import { build } from '../dashboard.ts';
@@ -73,7 +74,7 @@ test('archived sessions and snapshots match Python across branch changes, append
   refresh();
   assert.deepEqual(all(), before);
 });
-test('Copilot sidecar, JCode and Hermes use the Python parser contract', (t) => {
+test('JCode and Hermes use the Python parser contract', (t) => {
   const { root } = scratch(t);
   for (const [agent, name, doc] of [
     [
@@ -84,20 +85,10 @@ test('Copilot sidecar, JCode and Hermes use the Python parser contract', (t) => 
         messages: [{ role: 'assistant', timestamp: '2026-11-13T10:00:00Z', token_usage: { input_tokens: 6 } }],
       }),
     ],
-    [
-      'copilot',
-      'events.jsonl',
-      JSON.stringify({
-        type: 'session.usage_record',
-        timestamp: '2026-11-13T00:00:01Z',
-        data: { usage: { inputTokens: 12, cacheReadTokens: 4, initiator: 'user', cost: 1 } },
-      }) + '\n',
-    ],
   ]) {
     const path = join(root, name);
     writeFileSync(path, doc);
-    writeFileSync(join(root, 'workspace.yaml'), 'id: test\nclient_name: golden\n');
-    assert.deepEqual(parseFile(agent, path, doc, { id: 'test', client_name: 'golden' }), golden('parse-' + agent, root));
+    assert.deepEqual(parseFile(agent, path, doc), golden('parse-' + agent, root));
   }
   const expected = golden<[...Parameters<typeof parseHermes>, unknown]>('hermes-contract', root);
   assert.deepEqual(parseHermes(expected[0], expected[1]), expected[2]);
@@ -289,35 +280,81 @@ test('feature defect history matches Python across merge, fix, and a cached rebu
   assert.equal(store.db.prepare('SELECT count(*) n FROM dashboard_git').get()?.n, 1);
 });
 
-test('Copilot rows carry the same fields as other agents and sidecar metadata survives deletion', (t) => {
+test('OpenCode sessions come from its SQLite tables and follow rows updated in place', (t) => {
   const { root, store } = scratch(t),
-    dir = join(root, 'copilot');
-  for (const session of ['empty', 'active', '.hidden']) mkdirSync(join(dir, session), { recursive: true });
-  const event = {
-    type: 'session.usage_record',
-    timestamp: new Date().toISOString(),
-    data: { usage: { inputTokens: 10 } },
-  };
-  writeFileSync(join(dir, 'active', 'events.jsonl'), JSON.stringify(event) + '\n');
-  writeFileSync(join(dir, 'active', 'workspace.yaml'), 'id: archived\ncwd: /repo\nclient_name: test\n');
-  for (const path of files(dir, 'copilot', (_, e) => {
-    throw e;
-  }))
-    ingestFile(store, 'copilot', path);
-  rmSync(dir, { recursive: true });
-  projections(store)();
-  const data = build(store, 7);
-  assert.equal('copilot_dirs' in data, false, 'Copilot has no snapshot field of its own');
-  assert.equal(data.sessions.length, 1);
-  assert.equal(data.sessions[0].id, 'archived');
-  assert.equal(data.sessions[0].originator, 'test');
-  const row = data.sessions[0] as unknown as Record<string, unknown>;
-  assert.equal('prem' in row || 'snapshot' in row, false, 'no premium-request fields on a row');
-  assert.ok(
-    Object.values(data.sessions[0].days).every((v) => v.length === 4),
-    'day buckets are [fin, cr, cw, out]',
+    path = join(root, 'opencode.db'),
+    db = new DatabaseSync(path),
+    now = Date.now();
+  t.after(() => db.close());
+  db.exec(`CREATE TABLE session_v2(id TEXT PRIMARY KEY,parent_id TEXT,directory TEXT,title TEXT,agent TEXT,model TEXT,
+      tokens_input INTEGER,tokens_output INTEGER,tokens_reasoning INTEGER,tokens_cache_read INTEGER,tokens_cache_write INTEGER,
+      time_created INTEGER,time_updated INTEGER);
+    CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq INTEGER,time_created INTEGER,time_updated INTEGER,data TEXT);
+    CREATE TABLE session_part(message_id TEXT,session_id TEXT,ordinal INTEGER,type TEXT,call_id TEXT,time_created INTEGER,time_updated INTEGER,data TEXT,
+      PRIMARY KEY(message_id,ordinal));`);
+  const model = JSON.stringify({ id: 'm', providerID: 'p' });
+  db.prepare('INSERT INTO session_v2 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(
+    'ses',
+    null,
+    '/repo',
+    'Title',
+    'build',
+    model,
+    0,
+    0,
+    0,
+    0,
+    0,
+    now - 5000,
+    now - 3000,
   );
-  assert.equal(data.sessions[0].fin, 10, 'token fields are unchanged');
+  const message = db.prepare('INSERT INTO session_message VALUES(?,?,?,?,?,?,?)');
+  message.run('u1', 'ses', 'user', 1, now - 4000, now - 4000, JSON.stringify({ text: 'role: builder\nYour task ID is: task_abc' }));
+  const assistant = (tokens: object) => JSON.stringify({ time: { created: now - 3000 }, model: { id: 'm', providerID: 'p', variant: 'high' }, tokens });
+  message.run('a1', 'ses', 'assistant', 2, now - 3000, now - 3000, assistant({ input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }));
+  db.prepare('INSERT INTO session_part VALUES(?,?,?,?,?,?,?,?)').run(
+    'a1',
+    'ses',
+    0,
+    'tool',
+    'c1',
+    now - 2500,
+    now - 2500,
+    JSON.stringify({ type: 'tool', name: 'skill', state: { status: 'completed', input: { name: 'tdd' } } }),
+  );
+  ingestFile(store, 'opencode', path);
+  const refresh = projections(store);
+  refresh();
+  assert.equal(build(store, 7).sessions.length, 0, 'a message still streaming has no usage yet');
+  db.prepare('UPDATE session_message SET data=?,time_updated=? WHERE id=?').run(
+    assistant({ input: 10, output: 3, reasoning: 1, cache: { read: 5, write: 0 } }),
+    now - 1000,
+    'a1',
+  );
+  db.prepare('UPDATE session_v2 SET tokens_input=13,tokens_output=4,tokens_reasoning=1,tokens_cache_read=5,time_updated=? WHERE id=?').run(now, 'ses');
+  ingestFile(store, 'opencode', path);
+  refresh();
+  const data = build(store, 7);
+  assert.equal(data.sessions.length, 1);
+  const row = data.sessions[0];
+  assert.equal(row.agent, 'opencode');
+  assert.equal(row.id, 'ses');
+  assert.equal(row.cwd, '/repo');
+  assert.equal(row.title, 'Title');
+  assert.equal(row.originator, 'opencode:build');
+  assert.equal(row.calls, 2, 'the completed message, plus the usage only the session totals hold');
+  assert.deepEqual([row.fin, row.cr, row.cw, row.out], [13, 5, 0, 5], 'session totals: reasoning counts as output');
+  const parsed = JSON.parse(String(store.db.prepare("SELECT data FROM dashboard_sessions WHERE sid='ses'").get()?.data));
+  assert.deepEqual(
+    parsed.tasks.map((x: [string]) => x[0]),
+    ['task_abc'],
+  );
+  assert.equal(parsed.role_line, 'builder');
+  assert.deepEqual(
+    parsed.skills.map((x: [string]) => x[0]),
+    ['tdd'],
+  );
+  assert.deepEqual(parsed.calls.at(-1).slice(1, 9), ['p/m', 'high', 10, 5, 0, 4, 1, 'oc:a1']);
 });
 
 test('query worker follows appended history without HTTP requests', async (t) => {
