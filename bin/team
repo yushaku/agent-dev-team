@@ -217,6 +217,18 @@ exclude_links() {
   done
 }
 
+# claude_write_check <main>: warn when Claude Code's sandbox would refuse worker writes to <main>/.team
+# (reports, logs). Its writes are limited to the worktree and sandbox.filesystem.allowWrite, and the
+# worktree's .team is a link out of it. Granting it is the PO's call, so team only says what to add.
+claude_write_check() {
+  local s="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json" dir; dir="$(real "$1")/.team"
+  [ -f "$s" ] || return 0
+  jq -e --arg d "$dir" --arg h "$HOME" '.sandbox.enabled == true and
+      ([.sandbox.filesystem.allowWrite[]? | sub("^~"; $h) | sub("/+$"; "")]
+       | any(. as $p | $d == $p or ($d | startswith($p + "/"))) | not)' "$s" >/dev/null 2>&1 || return 0
+  echo "team: Claude workers cannot write $dir (Claude sandbox). With PO approval add it to sandbox.filesystem.allowWrite and permissions.additionalDirectories in $s; see start.md \"Worker permissions\"." >&2
+}
+
 # routing_for <role> <alias> <tier>: Routing JSON with the tier taken from models.tiers.
 routing_for() {
   set -e
@@ -262,7 +274,10 @@ cmd_init() {
 
   local main fdir state; main=$(main_checkout); fdir="$main/.team/$feature"; state="$fdir/run.json"
   if [ -f "$state" ]; then
-    echo "team: reusing $state" >&2; mark init "$(jq -r .run "$state")"; jq . "$state"; return 0
+    echo "team: reusing $state" >&2; mark init "$(jq -r .run "$state")"
+    [ "$(cfg '[.models.catalog // {} | .[] | select(type=="object" and .agent=="claude" and .enabled != false)] | length')" = 0 ] \
+      || claude_write_check "$main"
+    jq . "$state"; return 0
   fi
   [ -n "$base" ] || base=$(cfg '.branches.base // "main"')
   [ -n "$branch" ] || branch="feat/$feature"
@@ -297,6 +312,8 @@ cmd_init() {
       workspace:{path:$p, branch:$b, selector:$s}, tasks:{}}')"
 
   mark init "$run_id"
+  [ "$(cfg '[.models.catalog // {} | .[] | select(type=="object" and .agent=="claude" and .enabled != false)] | length')" = 0 ] \
+    || claude_write_check "$main"
   local coord; coord=$(whoami_line)
   if [ ! -f "$fdir/handoff.md" ]; then
     cat >"$fdir/handoff.md" <<EOF
@@ -500,6 +517,7 @@ cmd_dispatch() {
     args+=(--worktree "$(jq -r .workspace.selector <<<"$st")" --agent "$agent")
     if [ -n "$model" ]; then args+=(--model "$model"); [ -n "$effort" ] && args+=(--effort "$effort"); fi
   fi
+  [ -n "$terminal" ] || [ "$agent" != claude ] || claude_write_check "$(jq -r .main <<<"$st")"
   local res d; res=$(orca_call "${args[@]}")
   d=$(jq -r '.dispatchId // empty' <<<"$res"); [ -n "$d" ] || { echo "$res" >&2; die "dispatch: receipt has no dispatchId"; }
   local r_agent r_model r_effort r_term

@@ -73,6 +73,8 @@ models:
     work: [claude-work, codex-work, both]
     top: [off]
 EOF
+mkdir -p "$tmp/claude"; export CLAUDE_CONFIG_DIR="$tmp/claude"
+echo '{"sandbox":{"enabled":true,"filesystem":{"allowWrite":["~/.npm"]}}}' >"$tmp/claude/settings.json"
 export TEAM_ORCA_BIN="$tmp/bin/orca" FAKE_LOG="$tmp/orca.log" FAKE_REPO="$repo" FAKE_WT="$tmp/wt" AGENT_SKILLS_DIR=/skills
 cd "$repo"
 F="$repo/.team/csv"
@@ -91,10 +93,12 @@ w=$(env -u ORCA_PANE_KEY -u ORCA_TERMINAL_HANDLE "$team" whoami)
 check "whoami outside Orca has no identity" '[ "$(jq -r .terminal <<<"$w")" = null ]'
 check "init branches from base" 'grep -q -- "--base-branch main" "$FAKE_LOG"'
 check "init sets board in-progress" 'grep -q -- "--workspace-status in-progress" "$FAKE_LOG"'
+check "init warns when the Claude sandbox cannot write .team" 'grep -q "Claude workers cannot write $repo/.team" "$tmp/err"'
 check "init rerun reuses state (one run-create)" '[ "$(grep -c run-create "$FAKE_LOG")" = 1 ]'
 
 check "init marks Run on stderr" 'grep -qx "{\"team\":\"init\",\"run\":\"run_test1\"}" "$tmp/err"'
 "$team" init csv --objective "CSV export" 2>"$tmp/err" >/dev/null
+check "init rerun repeats the Claude sandbox warning" 'grep -q "Claude workers cannot write" "$tmp/err"'
 check "init rerun marks Run again (resume)" 'grep -q "\"team\":\"init\",\"run\":\"run_test1\"" "$tmp/err"'
 
 # spec
@@ -132,6 +136,8 @@ check "task passes --run" 'grep task-create "$FAKE_LOG" | grep -q -- "--run run_
 # dispatch
 d=$("$team" dispatch csv "$t1" 2>"$tmp/err")
 check "dispatch marks Run, Task and Dispatch" 'grep -qx "{\"team\":\"dispatch\",\"run\":\"run_test1\",\"task\":\"task_1\",\"dispatch\":\"ctx_1\"}" "$tmp/err"'
+check "a claude dispatch repeats the sandbox warning" 'grep -q "Claude workers cannot write" "$tmp/err"'
+jq --arg d "$repo/.team" '.sandbox.filesystem.allowWrite += [$d]' "$tmp/claude/settings.json" >"$tmp/s" && mv "$tmp/s" "$tmp/claude/settings.json"
 check "dispatch returns dispatch" '[ "$(jq -r .dispatch <<<"$d")" = ctx_1 ]'
 check "dispatch keeps open on workspace with routing" 'grep worker-start "$FAKE_LOG" | grep -q -- "--keep-open --worktree path:$tmp/wt/csv --agent claude --model sonnet --effort medium"'
 check "routing.jsonl appended" '[ "$(jq -r .dispatch "$F/routing.jsonl")" = ctx_1 ]'
@@ -176,7 +182,8 @@ check "default title from Goal, with the kind for a fix" 'grep task-create "$FAK
 check "--reuse dispatches to the role terminal" 'grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- "--terminal term_4"'
 check "--reuse copies the role Routing" 'grep -q "Routing: {\"tier\":\"work\",\"catalog\":\"claude-work\"" "$F/specs/04-builder-r2.md"'
 cd "$repo"
-"$team" init other --objective "Other" >/dev/null 2>&1
+"$team" init other --objective "Other" >/dev/null 2>"$tmp/err.other"
+check "no warning once allowWrite covers .team" '[ -s "$tmp/err.other" ] && ! grep -q "Claude workers cannot write" "$tmp/err.other"'
 "$team" status --json >/dev/null 2>"$tmp/err"
 check "two features from main: asks which" '[ $? -ne 0 ] && grep -q "which feature" "$tmp/err"'
 TEAM_FEATURE=csv "$team" status --json >/dev/null
