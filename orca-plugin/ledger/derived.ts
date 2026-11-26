@@ -3,7 +3,7 @@ import type { Store } from './store.ts';
 import { type HermesMessage, type HermesSession, parseFile, parseHermes } from './session.ts';
 import { dirname, join, basename } from 'node:path';
 
-export const PARSER_VERSION = 9;
+export const PARSER_VERSION = 10;
 
 // Match repeated records by occurrence. Place old-only records before the next shared
 // record, or before the new tail if the streams have no further common anchor.
