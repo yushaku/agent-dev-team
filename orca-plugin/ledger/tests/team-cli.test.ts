@@ -64,12 +64,13 @@ test('a team call followed by its marker attaches the coordinator to the Run (pi
   assert.equal(parseFile('pi', '/logs/s.jsonl', lines(pi(call, output('run_aaaa')))).dispatcher, true);
 });
 
-test('init, task, fix and rereview markers count; status, board and other commands do not make a team call', () => {
+test('init, task, fix, rereview and solo markers count; status, board and other commands do not make a team call', () => {
   assert.deepEqual(runs('pi', pi('team init greet --objective "Greet"', output('run_dddd', 'init'))), ['run_dddd']);
   assert.deepEqual(runs('pi', pi('bin/team task greet s.md --title x', output('run_eeee', 'task'))), ['run_eeee']);
   assert.deepEqual(runs('pi', pi('team fix greet --cause defect', output('run_abab'))), ['run_abab']);
   assert.deepEqual(runs('pi', pi('team rereview', output('run_cdcd'))), ['run_cdcd']);
   assert.deepEqual(runs('pi', pi('team review --catalog x', output('run_efef'))), ['run_efef']);
+  assert.deepEqual(runs('pi', pi('team solo api --role senior-backend --goal "GET /health"', output('run_a1a1', 'dispatch'))), ['run_a1a1']);
   assert.deepEqual(runs('pi', pi('team status greet', output('run_ffff'))), []);
   assert.deepEqual(runs('pi', pi('cat routing.jsonl', output('run_ffff'))), []);
 });

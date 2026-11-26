@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { Store } from './store.ts';
 import { PARSER_VERSION } from './derived.ts';
 import { featureData, featureDir, median, rounds } from './features.ts';
-import { home, checkout, repoOf, roleConfig } from './metadata.ts';
+import { home, checkout, repoOf, roleConfig, SENIOR } from './metadata.ts';
 import { aliases, tsOf, type Session } from './session.ts';
 import { readAgents } from './agents.ts';
 import { readSources } from './sources.ts';
@@ -133,6 +133,8 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
       s.branch_segments ? s.branch_segments.findLast((x) => x.at === null || x.at <= ts) || { cwd: s.cwd, branch: null } : { cwd: s.cwd, branch: s.branch };
     const rows = new Map<string, Row>(),
       branches = new Map<string, Segment>();
+    // A senior session (team solo) is its Run's coordinator by markers and the worker of its own Task.
+    const senior = s.skills.map((e) => e[0]).find((n) => SENIOR.includes(n));
     for (const call of s.calls.sort((a, b) => (a[0] || 0) - (b[0] || 0))) {
       const [ts, model, eff, fin, cr, cw, out, reason, mid, , ctx = { cwd: s.cwd, branch: s.branch }] = call;
       if (mid) {
@@ -156,8 +158,10 @@ export function build({ db }: Store, days: number, now = Date.now() / 1000, gitM
         if (tids.size === 1 && !rids.size) t = tasks.get([...tids][0]);
         else if (rids.size === 1 && !tids.size) rid = [...rids][0];
       } else if (s.tasks.length) t = tasks.get(active(s.tasks, ts));
-      else if (s.runs?.length) rid = active(s.runs, ts);
-      else if (!s.dispatcher) {
+      else if (s.runs?.length) {
+        rid = active(s.runs, ts);
+        if (senior) t = runs.get(rid)?.tasks.findLast((x) => x.role === senior && (x.created ?? 0) <= ts);
+      } else if (!s.dispatcher) {
         // ds keeps only dispatches with a start time, so the null check never drops one.
         const ids = new Set(ds.filter((d) => d.from !== null && d.from <= ts && ts <= (d.to || now)).map((d) => d.task));
         if (ids.size === 1) {

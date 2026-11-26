@@ -8,6 +8,8 @@ import { teamRoot } from './roots.ts';
 export const home = homedir(),
   teams = teamRoot();
 export const skills = process.env.AGENT_SKILLS_DIR || join(home, '.agents/skills');
+/** PO-invoked senior roles: skills/<role>/SKILL.md, each session works its own Task (`team solo`). */
+export const SENIOR = ['senior-backend', 'senior-frontend'];
 export function read(path: string) {
   try {
     return readFileSync(path, 'utf8');
@@ -44,7 +46,7 @@ export function roleConfig() {
           tier: text.match(/tier (top|work|fast)/)?.[1] || null,
           text: text.trim().slice(0, 200),
         };
-    } else if (['orchestrator', 'researcher', 'solution-architect'].includes(name)) known.push(name);
+    } else if (['orchestrator', 'researcher', 'solution-architect', ...SENIOR].includes(name)) known.push(name);
   }
   return {
     roles_cfg: { tiers: {}, order: ['fast', 'work', 'top'], roles },

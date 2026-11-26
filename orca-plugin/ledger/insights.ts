@@ -1,7 +1,7 @@
 import type { AgentSummary, AgentRun, DashboardData, DashboardRun } from './protocol.ts';
 import type { RunTask, UsageRow } from './protocol.ts';
 import { join } from 'node:path';
-import { teams, read, installed } from './metadata.ts';
+import { teams, read, installed, SENIOR } from './metadata.ts';
 import { loaded, median } from './features.ts';
 type RunSummary = AgentSummary['runs'][number];
 type Issue = AgentSummary['issues'][number];
@@ -79,7 +79,7 @@ function issues(data: DashboardData, sessions: UsageRow[], runs: DashboardRun[])
       filter: Object.fromEntries(Object.entries(filter).filter((e): e is [string, string] => !!e[1])),
     });
   const cards = new Map<string, { required: string[]; name: string }>();
-  for (const name of installed(join(teams, 'skills')).filter((n) => n.startsWith('team-') || ['researcher', 'solution-architect'].includes(n))) {
+  for (const name of installed(join(teams, 'skills')).filter((n) => n.startsWith('team-') || ['researcher', 'solution-architect', ...SENIOR].includes(n))) {
     const line = read(join(teams, 'skills', name, 'SKILL.md')).match(/^- \*\*Skills:\*\*\s*(.+)$/m)?.[1];
     if (!line) continue;
     const required: string[] = [];
