@@ -3,7 +3,7 @@
 ## Preflight
 
 1. Identify repo, objective, source branch and any named Task/handoff. Read the project config, request, `todo.md` and named carry-over/research notes. Ask only for unresolved identity or scope; preserve user work.
-2. Establish "Shared feature workspace" and link `.team` and `worktree_links` to the main checkout. Verify "Coordinator delivery", then complete "Run selection" before planning, gates or worker Tasks.
+2. Establish "Shared feature workspace" and link `.team` and `worktree_links` to the main checkout. Verify "Coordinator delivery", then complete "Run selection" before planning, gates or worker Tasks. `team init <feature> --objective <text>` does the mechanical part (worktree, links, Run, `run.json`, handoff skeleton, board); identity and ownership checks stay yours. Run `team` from this session, as `team ...` or by path; `team help` lists the commands.
 3. Follow install/verify commands and `serial`; separate baseline failures from regressions. With `codegraph: on`, initialize a missing worktree index before dispatch (`skills/init-team/references/config-schema.md` "Code search setup"). Read-only Support Engineers without a worktree use the main index.
 4. Plan and choose the team. Resolve models/slots through `routing.md`, and Task inputs through `specs.md`.
 
@@ -16,7 +16,7 @@
 
 ## Run selection
 
-- New independent objective on `/orchestrator`, including after `/clear` or in a reused session/worktree: automatically create and bind one Orca Run once repo, workspace and coordinator identity are verified, before planning or the first gate/Task. Use the version-matched orchestration guide's `run-create`, name it for the objective and save the returned Run ID in `.team/<feature>/handoff.md` before continuing. Mechanical edits, UI rounds and read-only investigations follow this rule too. Failed or uncertain creation follows Orca recovery before Run-scoped work continues.
+- New independent objective on `/orchestrator`, including after `/clear` or in a reused session/worktree: automatically create and bind one Orca Run once repo, workspace and coordinator identity are verified, before planning or the first gate/Task. Use `team init`, or the version-matched orchestration guide's `run-create`, name it for the objective and save the returned Run ID in `.team/<feature>/handoff.md` before continuing. Mechanical edits, UI rounds and read-only investigations follow this rule too. Failed or uncertain creation follows Orca recovery before Run-scoped work continues.
 - Continuing work: match handoff and live Orca state by repo, objective and Task ownership; reuse Run/Task identities. Without a handoff, discover through Orca; ask only when ownership is ambiguous. The session's current Run alone is insufficient.
 - Planning, Builder, Reviewer, specialists, fixes, re-reviews and delivery belong to that Run, including child-worktree and remote workers. Each ticket or review may have its own Task/Dispatch ID; carry the same Run ID in every Task spec.
 - Pass `--run <id>` explicitly on commands that accept it, including Task creation and worker starts. For Dispatch-addressed follow-ups, use the Dispatch belonging to that Run. Verify Task/Dispatch ownership in receipts and refresh handoff references before further dispatch; reconcile mismatches through Orca recovery. Process older-Run wakes under their owning IDs.

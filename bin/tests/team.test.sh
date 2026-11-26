@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+# Tests for bin/team against a fake orca and a scratch git repo. Run: bash bin/tests/team.test.sh
+set -uo pipefail
+here=$(cd "$(dirname "$0")" && pwd)
+team="$here/../team"
+tmp=$(cd "$(mktemp -d)" && pwd -P); trap 'rm -rf "$tmp"' EXIT
+fails=0; n=0
+ok() { n=$((n+1)); echo "ok $n - $1"; }
+no() { n=$((n+1)); fails=$((fails+1)); echo "not ok $n - $1"; [ -n "${2:-}" ] && echo "  $2"; }
+check() { if eval "$2"; then ok "$1"; else no "$1" "$2"; fi; }
+
+# fake orca: logs argv, answers per subcommand
+mkdir -p "$tmp/bin"
+cat >"$tmp/bin/orca" <<'EOF'
+#!/usr/bin/env bash
+echo "$*" >>"$FAKE_LOG"
+case "$1 $2" in
+  "worktree create")
+    name=""; while [ $# -gt 0 ]; do [ "$1" = --name ] && name=$2; shift; done
+    wt="$FAKE_WT/$name"; git -C "$FAKE_REPO" worktree add -q -b "feat/$name" "$wt" main
+    echo "{\"ok\":true,\"result\":{\"worktree\":{\"path\":\"$wt\"}}}";;
+  "orchestration run-create") echo '{"ok":true,"result":{"runId":"run_test1","objective":"x"}}';;
+  "orchestration task-create")
+    c=$(grep -c task-create "$FAKE_LOG"); echo "{\"ok\":true,\"result\":{\"taskId\":\"task_$c\",\"status\":\"ready\"}}";;
+  "orchestration worker-start")
+    [ -n "${FAKE_FAIL_START:-}" ] && { echo '{"ok":false,"error":{"code":"launch_failed"}}'; exit 1; }
+    task=""; agent=""; while [ $# -gt 0 ]; do case $1 in --task) task=$2;; --agent) agent=$2;; esac; shift; done
+    c=$(grep -c worker-start "$FAKE_LOG")
+    echo "{\"ok\":true,\"result\":{\"dispatchId\":\"ctx_$c\",\"taskId\":\"$task\",\"runId\":\"run_test1\",\"state\":\"ready\",\"agent\":\"${agent:-claude}\",\"terminal\":\"term_$c\",\"next\":\"end turn\"}}";;
+  "orchestration task-list") echo '{"ok":true,"result":{"tasks":[{"id":"task_1","status":"completed","title":"builder: one"},{"id":"task_2","status":"dispatched","title":"reviewer: two"}],"runId":"run_test1"}}';;
+  "worktree set") echo '{"ok":true,"result":{}}';;
+  *) echo '{"ok":false}'; exit 1;;
+esac
+EOF
+chmod +x "$tmp/bin/orca"
+
+repo="$tmp/repo"; mkdir -p "$repo/.team" "$tmp/wt"
+git -C "$repo" init -q -b main && git -C "$repo" commit -q --allow-empty -m init
+echo secret >"$repo/.env"
+cat >"$repo/.team/config.yaml" <<'EOF'
+branches:
+  base: main
+  naming: "{type}/{topic}"
+commands:
+  verify:
+    - "npm test"
+    - "npm run lint"   # comment
+  serial: false
+worktree_links: [.env]
+models:
+  catalog:
+    claude-work: {agent: claude, model: sonnet, effort: medium}
+    codex-work:  {agent: codex, model: gpt-x, effort: medium}
+    claude-fast:
+      agent: claude      # block form
+      model: haiku
+      effort: low
+    both: {agent: codex, model: null}
+    off: {agent: codex, enabled: false}
+  tiers:
+    fast: [claude-fast, both]
+    work: [claude-work, codex-work, both]
+    top: [off]
+EOF
+export TEAM_ORCA_BIN="$tmp/bin/orca" FAKE_LOG="$tmp/orca.log" FAKE_REPO="$repo" FAKE_WT="$tmp/wt" AGENT_SKILLS_DIR=/skills
+cd "$repo"
+F="$repo/.team/csv"
+
+# init
+out=$("$team" init csv --objective "CSV export" 2>"$tmp/err")
+check "init exits 0" '[ $? -eq 0 ]'
+check "init writes run.json with Run ID" '[ "$(jq -r .run "$F/run.json")" = run_test1 ]'
+check "init records worktree path" '[ "$(jq -r .workspace.path "$F/run.json")" = "$tmp/wt/csv" ]'
+check "init creates feature dirs" '[ -d "$F/specs" ] && [ -d "$F/reports" ] && [ -d "$F/logs" ] && [ -d "$F/issues" ]'
+check "init links .team into worktree" '[ -L "$tmp/wt/csv/.team" ]'
+check "init links worktree_links" '[ -L "$tmp/wt/csv/.env" ]'
+check "init writes handoff with Run" 'grep -q "Run: run_test1" "$F/handoff.md"'
+check "init branches from base" 'grep -q -- "--base-branch main" "$FAKE_LOG"'
+check "init sets board in-progress" 'grep -q -- "--workspace-status in-progress" "$FAKE_LOG"'
+check "init rerun reuses state (one run-create)" '[ "$(grep -c run-create "$FAKE_LOG")" = 1 ]'
+
+check "init marks Run on stderr" 'grep -qx "{\"team\":\"init\",\"run\":\"run_test1\"}" "$tmp/err"'
+"$team" init csv --objective "CSV export" 2>"$tmp/err" >/dev/null
+check "init rerun marks Run again (resume)" 'grep -q "\"team\":\"init\",\"run\":\"run_test1\"" "$tmp/err"'
+
+# spec
+s1=$("$team" spec csv builder --catalog claude-work)
+check "spec numbers from 01" '[ "$s1" = "$F/specs/01-builder.md" ]'
+check "spec fills Run" 'grep -qx "Run: run_test1" "$s1"'
+check "spec resolves catalog" 'grep -q "\"agent\":\"claude\",\"model\":\"sonnet\",\"effort\":\"medium\"" "$s1"'
+check "spec fills verify" 'grep -q "Evidence: npm test; npm run lint" "$s1"'
+check "spec fills Output" 'grep -q "Output: $F/reports/01-builder.md" "$s1"'
+check "spec leaves FILL for judgment" 'grep -q FILL: "$s1"'
+check "spec takes tier from models.tiers" 'grep -q "Routing: {\"tier\":\"work\",\"catalog\":\"claude-work\"" "$s1"'
+"$team" spec csv builder --kind fix >/dev/null 2>&1
+check "fix spec without round refused" '[ $? -ne 0 ]'
+"$team" spec csv builder --catalog nope >/dev/null 2>"$tmp/err"
+check "unknown catalog refused, aliases listed" '[ $? -ne 0 ] && grep -q "aliases: both, claude-fast" "$tmp/err"'
+"$team" spec csv builder --catalog claude-work --tier fast >/dev/null 2>"$tmp/err"
+check "tier not containing the alias refused" '[ $? -ne 0 ] && grep -q "not in tier fast" "$tmp/err"'
+"$team" spec csv builder --catalog both >/dev/null 2>"$tmp/err"
+check "alias in two tiers needs --tier" '[ $? -ne 0 ] && grep -q "pass --tier" "$tmp/err"'
+"$team" spec csv builder --catalog off >/dev/null 2>"$tmp/err"
+check "disabled alias refused" '[ $? -ne 0 ] && grep -q disabled "$tmp/err"'
+check "refused specs leave no file" '[ "$(ls "$F/specs" | wc -l | tr -d " ")" = 1 ]'
+
+# task validation
+"$team" task csv "$s1" --title one >/dev/null 2>"$tmp/err"
+check "task refuses FILL lines" '[ $? -ne 0 ] && grep -q "unresolved FILL" "$tmp/err"'
+sed -i '' 's/FILL:[^\n]*/done/' "$s1"
+t1=$("$team" task csv "$s1" --title one 2>"$tmp/err")
+check "task marks Run and Task" 'grep -qx "{\"team\":\"task\",\"run\":\"run_test1\",\"task\":\"task_1\"}" "$tmp/err"' 
+check "task returns task id" '[ "$t1" = task_1 ]'
+check "task title has role prefix" 'grep -q -- "--task-title builder: one" "$FAKE_LOG"'
+check "task passes --run" 'grep task-create "$FAKE_LOG" | grep -q -- "--run run_test1"'
+
+# dispatch
+d=$("$team" dispatch csv "$t1" 2>"$tmp/err")
+check "dispatch marks Run, Task and Dispatch" 'grep -qx "{\"team\":\"dispatch\",\"run\":\"run_test1\",\"task\":\"task_1\",\"dispatch\":\"ctx_1\"}" "$tmp/err"' 
+check "dispatch returns dispatch" '[ "$(jq -r .dispatch <<<"$d")" = ctx_1 ]'
+check "dispatch keeps open on workspace with routing" 'grep worker-start "$FAKE_LOG" | grep -q -- "--keep-open --worktree path:$tmp/wt/csv --agent claude --model sonnet --effort medium"'
+check "routing.jsonl appended" '[ "$(jq -r .dispatch "$F/routing.jsonl")" = ctx_1 ]'
+check "run.json records dispatch terminal" '[ "$(jq -r ".tasks.task_1.dispatches[0].terminal" "$F/run.json")" = term_1 ]'
+
+# reviewer independence
+s2=$("$team" spec csv reviewer --catalog claude-work 2>"$tmp/err")
+check "reviewer on builder agent refused at spec" '[ -z "$s2" ] && grep -q "routing.md rule 4" "$tmp/err"'
+s3=$("$team" spec csv reviewer --catalog codex-work --name alt); sed -i '' 's/FILL:[^\n]*/done/' "$s3"
+d=$("$team" start csv "$s3" --title three)
+check "start with other agent dispatches" '[ "$(jq -r .dispatch <<<"$d")" = ctx_2 ]'
+check "spec Peers lists builder dispatch" 'grep -q "Peers: task_1 builder dispatch:ctx_1" "$s3"'
+
+# follow-up on kept terminal, failure path
+s4=$("$team" spec csv builder --kind fix --round 1 --cause defect --catalog claude-work); sed -i '' 's/FILL:[^\n]*/done/' "$s4"
+check "fix spec named -r1" '[ "$s4" = "$F/specs/03-builder-r1.md" ]'
+t4=$("$team" task csv "$s4" --title "fix round 1")
+FAKE_FAIL_START=1 "$team" dispatch csv "$t4" --terminal term_1 >/dev/null 2>"$tmp/err"
+check "failed start exits nonzero" '[ $? -ne 0 ] && grep -q launch_failed "$tmp/err"'
+check "failed start leaves routing.jsonl alone" '[ "$(wc -l <"$F/routing.jsonl" | tr -d " ")" = 2 ]'
+"$team" dispatch csv "$s4" --terminal term_1 >/dev/null
+check "terminal reuse omits agent flags" 'grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- "--terminal term_1" && ! grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- --agent'
+
+# feature inference, start with a role, --reuse
+cd "$tmp/wt/csv"
+out=$("$team" spec reviewer --catalog claude-fast --goal "Review one" --scope "src/" --selection "cheap" 2>"$tmp/err")
+check "Reviewer clash refused before the spec is written" '[ -z "$out" ] && grep -q "routing.md rule 4" "$tmp/err" && [ ! -f "$F/specs/04-reviewer.md" ]'
+s5=$("$team" spec support-engineer --catalog claude-fast --goal "Find why X" --scope "src/" --selection "bounded read")
+check "feature inferred from the worktree" '[ "$s5" = "$F/specs/04-support-engineer.md" ]'
+check "spec --goal/--scope/--selection fill the lines" '! grep -q FILL: "$s5" && grep -qx "Selection: bounded read" "$s5" && grep -qx "Goal: Find why X" "$s5"'
+check "block-form catalog entry with tier fast" 'grep -q "\"tier\":\"fast\",\"catalog\":\"claude-fast\",\"agent\":\"claude\",\"model\":\"haiku\"" "$s5"'
+rm "$s5"
+"$team" start builder --catalog claude-work --goal "Fix X" >/dev/null 2>"$tmp/err"
+check "start refuses open FILL and names the lines" '[ $? -ne 0 ] && grep -q "unresolved FILL in Selection,Scope" "$tmp/err"'
+check "refused start removes its spec" '[ ! -f "$F/specs/04-builder.md" ]'
+check "refused start creates no Task" '[ "$(grep -c task-create "$FAKE_LOG")" = 3 ]'
+d=$("$team" start builder --kind fix --round 2 --cause defect --reuse builder --goal "Fix X" --scope "src/" --selection "same worker" 2>"$tmp/err")
+check "start with a role writes spec, Task and Dispatch" '[ -f "$F/specs/04-builder-r2.md" ] && [ "$(jq -r .task <<<"$d")" = task_4 ]'
+check "default title from Goal" 'grep task-create "$FAKE_LOG" | tail -1 | grep -q -- "--task-title builder: Fix X"'
+check "--reuse dispatches to the role terminal" 'grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- "--terminal term_4"'
+check "--reuse copies the role Routing" 'grep -q "Routing: {\"tier\":\"work\",\"catalog\":\"claude-work\"" "$F/specs/04-builder-r2.md"'
+cd "$repo"
+"$team" init other --objective "Other" >/dev/null 2>&1
+"$team" status --json >/dev/null 2>"$tmp/err"
+check "two features from main: asks which" '[ $? -ne 0 ] && grep -q "which feature" "$tmp/err"'
+TEAM_FEATURE=csv "$team" status --json >/dev/null
+check "TEAM_FEATURE picks the feature" '[ $? -eq 0 ]'
+cp .team/config.yaml "$tmp/cfg"; printf 'models:\n  catalog: |\n    x\n' >.team/config.yaml
+"$team" status csv >/dev/null 2>"$tmp/err"
+check "unsupported YAML reports the file" '[ $? -ne 0 ] && grep -q "cannot read .*config.yaml" "$tmp/err"'
+cp "$tmp/cfg" .team/config.yaml
+
+# status
+mkdir -p "$F/reports"; printf 'Role: builder\n\n## Result\nimplemented, verify green\n## Evidence\nx\n' >"$F/reports/01-builder.md"
+out=$("$team" status csv --json)
+check "status joins report verdict" '[ "$(jq -r ".tasks[0].verdict" <<<"$out")" = "implemented, verify green" ]'
+check "status shows dispatch" '[ "$(jq -r ".tasks[1].dispatch" <<<"$out")" = ctx_2 ]'
+"$team" status csv | grep -q "01-builder.md"
+check "status table prints" '[ $? -eq 0 ]'
+
+echo "1..$n"; [ $fails = 0 ] && echo "all passed" || { echo "$fails failed"; exit 1; }

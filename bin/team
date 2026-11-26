@@ -1,0 +1,562 @@
+#!/usr/bin/env bash
+# team: mechanical Orchestrator steps (Run, worktree, Task spec, Task, Dispatch, status).
+# Run it from the Orchestrator's own Orca terminal or chat: Orca binds Runs and receives
+# worker_done through the caller's runtime environment. Judgment (spec text, model choice,
+# reading reports, gates) stays with the Orchestrator. See `team help`.
+set -euo pipefail
+
+ORCA=${TEAM_ORCA_BIN:-orca}
+ORCA_ENV=${TEAM_ORCA_ENV:-local}
+SKILLS_DIR=${AGENT_SKILLS_DIR:-$HOME/.agents/skills}
+FILL="FILL:"
+ROLES="builder|reviewer|support-engineer"
+
+# Bash clears set -e inside $(...). Functions that run there start with `set -e` again, so a refusal
+# deep inside (say a spec check under `start`) stops the step instead of creating the Task anyway.
+die() { echo "team: $*" >&2; exit 1; }
+need() { command -v "$1" >/dev/null || die "missing command: $1"; }
+
+usage() {
+  cat <<'EOF'
+Usage: team <command> [feature] [args]
+
+[feature] may be omitted after init: team picks the feature whose workspace is the current
+checkout, else the only feature in .team/, else $TEAM_FEATURE.
+
+  init <feature> --objective TEXT [--branch B] [--base REF] [--here]
+      Worktree (or current checkout with --here), .team and worktree_links links, feature dirs,
+      Orca Run, run.json, handoff.md skeleton, board in-progress. Rerun reuses run.json.
+  spec [feature] <role> [spec flags]
+      Write specs/NN-<role>[-rN|-NAME].md. Lines left as FILL: are for the Orchestrator.
+  task [feature] <spec> [--title TEXT] [--deps ID,ID]
+      Validate the spec and create the Orca Task. Title defaults to the ticket name or Goal.
+  dispatch [feature] <task-id|spec> [--terminal H | --reuse ROLE] [--same-agent-ok]
+      worker-start --keep-open on the feature workspace, or on a kept terminal; append
+      routing.jsonl; record the Dispatch in run.json.
+  start [feature] <spec|role> [spec flags] [task flags] [dispatch flags]
+      With a role: spec + task + dispatch in one step (spec removed if the Task is refused).
+  status [feature] [--json]
+      Orca Task status joined with Dispatch, report path and report verdict.
+  board [feature] <todo|in-progress|in-review|completed>
+
+Spec flags:
+  --catalog ALIAS   models.catalog entry; tier comes from models.tiers (--tier when ambiguous)
+  --tier T          fast|work|top; must contain ALIAS
+  --selection TEXT  why this tier and entry (Selection:)
+  --ticket PATH     ticket file; replaces Goal and Scope
+  --goal TEXT --scope TEXT   for Tasks without a ticket
+  --kind K --round N --cause C   Measurement (fix/re-review need --round)
+  --reuse ROLE      continue on that role's last worker: copy its Routing, dispatch to its terminal
+  --name SUFFIX     file name suffix
+  --same-agent-ok   allow a Reviewer on a Builder's agent (PO exception, routing.md rule 4)
+
+Call it as `team ...` or by path, never through a shell variable: the dashboard links the
+session to the Run from the command line plus the JSON marker team prints on stderr.
+Env: TEAM_FEATURE, TEAM_ORCA_BIN (orca), TEAM_ORCA_ENV (local), AGENT_SKILLS_DIR.
+EOF
+}
+
+# ---------- helpers ----------
+
+main_checkout() {
+  local common
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || die "not inside a git repo"
+  dirname "$common"
+}
+
+feature_dir() { echo "$(main_checkout)/.team/$1"; }
+state_file() { echo "$(feature_dir "$1")/run.json"; }
+real() { (cd "$1" 2>/dev/null && pwd -P) || echo "$1"; }
+
+load_state() {
+  set -e
+  local f; f=$(state_file "$1")
+  [ -f "$f" ] || die "no $f; run: team init $1 --objective ..."
+  cat "$f"
+}
+
+save_state() { # feature json
+  local f tmp; f=$(state_file "$1"); tmp="$f.tmp.$$"
+  printf '%s\n' "$2" | jq . >"$tmp" && mv "$tmp" "$f"
+}
+
+features() { local f; for f in "$(main_checkout)"/.team/*/run.json; do [ -f "$f" ] && basename "$(dirname "$f")"; done; return 0; }
+
+infer_feature() {
+  set -e
+  [ -n "${TEAM_FEATURE:-}" ] && { echo "$TEAM_FEATURE"; return; }
+  local top all f hits=() n
+  top=$(real "$(git rev-parse --show-toplevel)"); all=$(features)
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    [ "$(real "$(jq -r .workspace.path "$(state_file "$f")")")" = "$top" ] && hits+=("$f")
+  done <<<"$all"
+  [ ${#hits[@]} = 1 ] && { echo "${hits[0]}"; return; }
+  n=$(grep -c . <<<"$all" || true)
+  [ ${#hits[@]} = 0 ] && [ "$n" = 1 ] && { echo "$all"; return; }
+  die "which feature? pass it as the first argument or set TEAM_FEATURE (features: $(echo $all | tr ' ' ',' ))"
+}
+
+# orca_call <args...>: run orca with --json, print .result, fail with the full receipt.
+orca_call() {
+  set -e
+  local out
+  if ! out=$("$ORCA" "$@" --environment "$ORCA_ENV" --json 2>&1); then
+    echo "$out" >&2; die "orca $1 $2 failed (see receipt above; recover per the orchestration guide, do not blindly rerun)"
+  fi
+  if ! printf '%s' "$out" | jq -e '.ok == true' >/dev/null 2>&1; then
+    echo "$out" >&2; die "orca $1 $2 returned no ok receipt"
+  fi
+  printf '%s' "$out" | jq -c '.result'
+}
+
+config_file() { echo "$(main_checkout)/.team/config.yaml"; }
+
+# YAML subset used by .team/config.yaml: block maps and lists, "- key: v" list items, flow [..] and
+# {..}, quoted/plain scalars, comments. Anchors, multi-docs and block scalars (| >) are not supported.
+read -r -d '' YAML_JS <<'JS' || true
+const src = require('fs').readFileSync(process.argv[1], 'utf8');
+const strip = (l) => { let q = ''; for (let i = 0; i < l.length; i++) { const c = l[i];
+  if (q) { if (c === q) q = ''; } else if (c === '"' || c === "'") q = c;
+  else if (c === '#' && (i === 0 || /\s/.test(l[i - 1]))) return l.slice(0, i); } return l; };
+const lines = src.split(/\r?\n/).map((l, n) => ({ n: n + 1, raw: strip(l).replace(/\s+$/, '') }))
+  .filter((l) => l.raw.trim() && l.raw.trim() !== '---')
+  .map((l) => { if (/^\s*\t/.test(l.raw)) throw new Error('line ' + l.n + ': tab indentation');
+    return { n: l.n, ind: l.raw.match(/^ */)[0].length, t: l.raw.trim() }; });
+const keyAt = (t) => { let q = ''; for (let i = 0; i < t.length; i++) { const c = t[i];
+  if (q) { if (c === q) q = ''; continue; } if (c === '"' || c === "'") { q = c; continue; }
+  if (c === ':' && (i === t.length - 1 || t[i + 1] === ' ')) return i; } return -1; };
+const split = (s) => { const out = []; let d = 0, q = '', cur = '';
+  for (const c of s) { if (q) { cur += c; if (c === q) q = ''; continue; }
+    if (c === '"' || c === "'") q = c; else if ('[{'.includes(c)) d++; else if (']}'.includes(c)) d--;
+    else if (c === ',' && d === 0) { out.push(cur); cur = ''; continue; } cur += c; }
+  if (cur.trim()) out.push(cur); return out; };
+const unq = (s) => s.trim().replace(/^(["'])(.*)\1$/, '$2');
+const scalar = (s) => { s = s.trim();
+  if (s.startsWith('[') && s.endsWith(']')) return split(s.slice(1, -1)).map(scalar);
+  if (s.startsWith('{') && s.endsWith('}')) { const o = {};
+    for (const p of split(s.slice(1, -1))) { const k = keyAt(p.trim());
+      if (k < 0) throw new Error('bad flow map entry: ' + p); o[unq(p.trim().slice(0, k))] = scalar(p.trim().slice(k + 1)); }
+    return o; }
+  if (/^(".*"|'.*')$/.test(s)) return s.slice(1, -1);
+  if (s === '' || s === 'null' || s === '~') return null;
+  if (s === 'true' || s === 'false') return s === 'true';
+  if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+  if (/^[|>&*!]/.test(s)) throw new Error('unsupported YAML: ' + s);
+  return s; };
+let i = 0;
+const item = (t) => t === '-' || t.startsWith('- ');
+const block = (ind) => {
+  if (item(lines[i].t)) { const arr = [];
+    while (i < lines.length && lines[i].ind === ind && item(lines[i].t)) {
+      const rest = lines[i].t.slice(1).trim();
+      if (!rest) { i++; arr.push(i < lines.length && lines[i].ind > ind ? block(lines[i].ind) : null); }
+      else if (keyAt(rest) > 0 && !/^["'[{]/.test(rest)) { lines[i] = { ...lines[i], ind: ind + 2, t: rest }; arr.push(block(ind + 2)); }
+      else { arr.push(scalar(rest)); i++; } }
+    return arr; }
+  const obj = {};
+  while (i < lines.length && lines[i].ind === ind && !item(lines[i].t)) {
+    const { t, n } = lines[i], k = keyAt(t);
+    if (k < 0) throw new Error('line ' + n + ': expected "key: value"');
+    const v = t.slice(k + 1).trim(); i++;
+    obj[unq(t.slice(0, k))] = v ? scalar(v)
+      : i < lines.length && (lines[i].ind > ind || (lines[i].ind === ind && item(lines[i].t))) ? block(lines[i].ind) : null; }
+  if (i < lines.length && lines[i].ind > ind) throw new Error('line ' + lines[i].n + ': unexpected indentation');
+  return obj; };
+const out = lines.length ? block(lines[0].ind) : {};
+if (i < lines.length) throw new Error('line ' + lines[i].n + ': unexpected indentation');
+process.stdout.write(JSON.stringify(out));
+JS
+
+CFG='{}'
+load_cfg() {
+  local f err; f=$(config_file); [ -f "$f" ] || return 0
+  CFG=$(node -e "$YAML_JS" "$f" 2>&1) || {
+    err=$(grep -m1 -E '^(Error|SyntaxError)' <<<"$CFG" || echo "$CFG" | tail -1)
+    die "cannot read $f: $err (team reads a YAML subset: maps, lists, [..], {..}, scalars)"; }
+}
+cfg() { jq -r "$@" <<<"$CFG"; }
+
+# mark <cmd> <run> [key value]...: one-line marker on stderr; the dashboard ledger reads it from the
+# coordinator's tool output to attach the session to the Run (orca-plugin/ledger/session.ts teamRuns).
+mark() {
+  local args=(--arg team "$1" --arg run "$2") expr='{team:$team, run:$run'; shift 2
+  while [ $# -gt 1 ]; do args+=(--arg "$1" "$2"); expr="$expr, $1:\$$1"; shift 2; done
+  jq -nc "${args[@]}" "$expr}" >&2
+}
+
+spec_line() { sed -nE "s/^$2:[[:space:]]*//p" "$1" | head -1; }
+
+abs_path() { (cd "$(dirname "$1")" && echo "$PWD/$(basename "$1")"); }
+
+link_into() { # src dest: symlink dest -> src unless dest exists
+  local src=$1 dest=$2
+  [ -e "$dest" ] || [ -L "$dest" ] && return 0
+  [ -e "$src" ] || { echo "team: skip link, missing $src" >&2; return 0; }
+  mkdir -p "$(dirname "$dest")"; ln -s "$src" "$dest"
+}
+
+# routing_for <role> <alias> <tier>: Routing JSON with the tier taken from models.tiers.
+routing_for() {
+  set -e
+  local role=$1 alias=$2 tier=$3 entry tiers count
+  entry=$(cfg -c --arg a "$alias" '.models.catalog[$a] // empty')
+  [ -n "$entry" ] || die "spec: catalog alias $alias not in models.catalog of $(config_file) (aliases: $(cfg '.models.catalog // {} | keys | join(", ")'))"
+  [ "$(jq -r 'if type=="object" then .agent // empty else empty end' <<<"$entry")" != "" ] \
+    || die "spec: models.catalog.$alias has no agent"
+  [ "$(jq -r '.enabled' <<<"$entry")" = false ] && die "spec: models.catalog.$alias is disabled (enabled: false)"
+  tiers=$(cfg --arg a "$alias" '.models.tiers // {} | to_entries[] | select(.value | type=="array" and index($a)) | .key')
+  count=$(grep -c . <<<"$tiers" || true)
+  if [ "$(cfg '.models.tiers // {} | length')" = 0 ]; then
+    [ -n "$tier" ] || tier=$(cfg --arg r "$role" '.models.roles[$r].tier // "work"')
+  elif [ -n "$tier" ]; then
+    grep -qx "$tier" <<<"$tiers" || die "spec: $alias is not in tier $tier (models.tiers puts it in: ${tiers:-none})"
+  elif [ "$count" = 1 ]; then tier=$tiers
+  elif [ "$count" = 0 ]; then die "spec: $alias is in no models.tiers entry; add it there or pass --tier"
+  else die "spec: $alias is in tiers $(echo $tiers | tr ' ' ','); pass --tier"; fi
+  case $tier in fast|work|top) ;; *) die "spec: bad tier $tier (fast|work|top)";; esac
+  jq -c --arg t "$tier" --arg a "$alias" '{tier:$t, catalog:$a, agent:.agent, model:(.model // null), effort:(.effort // null)}' <<<"$entry"
+}
+
+check_independent() { # state role agent same_ok: Reviewer must not run on a Builder's agent
+  [ "$2" = reviewer ] && [ "$4" = 0 ] && [ -n "$3" ] || return 0
+  local clash; clash=$(jq -r --arg a "$3" \
+    '[.tasks[] | select(.role=="builder") | .dispatches[] | select(.agent==$a)] | length' <<<"$1")
+  [ "$clash" = 0 ] || die "Reviewer agent $3 equals a Builder agent (routing.md rule 4); use another catalog entry or --same-agent-ok after the PO agrees"
+}
+
+last_of_role() { # state role -> task id of the role's latest Task with a Dispatch
+  jq -r --arg r "$2" '[.tasks | to_entries[] | select(.value.role==$r and (.value.dispatches|length)>0) | .key] | last // empty' <<<"$1"
+}
+
+# ---------- commands ----------
+
+cmd_init() {
+  local feature=${1:-}; [ -n "$feature" ] && [ "${feature#-}" = "$feature" ] || die "init: feature name required"; shift
+  local objective="" branch="" base="" here=0
+  while [ $# -gt 0 ]; do case $1 in
+    --objective) objective=$2; shift 2;; --branch) branch=$2; shift 2;;
+    --base) base=$2; shift 2;; --here) here=1; shift;; *) die "init: unknown $1";; esac; done
+  [ -n "$objective" ] || die "init: --objective required"
+
+  local main fdir state; main=$(main_checkout); fdir="$main/.team/$feature"; state="$fdir/run.json"
+  if [ -f "$state" ]; then
+    echo "team: reusing $state" >&2; mark init "$(jq -r .run "$state")"; jq . "$state"; return 0
+  fi
+  [ -n "$base" ] || base=$(cfg '.branches.base // "main"')
+  [ -n "$branch" ] || branch="feat/$feature"
+
+  local wpath wsel wbranch
+  if [ $here = 1 ]; then
+    wpath=$(git rev-parse --show-toplevel)
+  else
+    local wt
+    wt=$(orca_call worktree create --repo "path:$main" --name "$feature" --branch "$branch" --base-branch "$base")
+    wpath=$(printf '%s' "$wt" | jq -r '.worktree.path // .path // empty')
+    [ -n "$wpath" ] || { echo "$wt" >&2; die "init: worktree receipt has no path"; }
+  fi
+  wbranch=$(git -C "$wpath" rev-parse --abbrev-ref HEAD)
+  wsel="path:$wpath"
+
+  mkdir -p "$fdir"/{specs,reports,logs,issues,inputs}
+  if [ "$wpath" != "$main" ]; then
+    link_into "$main/.team" "$wpath/.team"
+    local l; while IFS= read -r l; do [ -n "$l" ] && link_into "$main/$l" "$wpath/$l"; done < <(cfg '.worktree_links // [] | .[]')
+  fi
+
+  local run run_id
+  run=$(orca_call orchestration run-create --objective "$objective")
+  run_id=$(printf '%s' "$run" | jq -r '.runId // .id // empty')
+  [ -n "$run_id" ] || die "init: run-create receipt has no runId"
+
+  save_state "$feature" "$(jq -n --arg f "$feature" --arg o "$objective" --arg r "$run_id" \
+    --arg p "$wpath" --arg b "$wbranch" --arg s "$wsel" --arg m "$main" --arg log "$fdir/routing.jsonl" \
+    '{feature:$f, objective:$o, run:$r, main:$m, routingLog:$log,
+      workspace:{path:$p, branch:$b, selector:$s}, tasks:{}}')"
+
+  mark init "$run_id"
+  if [ ! -f "$fdir/handoff.md" ]; then
+    cat >"$fdir/handoff.md" <<EOF
+# Handoff: $objective
+
+- Repo: $main. Workspace: $wpath, branch $wbranch (base $base).
+- Coordinator: $FILL receiver identity and surface (start.md "Coordinator delivery").
+- Run: $run_id. Routing log: routing.jsonl. State: run.json (bin/team).
+- Stage: planning.
+- Tasks: see \`team status $feature\`.
+- Next: grill-with-docs, to-spec, to-tickets.
+- Skills: orchestrator, orchestration, orca-cli.
+EOF
+  fi
+
+  "$ORCA" worktree set --worktree "$wsel" --workspace-status in-progress --environment "$ORCA_ENV" --json >/dev/null 2>&1 \
+    || echo "team: could not set board status (non-fatal)" >&2
+  if [ $here = 0 ] && [ "$(real "$wpath")" != "$(real "$PWD")" ]; then
+    echo "team: workers start in $wpath. This session can stay where it is and keep running team commands;" >&2
+    echo "team: to move coordination there, follow start.md \"Shared feature workspace\" (handoff.md, new coordinator session)." >&2
+  fi
+  jq . "$state"
+}
+
+cmd_spec() {
+  set -e
+  local feature=$1 role=${2:-}; shift 2 || true
+  case $role in builder|reviewer|support-engineer) ;; *) die "spec: unknown feature or role '${role}' (roles: $ROLES; features: $(features | paste -sd, -))";; esac
+  local kind="" round="" cause="" catalog="" tier="" ticket="" name="" goal="" scope="" selection="" reuse="" same_ok=0
+  while [ $# -gt 0 ]; do case $1 in
+    --kind) kind=$2; shift 2;; --round) round=$2; shift 2;; --cause) cause=$2; shift 2;;
+    --catalog) catalog=$2; shift 2;; --tier) tier=$2; shift 2;; --ticket) ticket=$2; shift 2;;
+    --name) name=$2; shift 2;; --goal) goal=$2; shift 2;; --scope) scope=$2; shift 2;;
+    --selection) selection=$2; shift 2;; --reuse) reuse=$2; shift 2;; --same-agent-ok) same_ok=1; shift;;
+    *) die "spec: unknown $1";; esac; done
+  [ -n "$kind" ] || case $role in reviewer) kind=review;; builder) kind=build;; *) kind=other;; esac
+  case $kind in build|review|fix|re-review|delivery|close|merge|other) ;; *) die "spec: bad --kind $kind";; esac
+  case $kind in fix|re-review) [[ "$round" =~ ^[1-9][0-9]*$ ]] || die "spec: --round N (positive) required for $kind";; esac
+  [ -z "$cause" ] || case $cause in defect|requirements|scope|standards) ;; *) die "spec: bad --cause $cause";; esac
+  [ -z "$ticket" ] || [ -z "$goal$scope" ] || die "spec: --ticket replaces --goal/--scope; pass one or the other"
+  [ -z "$ticket" ] || [ -f "$ticket" ] || die "spec: ticket $ticket not found"
+
+  local st fdir; st=$(load_state "$feature"); fdir=$(feature_dir "$feature")
+
+  # Everything that can refuse runs before the file is written, so a refusal leaves no spec behind.
+  local routing
+  if [ -n "$catalog" ]; then
+    routing=$(routing_for "$role" "$catalog" "$tier")
+  elif [ -n "$reuse" ]; then
+    local prev; prev=$(last_of_role "$st" "$reuse")
+    [ -n "$prev" ] || die "spec: --reuse $reuse: no dispatched $reuse Task in run.json"
+    routing=$(spec_line "$(jq -r --arg t "$prev" '.tasks[$t].spec' <<<"$st")" Routing)
+    [ -z "$tier" ] || [ "$(jq -r .tier <<<"$routing")" = "$tier" ] || die "spec: --reuse $reuse runs at tier $(jq -r .tier <<<"$routing"), not $tier"
+  else
+    routing=$(jq -nc --arg t "${tier:-work}" '{tier:$t, catalog:"FILL", agent:"FILL", model:null, effort:null}')
+  fi
+  [ -n "$reuse" ] || check_independent "$st" "$role" "$(jq -r '.agent // empty' <<<"$routing")" $same_ok
+  local measurement
+  measurement=$(jq -nc --arg k "$kind" --arg r "$round" --arg c "$cause" \
+    '{kind:$k, round:(if $r=="" then null else ($r|tonumber) end), cause:(if $c=="" then null else $c end)}')
+
+  local n; n=$(find "$fdir/specs" -maxdepth 1 -name '[0-9][0-9]-*.md' 2>/dev/null | sed -E 's#.*/([0-9]+)-.*#\1#' | sort -n | tail -1)
+  n=$(printf '%02d' $(( 10#${n:-0} + 1 )))
+  local suffix=""; [ -n "$round" ] && suffix="-r$round"; [ -n "$name" ] && suffix="-$name"
+  local base="$n-$role$suffix" spec="$fdir/specs/$n-$role$suffix.md"
+
+  local wpath wbranch run log peers verify serial skills
+  wpath=$(jq -r .workspace.path <<<"$st"); wbranch=$(jq -r .workspace.branch <<<"$st")
+  run=$(jq -r .run <<<"$st"); log=$(jq -r .routingLog <<<"$st")
+  peers=$(jq -r '[.tasks | to_entries[] | "\(.key) \(.value.role) dispatch:\(.value.dispatches[-1].id // "none")"] | join("; ")' <<<"$st")
+  verify=$(cfg '.commands.verify // [] | if type=="array" then join("; ") else tostring end')
+  serial=$(cfg '.commands.serial // empty')
+  skills="$SKILLS_DIR/team-$role/SKILL.md first"
+  case $role in reviewer) skills="$skills; $SKILLS_DIR/code-review/SKILL.md; $SKILLS_DIR/anti-ai/SKILL.md";; esac
+
+  {
+    echo "Role: $role"
+    echo "Run: $run"
+    echo "Measurement: $measurement"
+    echo "Routing: $routing"
+    echo "Routing-log: $log"
+    echo "Selection: ${selection:-$FILL why this tier and catalog entry fit the Task}"
+    if [ -n "$ticket" ]; then echo "Ticket: $(abs_path "$ticket")"
+    else
+      echo "Goal: ${goal:-$FILL observable result}"
+      echo "Scope: ${scope:-$FILL entry points, editable paths, spec/decisions by path}"
+    fi
+    echo "Spec: $fdir/spec.md"
+    echo "Workspace: path:$wpath, branch $wbranch. Do not change checkout/branch without coordinator approval."
+    echo "Peers: ${peers:-none yet}"
+    echo "Constraints: Worker communication: $SKILLS_DIR/orchestrator/references/specs.md \"Worker communication\". Browser: Orca via orca-cli only."
+    echo "Skills: $skills"
+    echo "Refs: none"
+    echo "Evidence: ${verify:-$FILL acceptance checks}${serial:+ (serial: $serial)}"
+    echo "Output: $fdir/reports/$base.md (format: $SKILLS_DIR/orchestrator/references/specs.md \"Report\", Result and Evidence required); raw logs $fdir/logs/$n-<command>.log"
+  } >"$spec"
+  echo "$spec"
+}
+
+validate_spec() { # spec run -> role
+  set -e
+  local spec=$1 run=$2 role k m open
+  [ -f "$spec" ] || die "spec $spec not found"
+  for k in Role Run Measurement Routing Routing-log Output; do
+    [ -n "$(spec_line "$spec" "$k")" ] || die "spec $spec: missing '$k:' line"; done
+  open=$(grep "$FILL" "$spec" | cut -d: -f1 | paste -sd, - || true)
+  [ -z "$open" ] || die "spec $spec: unresolved FILL in $open (edit the file, or pass --selection/--goal/--scope to spec/start)"
+  grep -q '"FILL"' "$spec" && die "spec $spec: Routing still has FILL values (pass --catalog or --reuse)"
+  [ "$(spec_line "$spec" Run)" = "$run" ] || die "spec $spec: Run is not $run"
+  role=$(spec_line "$spec" Role)
+  case $role in builder|reviewer|support-engineer) ;; *) die "spec $spec: bad Role $role";; esac
+  m=$(spec_line "$spec" Measurement)
+  jq -e . <<<"$m" >/dev/null 2>&1 || die "spec $spec: Measurement is not JSON"
+  jq -e . <<<"$(spec_line "$spec" Routing)" >/dev/null 2>&1 || die "spec $spec: Routing is not JSON"
+  case $(jq -r .kind <<<"$m") in fix|re-review)
+    jq -e '.round|type=="number" and .>0' <<<"$m" >/dev/null || die "spec $spec: $(jq -r .kind <<<"$m") needs a positive round";; esac
+  echo "$role"
+}
+
+default_title() { # spec -> ticket name or Goal, without FILL
+  local t; t=$(spec_line "$1" Ticket)
+  if [ -n "$t" ]; then basename "$t" .md | sed -E 's/^[0-9]+-//; s/-/ /g'
+  else spec_line "$1" Goal | cut -c1-70; fi
+}
+
+cmd_task() {
+  set -e
+  local feature=$1 spec=${2:-}; [ -n "$spec" ] || die "task: <spec> required"; shift 2
+  local title="" deps=""
+  while [ $# -gt 0 ]; do case $1 in
+    --title) title=$2; shift 2;; --deps) deps=$2; shift 2;; *) die "task: unknown $1";; esac; done
+  spec=$(abs_path "$spec")
+  local st run role; st=$(load_state "$feature"); run=$(jq -r .run <<<"$st")
+  role=$(validate_spec "$spec" "$run")
+  [ -n "$title" ] || title=$(default_title "$spec")
+  [ -n "$title" ] || die "task: --title required (spec has no Ticket or Goal)"
+  case $title in "$role: "*) ;; *) title="$role: $title";; esac
+
+  local args=(orchestration task-create --run "$run" --spec-file "$spec" --task-title "$title")
+  [ -z "$deps" ] || args+=(--deps "$(jq -nc --arg d "$deps" '$d | split(",") | map(select(. != ""))')")
+  local res task_id; res=$(orca_call "${args[@]}")
+  task_id=$(jq -r '.taskId // .id // empty' <<<"$res"); [ -n "$task_id" ] || die "task: receipt has no taskId"
+  st=$(jq --arg t "$task_id" --arg s "$spec" --arg r "$role" --arg ti "$title" \
+    '.tasks[$t] = {spec:$s, role:$r, title:$ti, dispatches:[]}' <<<"$st")
+  save_state "$feature" "$st"
+  mark task "$run" task "$task_id"
+  echo "$task_id"
+}
+
+cmd_dispatch() {
+  set -e
+  local feature=$1 ref=${2:-}; [ -n "$ref" ] || die "dispatch: <task-id|spec> required"; shift 2
+  local terminal="" reuse="" same_ok=0
+  while [ $# -gt 0 ]; do case $1 in
+    --terminal) terminal=$2; shift 2;; --reuse) reuse=$2; shift 2;; --same-agent-ok) same_ok=1; shift;;
+    *) die "dispatch: unknown $1";; esac; done
+  local st run task_id spec role
+  st=$(load_state "$feature"); run=$(jq -r .run <<<"$st")
+  if [ -n "$reuse" ]; then
+    [ -z "$terminal" ] || die "dispatch: --terminal and --reuse are exclusive"
+    local prev; prev=$(last_of_role "$st" "$reuse")
+    terminal=$(jq -r --arg t "$prev" '.tasks[$t].dispatches[-1].terminal // empty' <<<"$st")
+    [ -n "$terminal" ] || die "dispatch: --reuse $reuse: no $reuse worker terminal in run.json"
+  fi
+  if [ -f "$ref" ]; then
+    spec=$(abs_path "$ref")
+    task_id=$(jq -r --arg s "$spec" '[.tasks | to_entries[] | select(.value.spec==$s) | .key][-1] // empty' <<<"$st")
+    [ -n "$task_id" ] || die "dispatch: no Task for $spec; run team task first"
+  else
+    task_id=$ref; spec=$(jq -r --arg t "$task_id" '.tasks[$t].spec // empty' <<<"$st")
+    [ -n "$spec" ] || die "dispatch: $task_id not in run.json"
+  fi
+  role=$(jq -r --arg t "$task_id" '.tasks[$t].role' <<<"$st")
+  local routing agent model effort
+  routing=$(spec_line "$spec" Routing)
+  agent=$(jq -r '.agent // empty' <<<"$routing"); model=$(jq -r '.model // empty' <<<"$routing")
+  effort=$(jq -r '.effort // empty' <<<"$routing")
+
+  [ -n "$terminal" ] || check_independent "$st" "$role" "$agent" $same_ok
+
+  local args=(orchestration worker-start --run "$run" --task "$task_id" --keep-open)
+  if [ -n "$terminal" ]; then
+    args+=(--terminal "$terminal")
+  else
+    [ -n "$agent" ] || die "dispatch: Routing has no agent in $spec"
+    args+=(--worktree "$(jq -r .workspace.selector <<<"$st")" --agent "$agent")
+    if [ -n "$model" ]; then args+=(--model "$model"); [ -n "$effort" ] && args+=(--effort "$effort"); fi
+  fi
+  local res d; res=$(orca_call "${args[@]}")
+  d=$(jq -r '.dispatchId // empty' <<<"$res"); [ -n "$d" ] || { echo "$res" >&2; die "dispatch: receipt has no dispatchId"; }
+  local r_agent r_model r_effort r_term
+  r_agent=$(jq -r --arg a "$agent" '.agent // $a' <<<"$res"); r_model=$(jq -r '.model // empty' <<<"$res")
+  r_effort=$(jq -r '.effort // empty' <<<"$res"); r_term=$(jq -r --arg t "$terminal" '.terminal // $t' <<<"$res")
+  [ -n "$r_model" ] || r_model=$model; [ -n "$r_effort" ] || r_effort=$effort
+
+  local log; log=$(jq -r .routingLog <<<"$st")
+  if ! { [ -f "$log" ] && jq -e --arg d "$d" 'select(.dispatch==$d)' "$log" 2>/dev/null | grep -q .; }; then
+    jq -nc --arg t "$task_id" --arg d "$d" --argjson r "$routing" --arg a "$r_agent" --arg m "$r_model" --arg e "$r_effort" \
+      '{task:$t, dispatch:$d, tier:$r.tier, catalog:$r.catalog, agent:$a,
+        model:(if $m=="" then null else $m end), effort:(if $e=="" then null else $e end)}' >>"$log"
+  fi
+  st=$(jq --arg t "$task_id" --arg d "$d" --arg term "$r_term" --arg a "$r_agent" \
+    '.tasks[$t].dispatches |= ((map(select(.id != $d))) + [{id:$d, terminal:$term, agent:$a}])' <<<"$st")
+  save_state "$feature" "$st"
+  mark dispatch "$run" task "$task_id" dispatch "$d"
+  jq -c --arg t "$task_id" '{task:$t, dispatch:.dispatchId, terminal, next}' <<<"$res"
+}
+
+cmd_start() {
+  local feature=$1 target=${2:-}; [ -n "$target" ] || die "start: <spec|role> required"; shift 2
+  local sargs=() targs=() dargs=() same_ok=0 terminal=""
+  while [ $# -gt 0 ]; do case $1 in
+    --kind|--round|--cause|--catalog|--tier|--ticket|--name|--goal|--scope|--selection) sargs+=("$1" "$2"); shift 2;;
+    --reuse) sargs+=("$1" "$2"); dargs+=("$1" "$2"); terminal=reuse; shift 2;;
+    --same-agent-ok) sargs+=("$1"); dargs+=("$1"); same_ok=1; shift;;
+    --title|--deps) targs+=("$1" "$2"); shift 2;;
+    --terminal) dargs+=("$1" "$2"); terminal=$2; shift 2;;
+    *) die "start: unknown $1";; esac; done
+
+  local spec made=0
+  if [ ! -f "$target" ] && [[ "$target" =~ ^($ROLES)$ ]]; then
+    spec=$(cmd_spec "$feature" "$target" ${sargs[@]+"${sargs[@]}"}); made=1
+  else
+    [ ${#sargs[@]} = 0 ] || [ "${sargs[*]}" = "--same-agent-ok" ] || [ "${sargs[0]}" = --reuse ] \
+      || die "start: spec flags (${sargs[0]}) need a role, not an existing spec"
+    spec=$target
+    [ -n "$terminal" ] || check_independent "$(load_state "$feature")" "$(spec_line "$spec" Role)" \
+      "$(spec_line "$spec" Routing | jq -r '.agent // empty' 2>/dev/null)" $same_ok
+  fi
+  # A refused Task removes the spec start wrote, so its number is not consumed. (Not `if !`: that
+  # would switch off set -e inside cmd_task.)
+  if [ $made = 1 ]; then
+    UNDO_SPEC=$spec
+    trap '[ -z "${UNDO_SPEC:-}" ] || { rm -f "$UNDO_SPEC"; echo "team: removed $UNDO_SPEC" >&2; }' EXIT
+  fi
+  local task_id; task_id=$(cmd_task "$feature" "$spec" ${targs[@]+"${targs[@]}"})
+  UNDO_SPEC=""
+  [ $made = 1 ] && echo "team: spec $spec" >&2
+  cmd_dispatch "$feature" "$task_id" ${dargs[@]+"${dargs[@]}"}
+}
+
+report_verdict() { # report path -> first non-empty line under "## Result"
+  [ -f "$1" ] || { echo "-"; return; }
+  local v; v=$(awk '/^## Result/{f=1;next} f&&/^## /{exit} f&&NF{print;exit}' "$1" | cut -c1-120)
+  echo "${v:-?}"
+}
+
+cmd_status() {
+  local feature=$1; shift
+  local json=0; [ "${1:-}" = --json ] && json=1
+  local st run tasks; st=$(load_state "$feature"); run=$(jq -r .run <<<"$st")
+  tasks=$(orca_call orchestration task-list --run "$run" | jq -c '.tasks // []')
+  local rows="[]" t id status title spec report d
+  while IFS= read -r t; do
+    id=$(jq -r .id <<<"$t"); status=$(jq -r .status <<<"$t"); title=$(jq -r .title <<<"$t")
+    spec=$(jq -r --arg i "$id" '.tasks[$i].spec // empty' <<<"$st")
+    d=$(jq -r --arg i "$id" '.tasks[$i].dispatches[-1].id // "-"' <<<"$st")
+    report=""; [ -n "$spec" ] && report=$(spec_line "$spec" Output | sed -E 's/[; (].*//')
+    rows=$(jq -c --arg i "$id" --arg s "$status" --arg ti "$title" --arg d "$d" --arg r "$report" \
+      --arg v "$(report_verdict "$report")" '. + [{task:$i, status:$s, title:$ti, dispatch:$d, report:$r, verdict:$v}]' <<<"$rows")
+  done < <(jq -c '.[]' <<<"$tasks")
+  if [ $json = 1 ]; then jq --arg r "$run" --arg f "$feature" '{feature:$f, run:$r, tasks:.}' <<<"$rows"; return; fi
+  echo "$feature  Run $run  $(jq -r '.workspace.path + " (" + .workspace.branch + ")"' <<<"$st")"
+  jq -r '.[] | [.task, .status, .dispatch, .title, (.report | split("/") | .[-1] // "-"), .verdict] | @tsv' <<<"$rows" \
+    | column -t -s $'\t'
+}
+
+cmd_board() {
+  local feature=$1 status=${2:-}; [ -n "$status" ] || die "board: <status> required"
+  local st; st=$(load_state "$feature")
+  orca_call worktree set --worktree "$(jq -r .workspace.selector <<<"$st")" --workspace-status "$status" >/dev/null
+  echo "board: $status"
+}
+
+need jq; need git
+cmd=${1:-help}; shift || true
+case $cmd in help|-h|--help) usage; exit 0;; esac
+git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
+need node; load_cfg
+case $cmd in
+  init) cmd_init "$@";;
+  spec|task|dispatch|start|status|board)
+    if [ -n "${1:-}" ] && [ -f "$(state_file "$1")" ]; then feature=$1; shift; else feature=$(infer_feature); fi
+    "cmd_$cmd" "$feature" "$@";;
+  *) usage >&2; exit 2;;
+esac

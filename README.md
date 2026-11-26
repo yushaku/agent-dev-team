@@ -69,6 +69,13 @@ done
 
 Codex reads `~/.agents/skills` directly; Claude Code reads `~/.claude/skills`.
 
+Put the Orchestrator's `team` CLI on PATH (any PATH directory works; `~/.local/bin` is one):
+
+```sh
+mkdir -p ~/.local/bin && ln -sfn ~/.agents/teams/bin/team ~/.local/bin/team
+team help
+```
+
 5. Check.
 
 ```sh
@@ -108,6 +115,7 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 - `docs-policy.md`: document ownership and authoring rules; worker reports use `skills/orchestrator/references/specs.md`
 - `skills/`: skills the team wrote
 - `skills-lock.json`: pinned downloaded skills
+- `bin/team`: the Orchestrator's CLI for the mechanical steps (Run, worktree, Task spec, Task, Dispatch, status); tests in `bin/tests/team.test.sh`
 - `templates/`: file templates for projects
 - `diagrams/`: architecture diagrams
 - `docs/`: Vietnamese docs site (GitHub Pages); diagrams are `?embed=1` iframes sized from `style="--w; --h"` (the diagram's viewBox); update both when a re-render changes the viewBox

@@ -22,6 +22,7 @@ Evidence: <acceptance checks and commands.verify; serial if configured>
 Output: <report path and raw-log paths under .team/<feature>/>
 ```
 
+- Start Tasks with `team start <role> --catalog <alias> --selection <why> (--ticket <path> | --goal <text> --scope <text>)`; fix rounds add `--kind fix --round N --cause C --reuse builder`. It writes the spec with these lines, refuses missing or `FILL:` values and Reviewer/Builder agent clashes, creates the Task, dispatches with `--keep-open` and records Routing history. Use `team spec` and edit the file when Constraints, Refs or Skills need more than the defaults. `team status` joins Task state with report verdicts.
 - Title: `<role>: <what>`. `Role`, `Measurement`, `Routing` and `Routing-log` must be in the Orca Task spec, not only a linked file; the dashboard reads them there.
 - Before each `task-create`, check the spec file has all four lines, `Run:` and, for `fix`/`re-review`, a positive `round`. Every new unit of work (build, fix, re-review, retro, close) is its own `task-create`, started by `--task <id>`; reuse the same worker with `--terminal <handle>`. Start Builders and Reviewers with `--keep-open` so that handle stays reusable. Do not hand new work to a settled Dispatch with `send`: Orca turns it into a follow-up Task without this metadata. Use `send` only to steer a worker on its current Task.
 - `kind`: `build`, `review`, `fix`, `re-review`, `delivery`, `close`, `merge`, `other`. Fix/re-review Tasks in one cycle share a positive `round`; otherwise null. Fix `cause`: `defect`, `requirements`, `scope`, `standards`, or null if unknown. Preserve metadata on retries.
@@ -35,7 +36,7 @@ Output: <report path and raw-log paths under .team/<feature>/>
 ## Routing history
 
 - At Task creation, fill `Routing:` with the initial selection, keeping null for omitted flags, and `Routing-log:` with the absolute `.team/<feature>/routing.jsonl` path. Orca Task specs are create-only in this CLI; later selections belong in that log.
-- After a successful dispatch receipt, append `{"task":"<task-id>","dispatch":"<dispatch-id>","tier":"work","catalog":"<alias>","agent":"<agent-id>","model":null,"effort":null}` with resolved values. Check the Dispatch id first: receipt replay retains its existing record rather than appending a duplicate.
+- After a successful dispatch receipt (`team dispatch` and `team start` do this), append `{"task":"<task-id>","dispatch":"<dispatch-id>","tier":"work","catalog":"<alias>","agent":"<agent-id>","model":null,"effort":null}` with resolved values. Check the Dispatch id first: receipt replay retains its existing record rather than appending a duplicate.
 - A retry/replacement gets its own record before follow-up work. Preserve previous attempts and pass the log path in the Run handoff.
 - The dashboard reads only matching Task records contained in `.team/` and binds settings to the exact Dispatch window; missing/ambiguous records stay unverified.
 
@@ -70,6 +71,7 @@ Messages point to files. Store all Run files under `.team/<feature>/` via the wo
 | `spec.md` | Orchestrator (`to-spec`) | Spec and test seams |
 | `issues/NN-<slug>.md` | Orchestrator (`to-tickets`) | One ticket per Orca Task; `Blocked by:` line, no status |
 | `handoff.md` | Orchestrator | `start.md` "Handoff" |
+| `run.json` | `team` CLI | Run, workspace and each Task's spec, role and Dispatch terminals; read by `--reuse` and `team status` |
 
 ## Report
 
