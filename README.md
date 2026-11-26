@@ -105,6 +105,7 @@ No `missing:` lines means every skill and the CLI are in place.
   - `team-support-engineer`: read-only ticket and production investigation.
 - **Planning** (the Orchestrator with the PO, not workers): `grill-with-docs`, `to-spec`, `to-tickets`; see `skills/orchestrator/references/plan.md`.
 - **Commands** (`/orchestrator`, `/researcher`, `/solution-architect`, `/init-team`, `/project-health`): sessions the PO starts and chats with directly; the Orchestrator never dispatches them.
+- **Senior commands** (`/senior-backend <job>`, `/senior-frontend <job>`; pi: `/skill:senior-backend`, Codex: `$senior-backend`): user-invoked only (`disable-model-invocation`, Codex `agents/openai.yaml`). The session builds the job itself with a fixed skill set, test-first, without Orchestrator or Reviewer. `team solo` gives it a Run, a Task and a Dispatch to its own terminal, so the dashboard tracks it as role `senior-backend`/`senior-frontend`; `team submit` completes the Task.
 
 Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` skill; they run inside a worker's session, never as a separate worker. Role ids (Task title prefix, `models.roles`, dashboard): `builder`, `reviewer`, `support-engineer`.
 
@@ -112,6 +113,7 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 
 - `workflow.md`: short overview, decision boundaries and reading index
 - `skills/team-*/`: worker skills (see "Workers and commands" above), each with `references/`
+- `skills/senior-*/`: senior commands; they reuse `skills/team-builder/references/`
 - `skills/orchestrator/`: the Orchestrator skill; `references/` holds its step files, coding agents and ticket mode; Orca commands come from the version-matched skills
 - `skills/init-team/references/config-schema.md`: project config schema and defaults; platform and model presets live beside it
 - `skills/orchestrator/references/routing.md`: model routing and skill slots
