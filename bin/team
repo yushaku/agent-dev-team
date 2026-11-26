@@ -396,7 +396,7 @@ cmd_spec() {
       echo "Goal: ${goal:-$FILL observable result}"
       echo "Scope: ${scope:-$FILL entry points, editable paths, spec/decisions by path}"
     fi
-    echo "Spec: $fdir/spec.md"
+    if [ -f "$fdir/spec.md" ]; then echo "Spec: $fdir/spec.md"; else echo "Spec: none (no to-spec for this feature)"; fi
     echo "Workspace: path:$wpath, branch $wbranch. Do not change checkout/branch without coordinator approval."
     echo "Peers: ${peers:-none yet}"
     echo "Constraints: $constraints"
@@ -428,10 +428,13 @@ validate_spec() { # spec run -> role
   echo "$role"
 }
 
-default_title() { # spec -> ticket name or Goal, without FILL
-  local t; t=$(spec_line "$1" Ticket)
-  if [ -n "$t" ]; then basename "$t" .md | sed -E 's/^[0-9]+-//; s/-/ /g'
-  else spec_line "$1" Goal | cut -c1-70; fi
+default_title() { # spec -> ticket name or Goal, prefixed with the kind for follow-ups ("fix r1: ...")
+  local t what pre; t=$(spec_line "$1" Ticket)
+  if [ -n "$t" ]; then what=$(basename "$t" .md | sed -E 's/^[0-9]+-//; s/-/ /g')
+  else what=$(spec_line "$1" Goal | cut -c1-70); fi
+  [ -n "$what" ] || return 0
+  pre=$(spec_line "$1" Measurement | jq -r 'if .kind == "build" or .kind == "review" then "" else .kind + (if .round then " r\(.round)" else "" end) + ": " end' 2>/dev/null || true)
+  echo "$pre$what"
 }
 
 cmd_task() {
