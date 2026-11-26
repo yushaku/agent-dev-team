@@ -4,12 +4,11 @@ Read when the interview reaches `models`. Offer one preset as the starting point
 
 ## Discover ids first
 
-Copy no id from this file without checking it on the PO's machine:
+Copy no id from this file without checking it on the PO's machine: `team agents` lists what each Orca agent can launch (sources: `claude --help` and its documented aliases, `~/.codex/models_cache.json`, `pi --list-models`, `opencode models`, each agent's own config). `team agents --check` validates the written catalog against it.
 
-- Claude Code: aliases `haiku`, `sonnet`, `opus` follow the latest release; a full model name pins one. Effort: `claude --help` (`--effort`). Orca refuses an effort the model lacks (haiku takes none): use `effort: null` there.
-- Codex: `jq -r '.models[] | select(.visibility=="list") | .slug' ~/.codex/models_cache.json`; each entry lists its `supported_reasoning_levels`. The agent default is `model` / `model_reasoning_effort` in `~/.codex/config.toml`.
-- Other Orca agents: the version-matched `orca-cli` guide; when it cannot list models, ask the PO for the id.
-- Which model goes in which tier is the PO's call; a name does not tell quality or price.
+- Claude Code: aliases `haiku`, `sonnet`, `opus` follow the latest release; a full model name pins one. Orca refuses an effort the model lacks (haiku takes none): use `effort: null` there.
+- Pi: `provider/id`; effort becomes the thinking level. OpenCode: no effort. Hermes and agents without a probe launch with their own config: `model: null, effort: null`.
+- A listed model proves neither login nor quota. Which model goes in which tier is the PO's call; a name does not tell quality or price.
 
 ## A. Agent defaults (smallest)
 

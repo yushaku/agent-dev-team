@@ -115,7 +115,7 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 - `docs-policy.md`: document ownership and authoring rules; worker reports use `skills/orchestrator/references/specs.md`
 - `skills/`: skills the team wrote
 - `skills-lock.json`: pinned downloaded skills
-- `bin/team`: the Orchestrator's CLI for the mechanical steps (Run, worktree, Task spec, Task, Dispatch, status); tests in `bin/tests/team.test.sh`
+- `bin/team`: the CLI for the mechanical steps: `/init-team` model discovery (`team agents`), and the Orchestrator's Run, worktree, Task spec, Task, Dispatch, review rounds, status and close; tests in `bin/tests/team.test.sh`
 - `templates/`: file templates for projects
 - `diagrams/`: architecture diagrams
 - `docs/`: Vietnamese docs site (GitHub Pages); diagrams are `?embed=1` iframes sized from `style="--w; --h"` (the diagram's viewBox); update both when a re-render changes the viewBox
