@@ -67,7 +67,7 @@
 ## Board mapping
 
 - Dashboard work groups use repo then Orca Run ID, labelled by objective; use worktree only for activity without a Run ID. One Run spans coordinator/worker worktrees, while different Runs stay separate even in the same worktree. Worktree or branch equality alone does not assign activity to a Run.
-- Place Run card, status and ticket/PR links in the shared feature workspace: started `in-progress` (`team init`), delivered/Gate 2 pending `in-review` (`team board in-review`), merged `completed` (`team close`).
+- Place Run card, status and ticket/PR links in the shared feature workspace: started `in-progress` (`team init`), delivered/Gate 2 pending `in-review` (`team accept`), merged `completed` (`team close --merge`).
 - No-code production investigations use the configured `branches.client_visible` remote ref.
 
 ## Worker permissions
