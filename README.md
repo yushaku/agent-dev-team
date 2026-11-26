@@ -69,23 +69,26 @@ done
 
 Codex reads `~/.agents/skills` directly; Claude Code reads `~/.claude/skills`.
 
-Put the Orchestrator's `team` CLI on PATH (any PATH directory works; `~/.local/bin` is one):
+5. Put the `team` CLI on PATH. Required: the skills call it as `team ...` (`/init-team` runs `team agents`, the Orchestrator runs every step through it), and the dashboard links an Orchestrator session to its Run only from a literal `team` call. Any PATH directory works; `~/.local/bin` is one (add it to PATH in your shell profile if `echo $PATH` lacks it).
 
 ```sh
 mkdir -p ~/.local/bin && ln -sfn ~/.agents/teams/bin/team ~/.local/bin/team
-team help
 ```
 
-5. Check.
+Workers need no PATH entry: each Task spec names the CLI by absolute path for `team verify` and `team submit`. That path is the link itself, so keep the link where it is once Tasks run.
+
+6. Check.
 
 ```sh
 cd ~/.agents/teams
 for n in $(jq -r '.skills | keys[]' skills-lock.json) $(ls skills); do
   test -e ~/.agents/skills/"$n"/SKILL.md || echo "missing: $n"
-done; echo "check done"
+done
+command -v team >/dev/null || echo "missing: team on PATH"
+echo "check done"
 ```
 
-No `missing:` lines means every skill is in place.
+No `missing:` lines means every skill and the CLI are in place.
 
 ## Quickstart
 
