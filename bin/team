@@ -32,12 +32,13 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
       Write specs/NN-<role>[-rN|-NAME].md. Lines left as FILL: are for the Orchestrator.
   task [feature] <spec> [--title TEXT] [--deps ID,ID]
       Validate the spec and create the Orca Task. Title defaults to the ticket name or Goal.
-  dispatch [feature] <task-id|spec> [--terminal H | --reuse ROLE] [--same-agent-ok]
+  dispatch [feature] <task-id|spec> [--terminal H | --reuse ROLE | --catalog A] [--same-agent-ok]
       worker-start --keep-open on the feature workspace, or on a kept terminal; append
-      routing.jsonl; record the Dispatch in run.json.
+      routing.jsonl; record the Dispatch in run.json. --catalog retries on another entry of the
+      spec's tier (a launch or account failure); stop the failed Dispatch first.
   start [feature] <spec|role> [spec flags] [task flags] [dispatch flags]
       With a role: spec + task + dispatch in one step (spec removed if the Task is refused).
-  review [feature] --catalog A [--tier T] [--read-as V] [--selection T] [--constraint|--ref|--skill X]...
+  review [feature] --catalog A [--tier T] [--read-as V] [--selection T] [--same-agent-ok] [--constraint|--ref|--skill X]...
       After an "implemented" build: the review of base..HEAD on a new Reviewer (catalog is the
       Orchestrator's routing choice), the Builder's ticket and report as Ref; records the build
       as processed in handoff.md.
@@ -689,10 +690,12 @@ cmd_task() {
 cmd_dispatch() {
   set -e
   local feature=$1 ref=${2:-}; [ -n "$ref" ] || die "dispatch: <task-id|spec> required"; shift 2
-  local terminal="" reuse="" same_ok=0
+  local terminal="" reuse="" same_ok=0 catalog=""
   while [ $# -gt 0 ]; do case $1 in
     --terminal) terminal=$2; shift 2;; --reuse) reuse=$2; shift 2;; --same-agent-ok) same_ok=1; shift;;
+    --catalog) catalog=$2; shift 2;;
     *) die "dispatch: unknown $1";; esac; done
+  [ -z "$catalog" ] || [ -z "$terminal$reuse" ] || die "dispatch: --catalog starts a new worker; it excludes --terminal and --reuse"
   local st run task_id spec role
   st=$(load_state "$feature"); run=$(jq -r .run <<<"$st")
   if [ -n "$reuse" ]; then
@@ -712,6 +715,10 @@ cmd_dispatch() {
   role=$(jq -r --arg t "$task_id" '.tasks[$t].role' <<<"$st")
   local routing agent model effort
   routing=$(spec_line "$spec" Routing)
+  if [ -n "$catalog" ]; then # retry on another entry of the same tier (routing.md); the spec keeps the first
+    local tier; tier=$(jq -r .tier <<<"$routing")
+    routing=$(routing_for "$role" "$catalog" "$tier")
+  fi
   agent=$(jq -r '.agent // empty' <<<"$routing"); model=$(jq -r '.model // empty' <<<"$routing")
   effort=$(jq -r '.effort // empty' <<<"$routing")
 
@@ -1001,6 +1008,7 @@ cmd_review() {
   while [ $# -gt 0 ]; do case $1 in
     --read-as) read_as=$2; shift 2;; --selection) sel=$2; shift 2;;
     --catalog|--tier|--constraint|--ref|--skill) sargs+=("$1" "$2"); shift 2;;
+    --same-agent-ok) sargs+=("$1"); shift;;
     *) die "review: unknown $1";; esac; done
   [[ " ${sargs[*]-} " == *" --catalog "* ]] || die "review: --catalog required (routing.md: Reviewer tier and an agent other than the Builder's)"
   local st b spec kind report verdict head base

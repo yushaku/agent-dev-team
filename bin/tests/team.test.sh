@@ -298,6 +298,14 @@ setverify false
 check "a failed verify after the merge keeps the commit and closes nothing" '[ $? -ne 0 ] && grep -q "ORIG_HEAD" "$tmp/err" && [ -f "$repo/c.txt" ] && [ "$(jq -r .closed "$repo/.team/vf/run.json")" = null ]'
 cp "$tmp/cfg2" .team/config.yaml
 
+# dispatch --catalog: retry on another entry of the same tier
+d=$("$team" dispatch csv task_1 --catalog codex-work 2>"$tmp/err")
+check "dispatch --catalog starts the new entry and logs it" 'grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- "--agent codex --model gpt-x --effort medium" && [ "$(tail -1 "$F/routing.jsonl" | jq -r .catalog)" = codex-work ]'
+"$team" dispatch csv task_1 --catalog claude-fast >/dev/null 2>"$tmp/err"
+check "dispatch --catalog refuses another tier" '[ $? -ne 0 ] && grep -q "claude-fast is not in tier work" "$tmp/err"'
+"$team" dispatch csv task_1 --catalog codex-work --terminal term_1 >/dev/null 2>"$tmp/err"
+check "dispatch --catalog excludes --terminal" '[ $? -ne 0 ] && grep -q "excludes --terminal" "$tmp/err"'
+
 # submit: worker side
 R="$F/reports/01-builder.md"; WS="$tmp/wt/csv"
 printf 'Role: builder\nDispatch: ctx_1\n\n## Result\nimplemented\n## Evidence\nx\n' >"$R"
