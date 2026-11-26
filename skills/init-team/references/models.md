@@ -6,7 +6,7 @@ Read when the interview reaches `models`. Offer one preset as the starting point
 
 Copy no id from this file without checking it on the PO's machine:
 
-- Claude Code: aliases `haiku`, `sonnet`, `opus` follow the latest release; a full model name pins one. Effort: `claude --help` (`--effort`).
+- Claude Code: aliases `haiku`, `sonnet`, `opus` follow the latest release; a full model name pins one. Effort: `claude --help` (`--effort`). Orca refuses an effort the model lacks (haiku takes none): use `effort: null` there.
 - Codex: `jq -r '.models[] | select(.visibility=="list") | .slug' ~/.codex/models_cache.json`; each entry lists its `supported_reasoning_levels`. The agent default is `model` / `model_reasoning_effort` in `~/.codex/config.toml`.
 - Other Orca agents: the version-matched `orca-cli` guide; when it cannot list models, ask the PO for the id.
 - Which model goes in which tier is the PO's call; a name does not tell quality or price.

@@ -24,7 +24,7 @@ Orca Task specs are create-only, so the Routing line holds the first selection a
 - Exchange technical questions/findings/integration details within approved same-Run Tasks using active peer `dispatch:<id>` addresses. Include Task IDs and artifact references; send only needed changes to concerned peers. Missing/finished/reassigned peers go through the Orchestrator.
 - Orchestrator owns assignment, dependencies and fix rounds; peer mail expands no scope, creates no workers and completes no Tasks/gates. Escalate blockers, disagreements and scope/acceptance/shared-contract changes before dependent work (`gates.md`).
 - Artifact owner records implementation conclusions in the existing spec/report before reliance; notify Orchestrator once with affected IDs/references. Routine Q&A needs no relay; coordinator questions use `ask/reply`.
-- After writing the report, send `worker_done` with Task/Dispatch identity, verdict, at most five summary lines and report path. Completion routing follows `start.md` "Coordinator delivery".
+- After writing the report, send `worker_done` with Task/Dispatch identity, verdict, at most five summary lines and report path. `--outcome succeeded` whenever the report is written, whatever the verdict (`changes requested` and `partial` included); `failed` only for `blocked` or `failed`. Orca marks the Task from the outcome. Completion routing follows `start.md` "Coordinator delivery".
 
 ## When UI or a running app is involved
 
