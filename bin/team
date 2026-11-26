@@ -614,7 +614,7 @@ cmd_spec() {
   skills="$SKILLS_DIR/team-$role/SKILL.md first"
   case $role in reviewer) skills="$skills; $SKILLS_DIR/code-review/SKILL.md; $SKILLS_DIR/anti-ai/SKILL.md";; esac
   local x; for x in ${extra_s[@]+"${extra_s[@]}"}; do skills="$skills; $x"; done
-  local constraints="Finish: the report at Output is prefilled; replace its FILL lines, then run \`$TEAM_BIN submit <Output path>\`. It checks the report and sends worker_done for you: do not send worker_done yourself. Worker communication: $SKILLS_DIR/orchestrator/references/specs.md \"Worker communication\". Browser: Orca via orca-cli only."
+  local constraints="Finish: the report at Output is prefilled; replace its FILL lines, then run \`$TEAM_BIN submit <Output path>\`. It checks the report and sends worker_done for you: do not send worker_done yourself. Worker communication: $SKILLS_DIR/orchestrator/references/reports.md \"Worker communication\". Browser: Orca via orca-cli only."
   constraints="$constraints$(cfg '[
       (if .matt.glossary then "Glossary: \(.matt.glossary)." else empty end),
       (if .matt.adr then "ADRs: \(.matt.adr)." else empty end),
@@ -643,7 +643,7 @@ cmd_spec() {
     echo "Skills: $skills"
     echo "Refs: $refs"
     echo "Evidence: ${verify:-$FILL acceptance checks}${serial:+ (serial: $serial)}"
-    echo "Output: $fdir/reports/$base.md (prefilled at dispatch; format: $SKILLS_DIR/orchestrator/references/specs.md \"Report\"); raw logs $fdir/logs/$n-<command>.log"
+    echo "Output: $fdir/reports/$base.md (prefilled at dispatch; format: $SKILLS_DIR/orchestrator/references/reports.md); raw logs $fdir/logs/$n-<command>.log"
   } >"$spec"
   echo "$spec"
 }
@@ -1079,7 +1079,7 @@ work_args() { # spec -> the --ticket or --goal/--scope flags that spec was writt
   if [ -n "$tk" ]; then printf '%s\n' --ticket "$tk"
   else printf '%s\n' --goal "$(spec_line "$1" Goal)" --scope "$(spec_line "$1" Scope)"; fi
 }
-processed() { # feature task report verdict next: handoff line per specs.md "Report"
+processed() { # feature task report verdict next: handoff line per start.md "Handoff"
   local fdir st d head; fdir=$(feature_dir "$1"); st=$(load_state "$1")
   d=$(jq -r --arg t "$2" '.tasks[$t].dispatches[-1].id' <<<"$st")
   head=$(git -C "$(jq -r .workspace.path <<<"$st")" rev-parse --short HEAD 2>/dev/null || echo "?")

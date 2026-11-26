@@ -52,7 +52,7 @@ ui_rules:                    # optional; UI Builders and prototype Tasks, Review
   visual_loop: off           # on = Builder screenshot loop per UI slice; off = only when the PO asks
                              # other keys (screens, platform, copy) pass as-is to the Task spec
 ui_viewports: []             # e.g. ["desktop 1280x800", "mobile 390x844"]; set when there is a UI
-ui_screenshots: false        # true = capture shots for the visual loop and prototypes (`skills/orchestrator/references/specs.md` working rules)
+ui_screenshots: false        # true = capture shots for the visual loop and prototypes (`skills/orchestrator/references/specs.md` "UI and running app")
 perf_metrics: "latency and memory of the changed path, measured before and after"
 compliance: []               # e.g. [gdpr], [appi], [vn-pdpl]; its skills go in skills.security as references, never replacing the regime
 perf_notes: <path>           # optional perf ledger for the Reviewer's perf check

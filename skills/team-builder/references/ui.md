@@ -15,6 +15,6 @@
 
 ## Visual check
 
-- For `visual loop: on`, after each UI ticket's fast check, run the app per `skills/orchestrator/references/specs.md`. Capture every `ui_viewports` entry/touched state in Orca browser; inspect the rendered result against the chosen reference.
+- For `visual loop: on`, after each UI ticket's fast check, run the app per `skills/orchestrator/references/specs.md` "UI and running app". Capture every `ui_viewports` entry/touched state in Orca browser; inspect the rendered result against the chosen reference.
 - Fix the largest mismatch first: layout/density, typography, spacing, then detail. Check clipping, overflow, long labels and mobile action placement. Limit to two rounds; save viewport/state screenshots in `shots/` and report remaining differences.
 - Without the visual loop, mark appearance unverified and leave rendered review to PO; passing tests alone do not prove visual quality.

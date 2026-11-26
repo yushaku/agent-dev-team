@@ -15,7 +15,7 @@ The Orchestrator adds specialists only for a named decision or evidence gap. Pro
 - The PO owns scope, business rules and acceptance of delivery. Gate 1 covers the spec and tickets; G-UI applies when a prototype ran. Ticket reply/scope gates are in `gates.md` below.
 - Within approved scope, agents choose implementation details. New scope or unresolved risks return to the PO.
 - Orca holds status, ownership and dependencies. Code/tests explain implementation; the approved spec and tickets state intended behavior. Reports link execution evidence rather than claiming "done".
-- Each worker owns its Task/Dispatch report, including blocked or failed attempts. The Orchestrator reads and reconciles reports before reporting to the PO; the report contract and role-specific outputs live in `skills/orchestrator/references/specs.md` "Report".
+- Each worker owns its Task/Dispatch report, including blocked or failed attempts. The Orchestrator reads and reconciles reports before reporting to the PO; the report contract and role-specific outputs live in `skills/orchestrator/references/reports.md` "Report".
 
 ## Read by responsibility
 
@@ -23,8 +23,10 @@ Paths below are relative to the team root; workers receive their Task and role s
 
 | Need | Source |
 |---|---|
-| Plan (grill, spec, tickets), select team, resume | `skills/orchestrator/references/start.md` |
-| Task input, worker communication and reports | `skills/orchestrator/references/specs.md` |
+| Entry, resume, Run, handoff | `skills/orchestrator/references/start.md` |
+| Plan (grill, spec, tickets), select team | `skills/orchestrator/references/plan.md` |
+| Task input and dispatch | `skills/orchestrator/references/specs.md` |
+| Reports and worker communication | `skills/orchestrator/references/reports.md` |
 | PO gates and scope changes | `skills/orchestrator/references/gates.md` |
 | Review and fix rounds | `skills/orchestrator/references/review.md` |
 | Delivery and completion | `skills/orchestrator/references/delivery.md` |

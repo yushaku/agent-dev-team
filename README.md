@@ -96,11 +96,11 @@ No `missing:` lines means every skill is in place.
 
 ## Workers and commands
 
-- **Workers** (`skills/team-*`, dispatched by the Orchestrator as their own session and Task; each loads its assigned role skill, selects applicable references and writes its own Task/Dispatch report per `skills/orchestrator/references/specs.md` "Report"):
+- **Workers** (`skills/team-*`, dispatched by the Orchestrator as their own session and Task; each loads its assigned role skill, selects applicable references and writes its own Task/Dispatch report per `skills/orchestrator/references/reports.md`):
   - `team-builder`: one ticket at a time: tests, implementation, related docs, delivery evidence; prototype Tasks.
   - `team-reviewer`: independent review with `code-review`; security and perf/a11y checks are its references.
   - `team-support-engineer`: read-only ticket and production investigation.
-- **Planning** (the Orchestrator with the PO, not workers): `grill-with-docs`, `to-spec`, `to-tickets`; see `skills/orchestrator/references/start.md` "Plan".
+- **Planning** (the Orchestrator with the PO, not workers): `grill-with-docs`, `to-spec`, `to-tickets`; see `skills/orchestrator/references/plan.md`.
 - **Commands** (`/orchestrator`, `/researcher`, `/solution-architect`, `/init-team`, `/project-health`): sessions the PO starts and chats with directly; the Orchestrator never dispatches them.
 
 Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` skill; they run inside a worker's session, never as a separate worker. Role ids (Task title prefix, `models.roles`, dashboard): `builder`, `reviewer`, `support-engineer`.
@@ -112,7 +112,7 @@ Checks are references of `team-reviewer` and `team-builder`, plus the `anti-ai` 
 - `skills/orchestrator/`: the Orchestrator skill; `references/` holds its step files, coding agents and ticket mode; Orca commands come from the version-matched skills
 - `skills/init-team/references/config-schema.md`: project config schema and defaults; platform and model presets live beside it
 - `skills/orchestrator/references/routing.md`: model routing and skill slots
-- `docs-policy.md`: document ownership and authoring rules; worker reports use `skills/orchestrator/references/specs.md`
+- `docs-policy.md`: document ownership and authoring rules; worker reports use `skills/orchestrator/references/reports.md`
 - `skills/`: skills the team wrote
 - `skills-lock.json`: pinned downloaded skills
 - `bin/team`: the CLI for the mechanical steps: `/init-team` model discovery (`team agents`), and the Orchestrator's Run, worktree, Task spec, Task, Dispatch, review rounds, status and close; tests in `bin/tests/team.test.sh`

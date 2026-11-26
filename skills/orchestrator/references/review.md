@@ -1,23 +1,37 @@
-# Verification and fix rounds
+# Results and fix rounds
 
-## Worker results
+## Read each report
 
-- After each `worker_done`, read the full report, including deviations/leftovers. Match its Role/Run/Task/Dispatch, output path and revision to the assignment and receipt; return missing or conflicting evidence to the same worker. Reconcile `git status --short` in the worker checkout with reported paths; have an authorized committer finish delivery changes.
-- Quote verify evidence in the PO update; use shas/counts only from output read this turn. Before Gate 2, require passing `commands.verify` evidence for the final revision; rerun with summary output only if missing, stale or contradictory.
-- Record processed Dispatch/report references in the handoff (`start.md` "Handoff"). Missing completion follows "Coordinator delivery"; missing reports follow "Dispatch and follow-ups" there.
+- Read the full report, deviations and leftovers included. Match Role, Run, Task, Dispatch, output path and revision to the assignment; return missing or conflicting evidence to the same worker.
+- Reconcile `git status --short` in the worker checkout with the reported paths; an authorized committer finishes delivery changes.
+- Verify evidence is the `team verify` log for the reported sha (`logs/verify-<sha>.log`); `team submit` refuses `implemented` and `pass` without a green one. In PO updates quote its lines, with shas and counts read this turn.
 
-## Review and fixes
+## Next command
 
-- Start the review with `team review --catalog <alias>` once the Builder reports `implemented`: it names base...HEAD, the ticket and the Builder report. Assign the independent Reviewer selected by `routing.md`; use `team-reviewer`, `code-review`, `anti-ai` and triggered security references at the required tier. Name the base branch as fixed point and spec/tickets as Spec sources. Keep `## Standards` and `## Spec` separate; include Builder leftovers and visual-loop screenshots.
-- The Builder supplies tests/measurements; missing evidence returns to that Builder. Verify evidence is the `team verify` log for the reviewed sha (`logs/verify-<sha>.log`); the Reviewer reuses it with `team verify --reuse`. Run targeted checks for disputed findings or suspect evidence; prose edits or repeated review alone need no full rerun.
-- Findings reach the Builder through the review report, not peer mail: Orca refuses a worker's `send` to another worker's finished Dispatch (only the coordinator gives it more work). Orchestrator authorizes each fix round by starting it: `team fix` after a `changes requested` review, `team rereview` after an `implemented` fix, `team accept` after a `pass` (verify on the workspace, handoff Stage, board in-review). Both reuse the same worker and ticket, number the round, pass the reports as Refs and record the processed report in the handoff; add `--constraint` for scope notes. Builder reproduces/traces findings or rejects them with evidence; Reviewer verifies fixes/rejections and reports remaining blockers.
-- Fix blockers and fix-induced regressions; defer optional improvements. Accepted tradeoffs are not new defects. Finalize docs before final review; behavior changes use `gates.md`, alignment edits need no new Task.
-- Before Gate 2, amend/fixup review fixes into the commits they correct. Each round gets one scoped re-review of prior findings, rejection evidence, fix commits and finalized docs/delivery text. New findings cover only fix-induced regressions; security review follows the affected path.
-- After two failed fix rounds, ask the PO how to proceed; offer one tier up. No silent third round or automatic tier increase: `team fix` refuses round 3 until called with `--round 3` after PO approval. Delivery must satisfy `delivery.md` "Definition of Done (feature)"; list nonblocking leftovers and risks at Gate 2.
+| Report | Command |
+|---|---|
+| Builder `implemented`, first build | `team review --catalog <alias>`: Reviewer per `routing.md`, base...HEAD, ticket and Builder report as refs |
+| Reviewer `changes requested` | `team fix` |
+| Builder `implemented` in a fix round | `team rereview`: prior finding IDs and fix delta go into the spec |
+| Reviewer `pass` | `team accept` (verify, Stage, board `in-review`), then Gate 2 (`delivery.md`) |
+| Verdict wording that disagrees with its findings | the matching command with `--read-as <verdict>`; the handoff keeps both readings |
+| `partial`, `blocked`, `failed`, `inconclusive` | the gap goes back to the same worker or to the PO (`gates.md` "Escalation") |
+| Worker stopped on an error without a report | `routing.md` rule 5 (`team retry`) |
 
-## UI rounds (one Builder Task within the selected Run)
+Round commands reuse the same worker and ticket, number the round, pass the reports as refs and write the `Processed` line; add `--constraint` for scope notes. Findings reach the Builder through the review report: Orca accepts new work for a finished Dispatch only from the coordinator.
 
-- Send concrete inline UI asks to one Builder in the feature worktree. Reuse the Task for component follow-ups; state the exact change and behavior to preserve. Batch element polish into one commit when the PO closes the round.
-- For an area-wide complaint, fix the screen with most hits; list affected siblings and ask before expanding scope. Ambiguous layout: ask with recommended options.
-- A reference screenshot chosen as the redesign skips prototype/G-UI; ask only about structural placement. Map real app data/controls using app tokens. A mood reference uses prototype/G-UI (`start.md` "Team decisions").
-- Missing capability: deliver the UI-only part and ask whether to add the capability, retain behavior or reuse existing functionality. After merge, branch UI tweaks from `main` in the delivered worktree.
+## Fix rounds
+
+- The Reviewer uses `team-reviewer`, `code-review`, `anti-ai` and triggered security references at the required tier, with the base branch as fixed point and spec and tickets as Spec sources; it gets Builder leftovers and visual-loop screenshots.
+- Severity follows the `team-reviewer` Must fix list: a ticket criterion without a test is Must fix even when the report calls it Should fix (read it with `--read-as`). Fix blockers and fix-induced regressions; defer optional improvements. Accepted tradeoffs are no new defects.
+- The Builder supplies tests and measurements, reproduces or traces each finding or rejects it with evidence. The Reviewer reuses `team verify --reuse` and runs targeted checks only for disputed findings or suspect evidence.
+- Finalize docs before the final review; behavior changes go through `gates.md`. Before Gate 2, fixups are amended into the commits they correct.
+- Each round gets one scoped re-review: prior findings, rejection evidence, fix commits, finalized docs and delivery text. New findings cover fix-induced regressions only; security review follows the affected path.
+- Two failed fix rounds: ask the PO and offer one tier up. `team fix` refuses round 3 until called with `--round 3` after PO approval. At Gate 2, list nonblocking leftovers and risks.
+
+## UI rounds (one Builder Task in the Run)
+
+- Send concrete inline UI asks to one Builder in the feature worktree, reusing its Task for component follow-ups: the exact change and the behavior to keep. Batch element polish into one commit when the PO closes the round.
+- An area-wide complaint: fix the screen with most hits, list affected siblings and ask before widening scope. Ambiguous layout: ask with recommended options.
+- A reference screenshot chosen as the redesign skips prototype and G-UI; ask only about structural placement, and map real app data and controls with app tokens. A mood reference goes through prototype and G-UI (`plan.md` "Team decisions").
+- Missing capability: deliver the UI-only part and ask whether to add the capability, keep current behavior or reuse existing functionality. After merge, branch UI tweaks from `main` in the delivered worktree.

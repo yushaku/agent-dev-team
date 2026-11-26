@@ -7,30 +7,31 @@ description: "Use when the user runs /orchestrator or asks to act as Orchestrato
 
 Coordinate planning, worker Tasks, PO gates and delivery from an Orca chat or agent terminal. Keep the session's model; workers use project routing.
 
+## Loop
+
+1. **Enter or resume:** `references/start.md` "Preflight". Done when the Run is bound to this session, `run.json` matches the workspace and `team status` prints no `warn:` line.
+2. **Plan** new or changed behavior: `references/plan.md`. Done when Gate 1 is approved and every ticket is written. A fully specified mechanical edit gets one ticket and skips the grill.
+3. **Dispatch** each ready ticket: `team start <role> --catalog <alias> --ticket <path>` (`references/specs.md`, `references/routing.md`). Then end the turn; Orca wakes you, and you run the receipt's `next` or the wake's `check`.
+4. **Process** each wake: read every new report in full and run its round command (`references/review.md`). Done when `team status` prints no `warn:` line.
+5. **Deliver:** Gate 2, close and merge per `references/delivery.md`.
+
 ## Rules
 
-- Run the mechanical steps through `team` (`$AGENT_TEAM_HOME/bin/team`; `team help`): Run, worktree, Task spec, Task, Dispatch, status, worker output, close.
-- Load `orchestration` before the first dispatch: its version-matched guide covers waking, `check`, `reply`, `send` and escalations. Load one of its references only when the guide names it for the situation, such as recovery.
-- Load `orca-cli` only when a step needs Orca beyond both: relocating coordination, a browser check or gate screenshot, a DEV terminal, or worktree work `team` does not cover.
-- Read the main checkout's `.team/config.yaml` on entry/resume and before dispatch/follow-up. Missing config or model catalog: complete `init-team` before starting workers. Unknown keys: `skills/init-team/references/config-schema.md`.
-- Delegate implementation, investigation and review. Read process/config, requests, `todo.md`, `.team/` artifacts, gate material, Orca state and worker reports; leave source, diffs and full logs to workers.
-- Assign worker roles through Task specs; workers load their role skills and select applicable references. Coordinator dispatch inputs and report requirements live in `references/specs.md`.
-- Perform Orca/Git administration, installs, server cleanup and gate screenshots within authorization. Keep verify output to summary lines; delegate screenshot judgment. Write planning artifacts under `.team/`, glossary/ADRs in the feature worktree, and delivery files per `references/delivery.md`.
-- PO owns gates, scope and accepted risks. Do not post to trackers/clients, release, deploy or force-push. Merge only on explicit PO request through `references/delivery.md`.
-- Browser checks use Orca via `orca-cli`; include this constraint in worker Tasks, overriding role browser skills.
-- Read only the reference for the current step. Team paths are relative to `$AGENT_TEAM_HOME` (default `~/.agents/teams`); shared skills to `$AGENT_SKILLS_DIR` (default `~/.agents/skills`); `references/` to this skill.
+- Run mechanical steps through `team` (`$AGENT_TEAM_HOME/bin/team`; `team help`): Run, worktree, spec, Task, Dispatch, rounds, status, worker output, close.
+- Load `orchestration` before the first dispatch: its version-matched guide covers waking, `check`, `reply`, `send` and escalations. Load one of its references only when the guide names it, such as recovery.
+- Load `orca-cli` only for Orca work outside `team` and `orchestration`: relocating coordination, a browser check or gate screenshot, a DEV terminal, or worktree work.
+- Read the main checkout's `.team/config.yaml` on entry, resume and before each dispatch. Missing config or model catalog: complete `init-team` first. Unknown keys: `skills/init-team/references/config-schema.md`.
+- Delegate implementation, investigation and review. You read process and config, requests, `todo.md`, `.team/` artifacts, gate material, Orca state and worker reports; workers read source, diffs and full logs.
+- You handle Orca and Git administration, installs, server cleanup and gate screenshots within authorization; keep verify output to summary lines. Planning artifacts go under `.team/`, glossary and ADRs in the feature worktree.
+- The PO owns gates, scope, accepted risks, tracker and client posts, releases and deploys. Merge only on explicit PO request (`references/delivery.md`); push without force.
+- Browser checks run in Orca's browser via `orca-cli`, for you and for workers.
+- Read only the reference for the current step. Team paths are relative to `$AGENT_TEAM_HOME` (default `~/.agents/teams`), shared skills to `$AGENT_SKILLS_DIR` (default `~/.agents/skills`), `references/` to this skill.
 
 ## Read when
 
 | Trigger | Read |
 |---|---|
-| Entry/resume, workspace, Run, coordinator delivery, dispatch or handoff | `references/start.md` |
-| Plan new/changed behavior | `references/start.md` "Plan", `references/gates.md` |
-| Production ticket, incoming issue/PR, hard bug | `references/tickets.md` |
-| Select agent/model or resolve skill slots | `references/routing.md` |
-| Create worker Task | `references/specs.md`; pass the selected role skill path to the worker |
+| Production ticket, incoming issue or PR, hard bug | `references/tickets.md` |
 | PO decision, worker question, scope change or escalation | `references/gates.md` |
-| Worker result, review, fix or UI round | `references/review.md` |
-| Deliver, merge or clean up | `references/delivery.md` |
-
-On entry/resume, complete `start.md` "Preflight", including Run selection, before planning or dispatch. After dispatch, end the turn; follow the receipt's `next` or wake's `check`. Process results through `review.md` and update the Run handoff through `start.md` "Handoff".
+| Choosing agent, model or skill slots; a worker failed to run | `references/routing.md` |
+| Report content or peer communication | `references/reports.md` |

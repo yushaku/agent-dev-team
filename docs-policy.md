@@ -1,6 +1,6 @@
 # Documentation policy
 
-Read when creating, editing or reviewing documentation; load only the relevant sections. Routine worker reports use `skills/orchestrator/references/specs.md` "Report".
+Read when creating, editing or reviewing documentation; load only the relevant sections. Routine worker reports use `skills/orchestrator/references/reports.md`.
 
 ## Committed documents (complete list)
 

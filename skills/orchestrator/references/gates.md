@@ -4,29 +4,32 @@
 
 | Gate | Trigger | Material |
 |---|---|---|
-| Gate 1 | New/changed behavior | Step 1: spec and test seams; step 2: ticket titles, outcomes and blocking edges |
-| G-UI | Prototype Task ran | Prototype in `DEV`, variants and required viewport screenshots |
-| Gate 2 / G-PR | Reviewed delivery | PR/branch, evidence, merge risks, leftovers and human checks |
+| Gate 1 | New or changed behavior | Step 1: spec and test seams; step 2: ticket titles, outcomes and blocking edges |
+| G-UI | A prototype Task ran | Prototype in `DEV`, variants, required viewport screenshots |
+| Gate 2 / G-PR | `team accept` on a reviewed delivery | PR or branch, evidence, merge risks, leftovers, human checks |
 | G-Reply | Client-facing reply | Client-language draft and PO translation |
-| G-Scope | Scope/estimate commitment | Scope, exclusions and estimate |
+| G-Scope | Scope or estimate commitment | Scope, exclusions, estimate |
 
-- Attach material to the blocked work's Orca gate. After final review, use a close Task for Gate 2 (`specs.md`); omit placeholder documents.
-- Only PO answers resolve gates; absence is not approval. Reuse explicit prior answers; ask only unresolved decisions. Dispatch build after both Gate 1 steps. An explicit merge request for the delivered branch counts as Gate 2 approval.
-- Agents choose implementation details within approved requirements. Changed scope/behavior or accepted risk needs the PO; defer optional suggestions.
-- Answer worker questions through Orca ask/reply; peer exchanges follow `specs.md`. Relay PO choices as option text and resulting rule, not only an option number.
-- **Asking in rounds:** use `grilling`: present material and the full decision frontier in one numbered message, each with a recommended answer that "yes" accepts. Derive/check numbers and dates; resolve repo/config facts first, delegating code facts. Present in `languages.po`; record answers in `decisions.md` and update spec/tickets.
+- Attach the material to the blocked work's Orca gate; skip placeholder documents.
+- Only PO answers resolve a gate; silence is no approval. Reuse explicit earlier answers and ask only open decisions. Build starts after both Gate 1 steps. An explicit merge request for the delivered branch is Gate 2 approval.
+- Agents choose implementation details inside approved requirements. Changed scope or behavior and accepted risk go to the PO; optional suggestions wait.
+- Answer worker questions with Orca `ask`/`reply` (peer exchanges: `reports.md` "Worker communication"). Relay a PO choice as its option text and resulting rule, not just its number.
 
-## Gate 1 material
+## Asking in rounds
 
-- Follow-ups show changed items only. New behavior reopens Gate 1; fixes matching the spec do not. Technical clarification updates the existing Task; new capability requires a scope decision.
+Use `grilling`: one numbered message with the material and the whole decision frontier, each item with a recommended answer that "yes" accepts. Derive and check numbers and dates, and settle repo and config facts first (code facts by delegation). Write in `languages.po`; record answers in `decisions.md` and update spec and tickets.
+
+## Gate 1 follow-ups
+
+Show changed items only. New behavior reopens Gate 1; fixes that match the spec do not. A technical clarification updates the existing Task; a new capability needs a scope decision.
 
 ## Gate 2 material
 
-- Include local testing material from `delivery.md` "Local test before Gate 2" and keep the app running for the PO.
-- Every criterion needs evidence or a pending human check. Name manual checks for components uncovered by tests/rendered review and recommend testing before approval.
-- Bugs found at Gate 2 return to the existing Builder with reproduction evidence; review fixes and keep the gate pending.
+- Local testing material from `delivery.md` "Local test before Gate 2", with the app left running for the PO.
+- Every criterion has evidence or a pending human check. Name manual checks for components no test or rendered review covers, and recommend testing them before approval.
+- A bug found at Gate 2 goes back to the existing Builder with its reproduction (`team fix`), gets reviewed, and the gate stays pending.
 
 ## Escalation
 
-- Notify the PO for two failed fix rounds, unresolved evidence-based disagreement, ambiguous approved rules, scope changes, high-severity security findings, suspected personal-data breaches or confirmed worker blocks.
-- Irreversible and `human_only` actions require applicable authorization. State the action/consequence; reuse existing explicit authorization.
+- Tell the PO about two failed fix rounds, an evidence-based disagreement that stays open, an ambiguous approved rule, a scope change, a high-severity security finding, a suspected personal-data breach or a confirmed worker block.
+- Irreversible and `human_only` actions need matching authorization: state the action and its consequence, reusing explicit earlier authorization.

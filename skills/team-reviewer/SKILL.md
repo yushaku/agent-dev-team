@@ -13,7 +13,7 @@ description: "Use only when an Orchestrator Task assigns the Reviewer role or th
 1. Run `team verify --reuse`: it keeps the Builder's green log at the same clean HEAD, otherwise reruns. Each failing command is a `mechanical` Must fix quoting failing lines from its log. Skip manual checks covered by passing automation.
 2. Read tests before implementation; run `code-review` from the base branch against Task spec/tickets. Standards: repo rules, Fowler baseline and triggered security/performance references. Both review sub-agents start fresh, report under 400 words each; keep their axes/rankings separate.
 3. Check acceptance evidence (failing-before output, screenshots, measurements); run targeted checks for missing/doubtful evidence.
-4. Fill the prefilled report at the Task's `Output:` path (content: `skills/orchestrator/references/specs.md` "Report", Reviewer row), then finish with `team submit <path>`, also for blocked/inconclusive reviews. Keep Standards and Spec separate. PR comments, when authorized, link back to this report.
+4. Fill the prefilled report at the Task's `Output:` path (content: `skills/orchestrator/references/reports.md`, Reviewer row), then finish with `team submit <path>`, also for blocked/inconclusive reviews. Keep Standards and Spec separate. PR comments, when authorized, link back to this report.
 
 ## Rules
 - **Must fix:**
