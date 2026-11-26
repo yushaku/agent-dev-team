@@ -54,7 +54,8 @@ checkout, else the only feature in .team/, else $TEAM_FEATURE.
       After a "pass" review: run commands.verify in the workspace (log in logs/), record the
       review as processed, set handoff Stage to Gate 2 pending and the board to in-review.
   status [feature] [--json]
-      Orca Task status joined with Dispatch, report path and report verdict.
+      Orca Task status joined with Dispatch, report path and report verdict; warns about finished
+      reports without a Processed line in handoff.md and a handoff over 40 lines.
   board [feature] <todo|in-progress|in-review|completed>
   read [feature] <task-id|role> [--last N]
       Last N transcript messages (default 5) of that Task's or role's latest Dispatch.
@@ -1066,6 +1067,16 @@ cmd_fix() {
   processed "$feature" "$rv" "$report" "$verdict" "fix r$n"
 }
 
+prior_findings() { # review report -> "P1 Must fix, S1 Should fix"
+  grep -oE '^([-*][[:space:]]*)?(\*\*)?[SP][0-9]+(\*\*)?[^A-Za-z]*(Must fix|Should fix)' "$1" 2>/dev/null \
+    | sed -E 's/^([-*][[:space:]]*)?(\*\*)?([SP][0-9]+).*(Must fix|Should fix)$/\3 \4/' | paste -sd, - | sed 's/,/, /g' || true
+}
+fix_range() { # workspace reviewed-sha base -> how to see the fix
+  local ws=$1 r=$2 base=$3
+  if [ -z "$r" ] || ! git -C "$ws" cat-file -e "$r^{commit}" 2>/dev/null; then echo "reviewed revision unknown; review $base...HEAD"
+  elif git -C "$ws" merge-base --is-ancestor "$r" HEAD; then echo "git diff ${r:0:9}..HEAD"
+  else echo "history rewritten, git range-diff $base..${r:0:9} $base..HEAD"; fi
+}
 cmd_rereview() {
   local feature=$1; shift
   local sel="" read_as="" extra=()
@@ -1082,11 +1093,12 @@ cmd_rereview() {
   report=$(round_report "$spec" builder); verdict=$(read_verdict "$report" implemented "$read_as" "rereview: fix $b")
   n=$(spec_round "$spec")
   prior=$(report_of "$(jq -r --arg t "$(last_of_role "$st" reviewer)" '.tasks[$t].spec' <<<"$st")")
-  head=$(git -C "$(jq -r .workspace.path <<<"$st")" rev-parse --short HEAD)
+  local ws ids range; ws=$(jq -r .workspace.path <<<"$st"); head=$(git -C "$ws" rev-parse --short HEAD)
+  ids=$(prior_findings "$prior"); range=$(fix_range "$ws" "$(spec_line "$prior" Revision | cut -d' ' -f1)" "$(base_of "$st")")
   local work=(); while IFS= read -r l; do work+=("$l"); done < <(work_args "$spec")
   cmd_start "$feature" reviewer --kind re-review --round "$n" --reuse reviewer "${work[@]}" \
     --selection "${sel:-same Reviewer, scoped re-review round $n}" --ref "$prior" --ref "$report" \
-    --constraint "Scoped re-review round $n at $head: each finding of $prior resolved or not, with file:line; new findings only for fix-induced regressions." \
+    --constraint "Scoped re-review round $n at $head. Prior findings: ${ids:-none listed}; mark each resolved or not with file:line. Fix delta: $range. New findings only for problems the fix introduced; run team verify --reuse first." \
     ${extra[@]+"${extra[@]}"}
   processed "$feature" "$b" "$report" "$verdict" "re-review r$n"
 }
@@ -1115,10 +1127,19 @@ cmd_status() {
     rows=$(jq -c --arg i "$id" --arg s "$status" --arg ti "$title" --arg d "$d" --arg r "$report" \
       --arg v "$(task_verdict "$report" "$status")" '. + [{task:$i, status:$s, title:$ti, dispatch:$d, report:$r, verdict:$v}]' <<<"$rows")
   done < <(jq -c '.[]' <<<"$tasks")
-  if [ $json = 1 ]; then jq --arg r "$run" --arg f "$feature" '{feature:$f, run:$r, tasks:.}' <<<"$rows"; return; fi
+  local fdir hand warns=() r; fdir=$(feature_dir "$feature"); hand="$fdir/handoff.md"
+  while IFS= read -r r; do
+    [ -n "$r" ] && report_written "$r" || continue
+    grep -qF "| ${r#"$fdir"/} |" "$hand" 2>/dev/null || warns+=("not processed: ${r#"$fdir"/} (next round command, or record it in handoff.md)")
+  done < <(jq -r '.[] | select(.status=="completed" or .status=="failed") | .report' <<<"$rows")
+  [ ! -f "$hand" ] || [ "$(wc -l <"$hand")" -le 40 ] || warns+=("handoff.md has $(wc -l <"$hand" | tr -d ' ') lines; keep it under 40 (start.md \"Handoff\")")
+  if [ $json = 1 ]; then
+    jq --arg r "$run" --arg f "$feature" --args '{feature:$f, run:$r, tasks:., warnings:$ARGS.positional}' ${warns[@]+"${warns[@]}"} <<<"$rows"; return
+  fi
   echo "$feature  Run $run  $(jq -r '.workspace.path + " (" + .workspace.branch + ")"' <<<"$st")"
   jq -r '.[] | [.task, .status, .dispatch, .title, (.report | split("/") | .[-1] // "-"), .verdict] | @tsv' <<<"$rows" \
     | column -t -s $'\t'
+  [ ${#warns[@]} = 0 ] || printf 'warn: %s\n' "${warns[@]}"
 }
 
 cmd_board() {

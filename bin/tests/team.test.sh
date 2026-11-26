@@ -203,8 +203,11 @@ mkdir -p "$F/reports"; printf 'Role: builder\n\n## Result\nimplemented, verify g
 out=$("$team" status csv --json)
 check "status joins report verdict" '[ "$(jq -r ".tasks[0].verdict" <<<"$out")" = "implemented, verify green" ]'
 check "status shows dispatch" '[ "$(jq -r ".tasks[1].dispatch" <<<"$out")" = ctx_2 ]'
-"$team" status csv | grep -q "01-builder.md"
-check "status table prints" '[ $? -eq 0 ]'
+"$team" status csv >"$tmp/st"
+check "status table prints" '[ $? -eq 0 ] && grep -q "01-builder.md" "$tmp/st"'
+check "status warns about a finished report not processed" 'grep -q "^warn: not processed: reports/01-builder.md" "$tmp/st" && [ "$("$team" status csv --json | jq -r ".warnings[0]")" != null ]'
+cp "$F/handoff.md" "$tmp/hand"; seq 45 >>"$F/handoff.md"; "$team" status csv >"$tmp/st"; cp "$tmp/hand" "$F/handoff.md"
+check "status warns about a long handoff" 'grep -q "^warn: handoff.md has .* lines" "$tmp/st"'
 mv "$F/reports/01-builder.md" "$tmp/r1"
 check "status says missing for a finished Task without report" '[ "$("$team" status csv --json | jq -r ".tasks[0].verdict")" = missing ] && [ "$("$team" status csv --json | jq -r ".tasks[1].verdict")" = - ]'
 mv "$tmp/r1" "$F/reports/01-builder.md"
@@ -226,7 +229,7 @@ check "fix refuses a passing review" '[ $? -ne 0 ] && grep -q "says \"pass\", no
 check "--read-as names only the verdict the step needs" '[ $? -ne 0 ] && grep -q "read-as must be \"changes requested\"" "$tmp/err"'
 "$team" rereview other >/dev/null 2>"$tmp/err"
 check "rereview refuses when the last Builder Task is no fix" '[ $? -ne 0 ] && grep -q "is build, not a fix" "$tmp/err"'
-printf '## Result\nChanges requested: S1 Must fix.\n' >"$O/reports/02-reviewer.md"
+printf 'Revision: %s (clean)\n\n## Result\nChanges requested: S1 Must fix.\n## Standards\n- S1, Must fix, a.sh:1\n## Spec\n- **P2** Should fix: x\nP3 Must fix, `b.sh:2`\n' "$(git -C "$tmp/wt/other" rev-parse HEAD)" >"$O/reports/02-reviewer.md"
 "$team" fix other >/dev/null 2>&1
 s=$O/specs/03-builder-r1.md
 check "fix writes round 1 with the ticket and the review as Ref" '[ -f "$s" ] && grep -q "\"kind\":\"fix\",\"round\":1,\"cause\":\"defect\"" "$s" && grep -q "^Ticket: $O/issues/01-thing.md" "$s" && grep -q "^Refs: .*02-reviewer.md" "$s"'
@@ -237,7 +240,9 @@ check "a second fix for the same review is refused" '[ $? -ne 0 ] && grep -q "bu
 "$team" rereview other >/dev/null 2>"$tmp/err"
 check "rereview refuses a missing fix report" '[ $? -ne 0 ] && grep -q "builder report missing" "$tmp/err"'
 printf '## Result\nimplemented\n' >"$O/reports/03-builder-r1.md"
+reviewed=$(git -C "$tmp/wt/other" rev-parse HEAD); git -C "$tmp/wt/other" commit -q --allow-empty -m "fix S1"
 "$team" rereview other >/dev/null 2>&1
+check "rereview lists the prior finding IDs and the fix delta" 'grep -q "Prior findings: S1 Must fix, P2 Should fix, P3 Must fix; mark each" "$O/specs/04-reviewer-r1.md" && grep -q "Fix delta: git diff ${reviewed:0:9}..HEAD" "$O/specs/04-reviewer-r1.md"' 
 s=$O/specs/04-reviewer-r1.md
 check "rereview writes round 1 with both reports as Refs" '[ -f "$s" ] && grep -q "\"kind\":\"re-review\",\"round\":1" "$s" && grep -q "^Refs: .*02-reviewer.md.*03-builder-r1.md" "$s"'
 check "rereview dispatches to the Reviewer terminal" 'grep worker-start "$FAKE_LOG" | tail -1 | grep -q -- "--terminal $rterm"'
