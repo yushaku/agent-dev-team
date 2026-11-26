@@ -1,60 +1,6 @@
 {
   "version": 2,
   "skills": {
-    "security-and-hardening": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/security-and-hardening/SKILL.md",
-      "computedHash": "4970681073e6138c4cec8eca31546187f47723a61a7f1204710ae86d9f704517"
-    },
-    "source-driven-development": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/source-driven-development/SKILL.md",
-      "computedHash": "60cff6e7bfaeebf37929399786730b260ea0441b23e1a05fdb4d7244eac3fae4"
-    },
-    "browser-testing-with-devtools": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/browser-testing-with-devtools/SKILL.md",
-      "computedHash": "4e76269b455e079e76f29e11fdd80c61a7dd6ef0ab12e26432ea1b782c0a245e"
-    },
-    "ci-cd-and-automation": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/ci-cd-and-automation/SKILL.md",
-      "computedHash": "fbffe27b3bc3df30ba2895a71b87b2f032bb7b163de762bc8900f2673631c96d"
-    },
-    "deprecation-and-migration": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/deprecation-and-migration/SKILL.md",
-      "computedHash": "0f86b1fd18c377eb69fd1991046d49f0a848bd32f7318d1399020b79a6391cec"
-    },
-    "frontend-ui-engineering": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/frontend-ui-engineering/SKILL.md",
-      "computedHash": "73a13aa14acf407518dccde3d021becac59e42e0a90a6a52a86dc53c3a279d12"
-    },
-    "idea-refine": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/idea-refine/SKILL.md",
-      "computedHash": "f93acea3b4a197e2fda976bc9b7aa1aafedfd819fe190c7b33e70eaf745820fb"
-    },
-    "observability-and-instrumentation": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/observability-and-instrumentation/SKILL.md",
-      "computedHash": "71661b8e1558d7eed8cdf93bfb731da1c3afed9b895b049ecf92792af0d8a364"
-    },
-    "performance-optimization": {
-      "source": "addyosmani/agent-skills",
-      "sourceType": "github",
-      "skillPath": "skills/performance-optimization/SKILL.md",
-      "computedHash": "cfa0c39804554198a33e3beb2b0f920a1b468bb2e066822e1d08f4abeda3db33"
-    },
     "archify": {
       "source": "tt-a1i/archify",
       "sourceType": "github",

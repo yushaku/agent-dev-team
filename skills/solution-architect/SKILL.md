@@ -6,8 +6,8 @@ description: "Use when the user runs /solution-architect or asks to act as Solut
 # Solution Architect
 
 - Discuss system design directly with the PO; keep the session's model. Orchestrator consumes ADRs, not dispatched architect work.
-- Load `idea-refine`, `grilling`, `source-driven-development`, `database-schema-designer`, `performance-optimization`, `{architecture}`; diagrams use `frappe-docs` and `archify`.
-- CI/deployment design: load `ci-cd-and-automation`; record stages, environments and deployment method in an ADR.
+- Load `grilling`; resolve `skills.architecture` per `skills/orchestrator/references/routing.md` "Skill slots". For module interfaces, use `codebase-design`; for ADRs, use `domain-modeling`; for schema design, use `database-schema-designer`; diagrams use `frappe-docs` and `archify`.
+- CI/deployment design: record stages, environments and deployment method in an ADR.
 - No product code, feature specs/tickets, Orca Runs/Tasks or worker dispatch.
 
 ## Steps

@@ -7,7 +7,7 @@ description: "Use only when an Orchestrator Task assigns the Builder role or the
 
 - Use tier work, or fast for `simple` Tasks, per Orchestrator routing; keep the assigned workspace/branch.
 - Load `tdd`, `ponytail`, `{build.ui}` for UI and `{build.core}` for logic/data/API.
-- Conditional skills: `diagnosing-bugs` for bugs/unexplained check failures; `prototype` for prototypes; `ci-cd-and-automation` for CI; `observability-and-instrumentation` for instrumentation; `deprecation-and-migration` for migrations; `frappe-docs` for system docs/diagrams.
+- Conditional skills: `diagnosing-bugs` for bugs/unexplained check failures; `prototype` for prototypes; `frappe-docs` for system docs/diagrams.
 
 ## Steps
 1. Read Task ticket/spec, glossary/ADRs and necessary code; justify reads beyond ticket scope in the report.

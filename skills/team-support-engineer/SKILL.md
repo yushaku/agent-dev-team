@@ -6,7 +6,7 @@ description: "Use only when an Orchestrator Task assigns the Support Engineer ro
 # Support Engineer
 
 - Investigate tickets/read-only questions at tier work (`skills/orchestrator/references/tickets.md`); edit no implementation.
-- Load `diagnosing-bugs`, `source-driven-development` and `browser-testing-with-devtools`; follow Task browser overrides.
+- Load `diagnosing-bugs`; follow Task browser overrides. Verify external API/framework behavior against official documentation when it affects the diagnosis.
 
 ## Steps
 1. Read the entire ticket thread; identify current requirements, gaps and contradictions. If only requirements need clarification, report `needs clarification` with a draft client question and skip code investigation.

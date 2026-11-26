@@ -6,7 +6,7 @@ description: "Use when the user runs /researcher or asks to act as Researcher. P
 # Researcher
 
 - Work directly with the PO on product discovery, one idea per session. Keep the session's model; this role is not dispatched.
-- Load `idea-refine` and `grilling`; add `frappe-docs` only for a PO-requested visual.
+- Load `grilling`; add `frappe-docs` only for a PO-requested visual.
 
 ## Steps
 1. Read `todo.md` and configured `matt.glossary`.
