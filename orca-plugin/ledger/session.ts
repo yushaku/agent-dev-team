@@ -295,9 +295,9 @@ function tool(s: Session, name: string, args: unknown, ts: Time) {
 }
 // bin/team runs the orca commands itself, so the coordinator's own command lines carry no `--run`.
 // It prints a marker line per Run-scoped step, `{"team":"start","run":"run_…",…}`, which counts only in a
-// tool result of a session that called `team init|task|dispatch|start|fix|rereview`, on its own line (escaped inside JSONL).
+// tool result of a session that called `team init|task|dispatch|start|review|fix|rereview`, on its own line (escaped inside JSONL).
 const teamCallers = new WeakSet<Session>();
-const teamCall = /(?:^|[\s;&|('"`/])team\s+(?:init|task|dispatch|start|fix|rereview)\b/;
+const teamCall = /(?:^|[\s;&|('"`/])team\s+(?:init|task|dispatch|start|review|fix|rereview)\b/;
 const teamMarker = /(?:\\n|\\r|^|")\{(\\*)"team\1":\1"(?:init|task|dispatch|start)\1",\1"run\1":\1"(run_[0-9a-z]+)\1"/g;
 function teamRuns(s: Session, raw: string, ts: Time) {
   if (!teamCallers.has(s) || !raw.includes('team')) return;

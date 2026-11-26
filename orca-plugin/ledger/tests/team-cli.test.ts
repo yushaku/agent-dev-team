@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { parseFile } from '../session.ts';
 
 // bin/team runs the orca commands for the coordinator and prints one marker line per Run-scoped step.
-// The coordinator session attaches to that Run only from a tool result, after it called `team init|task|dispatch|start|fix|rereview`.
+// The coordinator session attaches to that Run only from a tool result, after it called `team init|task|dispatch|start|review|fix|rereview`.
 const at = (n: number) => `2026-11-26T06:00:${String(n).padStart(2, '0')}.000Z`;
 const marker = (run: string, step = 'dispatch') => JSON.stringify({ team: step, run, task: 'task_1', dispatch: 'ctx_1' });
 const output = (run: string, step?: string) => ['{"task":"task_1","dispatch":"ctx_1"}', marker(run, step), ''].join('\n');
@@ -69,6 +69,7 @@ test('init, task, fix and rereview markers count; status, board and other comman
   assert.deepEqual(runs('pi', pi('bin/team task greet s.md --title x', output('run_eeee', 'task'))), ['run_eeee']);
   assert.deepEqual(runs('pi', pi('team fix greet --cause defect', output('run_abab'))), ['run_abab']);
   assert.deepEqual(runs('pi', pi('team rereview', output('run_cdcd'))), ['run_cdcd']);
+  assert.deepEqual(runs('pi', pi('team review --catalog x', output('run_efef'))), ['run_efef']);
   assert.deepEqual(runs('pi', pi('team status greet', output('run_ffff'))), []);
   assert.deepEqual(runs('pi', pi('cat routing.jsonl', output('run_ffff'))), []);
 });

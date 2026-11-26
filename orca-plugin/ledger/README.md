@@ -127,7 +127,7 @@ copied fork history from counting twice. Provider/model and thinking level
 remain attached to each call; reasoning is part of output, not added again.
 Successful Orca Run creation receipts and explicit Run commands establish
 attribution boundaries; worker prompts supply Task IDs. For every agent, a
-`bin/team init|task|dispatch|start|fix|rereview` call does the same through the marker
+`bin/team init|task|dispatch|start|review|fix|rereview` call does the same through the marker
 line the script prints (`{"team":"<step>","run":"run_…",…}`), counted only
 from a successful tool result, on its own line, in a session that made such a call. Format reference:
 [Pi session format](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/session-format.md).
