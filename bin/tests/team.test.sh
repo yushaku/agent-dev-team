@@ -29,6 +29,12 @@ case "$1 $2" in
     echo "{\"ok\":true,\"result\":{\"dispatchId\":\"ctx_$c\",\"taskId\":\"$task\",\"runId\":\"run_test1\",\"state\":\"ready\",\"agent\":\"${agent:-claude}\",\"terminal\":\"term_$c\",\"next\":\"end turn\"}}";;
   "orchestration task-list") echo '{"ok":true,"result":{"tasks":[{"id":"task_1","status":"completed","title":"builder: one"},{"id":"task_2","status":"dispatched","title":"reviewer: two"}],"runId":"run_test1"}}';;
   "worktree set") echo '{"ok":true,"result":{}}';;
+  "worktree rm") echo '{"ok":true,"result":{}}';;
+  "agent list") echo '{"ok":true,"result":{"agents":[{"orcaSessionId":"sess-1","kind":"terminal","agent":"pi","paneKey":"pane-1","repo":"repo"}]}}';;
+  "orchestration worker-release") echo '{"ok":true,"result":{"status":"released"}}';;
+  "orchestration worker-read")
+    if [[ "$*" == *--cursor* ]]; then echo '{"ok":true,"result":{"transcript":{"messages":[{"role":"assistant","blocks":[{"type":"text","text":"tail message"}]}]}}}'
+    else echo '{"ok":true,"result":{"transcript":{"nextCursor":"c2","messages":[{"role":"user","blocks":[{"type":"text","text":"prompt"}]},{"role":"assistant","blocks":[{"type":"tool_use"}]}]}}}'; fi;;
   *) echo '{"ok":false}'; exit 1;;
 esac
 EOF
@@ -80,6 +86,9 @@ check "init creates feature dirs" '[ -d "$F/specs" ] && [ -d "$F/reports" ] && [
 check "init links .team into worktree" '[ -L "$tmp/wt/csv/.team" ]'
 check "init links worktree_links" '[ -L "$tmp/wt/csv/.env" ]'
 check "init writes handoff with Run" 'grep -q "Run: run_test1" "$F/handoff.md"'
+check "init records the coordinator identity" 'grep -q "Coordinator: pi terminal, terminal term_me, orca_session_id:sess-1" "$F/handoff.md"'
+w=$(env -u ORCA_PANE_KEY -u ORCA_TERMINAL_HANDLE "$team" whoami)
+check "whoami outside Orca has no identity" '[ "$(jq -r .terminal <<<"$w")" = null ]'
 check "init branches from base" 'grep -q -- "--base-branch main" "$FAKE_LOG"'
 check "init sets board in-progress" 'grep -q -- "--workspace-status in-progress" "$FAKE_LOG"'
 check "init rerun reuses state (one run-create)" '[ "$(grep -c run-create "$FAKE_LOG")" = 1 ]'
@@ -114,7 +123,7 @@ check "refused specs leave no file" '[ "$(ls "$F/specs" | wc -l | tr -d " ")" = 
 check "task refuses FILL lines" '[ $? -ne 0 ] && grep -q "unresolved FILL" "$tmp/err"'
 sed -i '' 's/FILL:[^\n]*/done/' "$s1"
 t1=$("$team" task csv "$s1" --title one 2>"$tmp/err")
-check "task marks Run and Task" 'grep -qx "{\"team\":\"task\",\"run\":\"run_test1\",\"task\":\"task_1\"}" "$tmp/err"' 
+check "task marks Run and Task" 'grep -qx "{\"team\":\"task\",\"run\":\"run_test1\",\"task\":\"task_1\"}" "$tmp/err"'
 check "task returns task id" '[ "$t1" = task_1 ]'
 check "task title has role prefix" 'grep -q -- "--task-title builder: one" "$FAKE_LOG"'
 check "task passes --run" 'grep task-create "$FAKE_LOG" | grep -q -- "--run run_test1"'
@@ -183,5 +192,20 @@ check "status joins report verdict" '[ "$(jq -r ".tasks[0].verdict" <<<"$out")" 
 check "status shows dispatch" '[ "$(jq -r ".tasks[1].dispatch" <<<"$out")" = ctx_2 ]'
 "$team" status csv | grep -q "01-builder.md"
 check "status table prints" '[ $? -eq 0 ]'
+
+# read, close
+out=$("$team" read csv builder --last 2)
+check "read follows the cursor to the tail, skips textless messages" 'grep -q "tail message" <<<"$out" && grep -q "^--- user" <<<"$out" && ! grep -q "tool_use" <<<"$out"'
+check "init links do not dirty the worktree" '[ -z "$(git -C "$tmp/wt/csv" status --porcelain)" ]'
+touch "$tmp/wt/csv/dirty.txt"
+"$team" close csv --remove-worktree >/dev/null 2>"$tmp/err"
+check "close refuses a dirty worktree before releasing" '[ $? -ne 0 ] && grep -q "uncommitted" "$tmp/err" && ! grep -q worker-release "$FAKE_LOG"'
+rm "$tmp/wt/csv/dirty.txt"
+(cd "$tmp/wt/csv" && "$team" close csv --remove-worktree >/dev/null 2>"$tmp/err")
+check "close refuses from inside the worktree" '[ $? -ne 0 ] && grep -q "outside" "$tmp/err"'
+out=$("$team" close csv --remove-worktree --delete-branch)
+check "close releases every recorded Dispatch" '[ "$(grep -c worker-release "$FAKE_LOG")" = "$(jq "[.tasks[].dispatches[].id] | unique | length" "$F/run.json")" ]'
+check "close sets board completed and removes the worktree with its branch" 'grep -q -- "--workspace-status completed" "$FAKE_LOG" && grep "worktree rm" "$FAKE_LOG" | grep -q -- "--worktree path:$tmp/wt/csv --delete-branch"'
+check "close records itself in run.json" '[ "$(jq -r .closed.worktreeRemoved "$F/run.json")" = true ]'
 
 echo "1..$n"; [ $fails = 0 ] && echo "all passed" || { echo "$fails failed"; exit 1; }
