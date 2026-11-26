@@ -49,10 +49,10 @@ Read when creating, editing or reviewing documentation; load only the relevant s
 
 ## ADR
 
-- Sections: Context, Decision, Rejected options (one line each), Consequences, Status (`accepted` / `superseded by NNN`). Solution Architect system ADRs add NFR targets and monthly cost, and the PR link.
+- Sections: Context, Decision, Rejected options (one line each), Consequences, Status (`accepted` / `superseded by NNN`). Solution Architect system ADRs add NFR targets and monthly cost.
 - Max about 15 lines; system ADRs about 40.
 - Only for decisions expensive to reverse.
-- Immutable: a changed decision gets a new ADR; the only edit to an old ADR is its Status line (`superseded by NNN`), made by the new ADR's author in the same PR.
+- Immutable: a changed decision gets a new ADR; the only edit to an old ADR is its Status line (`superseded by NNN`), made by the new ADR's author in the same commit.
 - Agents read only `accepted` ADRs.
 
 ## Audit

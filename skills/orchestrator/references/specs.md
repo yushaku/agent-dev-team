@@ -115,6 +115,6 @@ A report is complete when it records the attempt and its evidence, even if the v
 |---|---|---|
 | Orchestrator | Feature `handoff.md`, decisions and references to each processed Task/Dispatch/report | Current result or gate, worker verdicts with report links, verification revision, unresolved risks and the next action or PO decision. Mark missing reports explicitly. |
 | Researcher | `.team/research/<topic>.md` per its role skill | Research conclusion, sources, chosen scope and unresolved questions; link the note. |
-| Solution Architect | Draft PR analysis and approved ADRs per its role skill | Recommendation, NFR/cost tradeoffs, decision state and PoC/open questions; link PR/ADRs. |
+| Solution Architect | `.team/architecture/<topic>.md` analysis and approved ADRs per its role skill | Recommendation, NFR/cost tradeoffs, decision state and PoC/open questions; link analysis/ADRs. |
 
 Researcher and Solution Architect work directly with the PO and have no worker Task/Dispatch identity. Coordinator summaries cite worker reports; the worker owns its findings and evidence. Record report processing in the handoff as `Task | Dispatch | report path | verdict | reviewed revision | next action`. Receipt of `worker_done`, report existence and coordinator processing are distinct facts; this convention does not add automatic dashboard tracking.
